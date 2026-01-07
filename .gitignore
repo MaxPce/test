@@ -1,0 +1,132 @@
+# =========================
+# Logs
+# =========================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =========================
+# Dependencies
+# =========================
+node_modules/
+.pnp/
+.pnp.js
+
+# =========================
+# Build outputs
+# =========================
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+
+# Local env files (common)
+*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# =========================
+# Coverage / Testing
+# =========================
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+cypress/videos/
+cypress/screenshots/
+
+# =========================
+# Tooling caches
+# =========================
+.eslintcache
+.stylelintcache
+.turbo/
+.parcel-cache/
+.vite/
+.rspack-cache/
+.rollup.cache/
+tsconfig.tsbuildinfo
+
+# =========================
+# Optional: lockfiles (elige según tu equipo)
+# Si tu equipo usa SOLO un package manager,
+# puedes descomentar los otros para ignorarlos.
+# =========================
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# =========================
+# Editor directories and files
+# =========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# Misc
+# =========================
+*.tgz
+*.pem
+*.key
+*.crt
+
+# =========================
+# Firebase / Vercel / Netlify / Misc hosting
+# (si no usas alguno, igual no molesta)
+# =========================
+.firebase/
+.vercel/
+.netlify/
+
+# =========================
+# Storybook (si usas)
+# =========================
+storybook-static/
+
+# =========================
+# CRA / Expo (por si aplica)
+# =========================
+.expo/
+web-build/
+
+# =========================
+# Debug
+# =========================
+*.pid
+*.seed
+*.pid.lock
