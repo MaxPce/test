@@ -23,6 +23,7 @@ export function FormatsPage() {
   };
 
   const onOpen = (id: number) => {
+    {console.log("Last format ID:", lastFormatId);}
     setLastFormatId(id);
     navigate(`/formats/${id}`);
   };
@@ -32,7 +33,7 @@ export function FormatsPage() {
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Formatos</h1>
-          <p className="text-sm text-slate-300">Demo: consumiendo el backend (/formats)</p>
+          {/* <p className="text-sm text-slate-300">Demo: consumiendo el backend (/formats)</p> */}
         </div>
 
         <button
@@ -40,27 +41,15 @@ export function FormatsPage() {
           disabled={createFormat.isPending}
           className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
         >
-          {createFormat.isPending ? "Creando..." : "Crear formato demo"}
+          {createFormat.isPending ? "Creando..." : "Crear formato"}
         </button>
       </header>
-
-      {lastFormatId ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
-          Último formato visitado (localStorage):{" "}
-          <Link className="underline" to={`/formats/${lastFormatId}`}>
-            #{lastFormatId}
-          </Link>
-        </div>
-      ) : null}
 
       {isLoading ? <p className="text-sm text-slate-300">Cargando...</p> : null}
 
       {isError ? (
         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
           Error: {error instanceof Error ? error.message : "Error desconocido"}
-          <div className="mt-2 text-xs text-red-200/80">
-            Tip: verifica que el backend esté en http://localhost:3000 y que tenga CORS habilitado.
-          </div>
         </div>
       ) : null}
 
