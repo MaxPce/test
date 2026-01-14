@@ -24,6 +24,6 @@ export type CategoryType = "individual" | "equipo";
 
 export type TeamRole = "capitan" | "titular" | "suplente";
 
-export type PhaseType = "grupo" | "eliminacion" | "repechaje";
+export type PhaseType = "grupo" | "eliminacion" | "repechaje" | "mejor_de_3";
 
 export type Corner = "blue" | "white" | "A" | "B";

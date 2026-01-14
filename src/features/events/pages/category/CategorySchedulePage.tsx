@@ -28,6 +28,9 @@ import type { Phase, Match } from "@/features/competitions/types";
 import { GenerateRoundRobinModal } from "@/features/competitions/components/GenerateRoundRobinModal";
 import { useInitializeRoundRobin } from "@/features/competitions/api/round-robin.mutations";
 import { useUpdateStandings } from "@/features/competitions/api/standings.mutations";
+import { BestOf3View } from "@/features/competitions/components/BestOf3View";
+import { GenerateBestOf3Modal } from "@/features/competitions/components/GenerateBestOf3Modal";
+import { useInitializeBestOf3 } from "@/features/competitions/api/best-of-3.mutations";
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -43,8 +46,12 @@ export function CategorySchedulePage() {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "bracket">("list");
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] =
+    useState(false);
+
   const initializeRoundRobinMutation = useInitializeRoundRobin();
   const updateStandingsMutation = useUpdateStandings();
+  const initializeBestOf3Mutation = useInitializeBestOf3();
 
   const { data: phases = [], isLoading: phasesLoading } = usePhases(
     eventCategory.eventCategoryId
@@ -108,6 +115,14 @@ export function CategorySchedulePage() {
     }
   };
 
+  const handleGenerateBestOf3 = async (data: {
+    phaseId: number;
+    registrationIds: number[];
+  }) => {
+    await initializeBestOf3Mutation.mutateAsync(data);
+    setIsGenerateBestOf3ModalOpen(false);
+  };
+
   const getStatusBadgeVariant = (status: string) => {
     const variants: Record<
       string,
@@ -126,6 +141,7 @@ export function CategorySchedulePage() {
       grupo: "Grupos",
       eliminacion: "Eliminación",
       repechaje: "Repechaje",
+      mejor_de_3: "Mejor de 3",
     };
     return types[type] || type;
   };
@@ -253,6 +269,18 @@ export function CategorySchedulePage() {
                         Generar Partidos
                       </Button>
                     )}
+                    {/* ✅ BOTÓN GENERAR SERIE MEJOR DE 3 */}
+                    {selectedPhase.type === "mejor_de_3" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsGenerateBestOf3ModalOpen(true)}
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          Generar Serie
+                        </Button>
+                      )}
                     <Button size="sm" onClick={() => setIsMatchModalOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Nuevo Partido
@@ -271,6 +299,15 @@ export function CategorySchedulePage() {
                 ) : viewMode === "bracket" &&
                   selectedPhase.type === "eliminacion" ? (
                   <BracketView matches={matches} phase={selectedPhase} />
+                ) : selectedPhase.type === "mejor_de_3" ? (
+                  <BestOf3View
+                    matches={matches}
+                    phase={selectedPhase}
+                    onRegisterResult={(match) => {
+                      setSelectedMatch(match);
+                      setIsResultModalOpen(true);
+                    }}
+                  />
                 ) : (
                   <div className="space-y-3">
                     {matches.map((match) => {
@@ -465,7 +502,6 @@ export function CategorySchedulePage() {
             />
           </Modal>
 
-          {/* ✅ AGREGAR ESTE MODAL AQUÍ */}
           {selectedPhase.type === "grupo" && (
             <GenerateRoundRobinModal
               isOpen={isGenerateModalOpen}
@@ -474,6 +510,18 @@ export function CategorySchedulePage() {
               registrations={eventCategory.registrations || []}
               onGenerate={handleGenerateRoundRobin}
               isLoading={initializeRoundRobinMutation.isPending}
+            />
+          )}
+
+          {/* ✅ MODAL MEJOR DE 3 */}
+          {selectedPhase.type === "mejor_de_3" && (
+            <GenerateBestOf3Modal
+              isOpen={isGenerateBestOf3ModalOpen}
+              onClose={() => setIsGenerateBestOf3ModalOpen(false)}
+              phase={selectedPhase}
+              registrations={eventCategory.registrations || []}
+              onGenerate={handleGenerateBestOf3}
+              isLoading={initializeBestOf3Mutation.isPending}
             />
           )}
 
