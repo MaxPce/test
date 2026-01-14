@@ -138,13 +138,17 @@ export function BracketView({ matches, phase }: BracketViewProps) {
                                 </div>
                                 <Badge
                                   variant={
-                                    participation.corner === "ROJO"
-                                      ? "destructive"
-                                      : "primary"
+                                    participation.corner === "blue" ||
+                                    participation.corner === "A"
+                                      ? "primary"
+                                      : "default"
                                   }
                                   size="sm"
                                 >
-                                  {participation.corner}
+                                  {participation.corner === "blue" && "Azul"}
+                                  {participation.corner === "white" && "Blanco"}
+                                  {participation.corner === "A" && "A"}
+                                  {participation.corner === "B" && "B"}
                                 </Badge>
                               </div>
                             </div>

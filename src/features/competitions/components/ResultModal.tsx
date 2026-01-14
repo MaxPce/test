@@ -98,12 +98,16 @@ export function ResultModal({
                     </div>
                     <Badge
                       variant={
-                        participation.corner === "ROJO"
-                          ? "destructive"
-                          : "primary"
+                        participation.corner === "blue" ||
+                        participation.corner === "A"
+                          ? "primary"
+                          : "default"
                       }
                     >
-                      {participation.corner}
+                      {participation.corner === "blue" && "Azul"}
+                      {participation.corner === "white" && "Blanco"}
+                      {participation.corner === "A" && "A"}
+                      {participation.corner === "B" && "B"}
                     </Badge>
                   </div>
                 </button>

@@ -29,7 +29,7 @@ export interface Participation {
   participationId: number;
   matchId: number;
   registrationId: number;
-  corner?: "AKA" | "AO" | "ROJO" | "AZUL";
+  corner?: "blue" | "white" | "A" | "B";
   match?: Match;
   registration?: any;
 }
@@ -69,7 +69,7 @@ export interface CreateMatchData {
 export interface CreateParticipationData {
   matchId: number;
   registrationId: number;
-  corner?: "AKA" | "AO" | "ROJO" | "AZUL";
+  corner?: "blue" | "white" | "A" | "B";
 }
 
 export interface UpdateMatchData {

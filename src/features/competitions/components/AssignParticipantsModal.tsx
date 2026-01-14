@@ -51,18 +51,20 @@ export function AssignParticipantsModal({
   ];
 
   const handleAssign = async () => {
+    const isGroupPhase = match.phase?.type === "grupo";
+
     if (participant1 > 0) {
       await onAssign({
         matchId: match.matchId,
         registrationId: participant1,
-        corner: "ROJO",
+        corner: isGroupPhase ? "A" : "blue",
       });
     }
     if (participant2 > 0) {
       await onAssign({
         matchId: match.matchId,
         registrationId: participant2,
-        corner: "AZUL",
+        corner: isGroupPhase ? "B" : "white",
       });
     }
     setParticipant1(0);
@@ -71,6 +73,20 @@ export function AssignParticipantsModal({
   };
 
   const currentParticipants = match.participations || [];
+
+  const getCornerLabel = (corner?: string) => {
+    if (corner === "blue") return "Azul";
+    if (corner === "white") return "Blanco";
+    if (corner === "A") return "Equipo A";
+    if (corner === "B") return "Equipo B";
+    return corner || "Sin asignar";
+  };
+
+  const getCornerBadgeVariant = (corner?: string) => {
+    if (corner === "blue") return "primary";
+    if (corner === "white") return "default";
+    return "default";
+  };
 
   return (
     <Modal
@@ -112,13 +128,9 @@ export function AssignParticipantsModal({
                       </div>
                     </div>
                     <Badge
-                      variant={
-                        participation.corner === "ROJO"
-                          ? "destructive"
-                          : "primary"
-                      }
+                      variant={getCornerBadgeVariant(participation.corner)}
                     >
-                      {participation.corner}
+                      {getCornerLabel(participation.corner)}
                     </Badge>
                   </div>
                 );
@@ -139,7 +151,11 @@ export function AssignParticipantsModal({
                 <>
                   <div>
                     <Select
-                      label="Participante 1 (Rojo)"
+                      label={
+                        match.phase?.type === "grupo"
+                          ? "Participante 1 (A)"
+                          : "Participante 1 (Azul)"
+                      }
                       value={participant1}
                       onChange={(e) => setParticipant1(Number(e.target.value))}
                       options={registrationOptions}
@@ -148,7 +164,11 @@ export function AssignParticipantsModal({
 
                   <div>
                     <Select
-                      label="Participante 2 (Azul)"
+                      label={
+                        match.phase?.type === "grupo"
+                          ? "Participante 2 (B)"
+                          : "Participante 2 (Blanco)"
+                      }
                       value={participant2}
                       onChange={(e) => setParticipant2(Number(e.target.value))}
                       options={registrationOptions.filter(
@@ -162,9 +182,11 @@ export function AssignParticipantsModal({
               {currentParticipants.length === 1 && (
                 <div>
                   <Select
-                    label={`Participante 2 (${
-                      currentParticipants[0].corner === "ROJO" ? "Azul" : "Rojo"
-                    })`}
+                    label={`Participante 2 (${getCornerLabel(
+                      currentParticipants[0].corner === "blue"
+                        ? "white"
+                        : "blue"
+                    )})`}
                     value={participant1}
                     onChange={(e) => setParticipant1(Number(e.target.value))}
                     options={registrationOptions}

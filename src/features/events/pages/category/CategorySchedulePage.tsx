@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
-import { Plus, Calendar, Trophy, Eye } from "lucide-react";
+import { Plus, Calendar, Trophy, Eye, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -25,6 +25,9 @@ import {
 import { useCreateParticipation } from "@/features/competitions/api/participations.mutations";
 import type { EventCategory } from "../../types";
 import type { Phase, Match } from "@/features/competitions/types";
+import { GenerateRoundRobinModal } from "@/features/competitions/components/GenerateRoundRobinModal";
+import { useInitializeRoundRobin } from "@/features/competitions/api/round-robin.mutations";
+import { useUpdateStandings } from "@/features/competitions/api/standings.mutations";
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -39,6 +42,9 @@ export function CategorySchedulePage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "bracket">("list");
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const initializeRoundRobinMutation = useInitializeRoundRobin();
+  const updateStandingsMutation = useUpdateStandings();
 
   const { data: phases = [], isLoading: phasesLoading } = usePhases(
     eventCategory.eventCategoryId
@@ -95,6 +101,11 @@ export function CategorySchedulePage() {
         winnerRegistrationId: winnerId,
       },
     });
+
+    // Actualizar standings automáticamente si es fase de grupos
+    if (selectedPhase?.type === "grupo") {
+      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+    }
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -117,6 +128,14 @@ export function CategorySchedulePage() {
       repechaje: "Repechaje",
     };
     return types[type] || type;
+  };
+
+  const handleGenerateRoundRobin = async (data: {
+    phaseId: number;
+    registrationIds: number[];
+  }) => {
+    await initializeRoundRobinMutation.mutateAsync(data);
+    setIsGenerateModalOpen(false);
   };
 
   if (phasesLoading) {
@@ -222,6 +241,16 @@ export function CategorySchedulePage() {
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         {viewMode === "list" ? "Ver Bracket" : "Ver Lista"}
+                      </Button>
+                    )}
+                    {selectedPhase.type === "grupo" && matches.length === 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsGenerateModalOpen(true)}
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Generar Partidos
                       </Button>
                     )}
                     <Button size="sm" onClick={() => setIsMatchModalOpen(true)}>
@@ -341,13 +370,21 @@ export function CategorySchedulePage() {
                                     </div>
                                     <Badge
                                       variant={
-                                        participation.corner === "ROJO"
-                                          ? "destructive"
-                                          : "primary"
+                                        participation.corner === "blue" ||
+                                        participation.corner === "A"
+                                          ? "primary"
+                                          : "default"
                                       }
                                       size="sm"
                                     >
-                                      {participation.corner}
+                                      {participation.corner === "blue" &&
+                                        "Azul"}
+                                      {participation.corner === "white" &&
+                                        "Blanco"}
+                                      {participation.corner === "A" &&
+                                        "Equipo A"}
+                                      {participation.corner === "B" &&
+                                        "Equipo B"}
                                     </Badge>
                                   </div>
                                 );
@@ -427,6 +464,18 @@ export function CategorySchedulePage() {
               isLoading={createMatchMutation.isPending}
             />
           </Modal>
+
+          {/* ✅ AGREGAR ESTE MODAL AQUÍ */}
+          {selectedPhase.type === "grupo" && (
+            <GenerateRoundRobinModal
+              isOpen={isGenerateModalOpen}
+              onClose={() => setIsGenerateModalOpen(false)}
+              phase={selectedPhase}
+              registrations={eventCategory.registrations || []}
+              onGenerate={handleGenerateRoundRobin}
+              isLoading={initializeRoundRobinMutation.isPending}
+            />
+          )}
 
           {selectedMatch && (
             <>
