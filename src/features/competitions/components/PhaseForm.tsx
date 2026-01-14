@@ -1,62 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import type { Phase, CreatePhaseData } from "../types";
 
 interface PhaseFormProps {
   eventCategoryId: number;
-  phase?: Phase;
-  onSubmit: (data: CreatePhaseData) => void;
+  existingPhases: number;
+  onSubmit: (data: {
+    eventCategoryId: number;
+    name: string;
+    type: string;
+    displayOrder?: number;
+  }) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
 export function PhaseForm({
   eventCategoryId,
-  phase,
+  existingPhases,
   onSubmit,
   onCancel,
   isLoading,
 }: PhaseFormProps) {
-  const [formData, setFormData] = useState<CreatePhaseData>({
-    eventCategoryId,
+  const [formData, setFormData] = useState({
     name: "",
-    format: "eliminacion_directa",
-    status: "pendiente",
-    startDate: "",
-    endDate: "",
+    type: "eliminacion",
   });
-
-  useEffect(() => {
-    if (phase) {
-      setFormData({
-        eventCategoryId: phase.eventCategoryId,
-        name: phase.name,
-        format: phase.format,
-        status: phase.status,
-        startDate: phase.startDate?.split("T")[0] || "",
-        endDate: phase.endDate?.split("T")[0] || "",
-      });
-    }
-  }, [phase]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      eventCategoryId,
+      name: formData.name,
+      type: formData.type,
+      displayOrder: existingPhases + 1,
+    });
   };
 
-  const formatOptions = [
-    { value: "eliminacion_directa", label: "Eliminación Directa" },
-    { value: "round_robin", label: "Round Robin (Todos contra Todos)" },
-    { value: "grupos", label: "Fase de Grupos" },
+  const typeOptions = [
+    { value: "grupo", label: "Fase de Grupos" },
+    { value: "eliminacion", label: "Eliminación Directa" },
+    { value: "repechaje", label: "Repechaje" },
   ];
 
-  const statusOptions = [
-    { value: "pendiente", label: "Pendiente" },
-    { value: "en_curso", label: "En Curso" },
-    { value: "finalizado", label: "Finalizado" },
-  ];
+  const getTypeDescription = (type: string) => {
+    const descriptions: Record<string, string> = {
+      grupo:
+        "Sistema de todos contra todos dentro de un grupo. Ideal para fase inicial con múltiples equipos.",
+      eliminacion:
+        "Sistema de eliminación directa. El perdedor queda eliminado del torneo.",
+      repechaje:
+        "Fase especial para perdedores de semifinales que compiten por el tercer lugar.",
+    };
+    return descriptions[type] || "";
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,63 +62,39 @@ export function PhaseForm({
         label="Nombre de la Fase *"
         value={formData.name}
         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        placeholder="Ej: Octavos de Final"
+        placeholder="Ej: Grupo A, Semifinales, Final"
         required
       />
 
       <Select
-        label="Formato *"
-        value={formData.format}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            format: e.target.value as CreatePhaseData["format"],
-          })
-        }
-        options={formatOptions}
+        label="Tipo de Fase *"
+        value={formData.type}
+        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+        options={typeOptions}
         required
       />
 
-      <Select
-        label="Estado *"
-        value={formData.status}
-        onChange={(e) =>
-          setFormData({
-            ...formData,
-            status: e.target.value as CreatePhaseData["status"],
-          })
-        }
-        options={statusOptions}
-        required
-      />
-
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Fecha de Inicio"
-          type="date"
-          value={formData.startDate}
-          onChange={(e) =>
-            setFormData({ ...formData, startDate: e.target.value })
-          }
-        />
-
-        <Input
-          label="Fecha de Fin"
-          type="date"
-          value={formData.endDate}
-          onChange={(e) =>
-            setFormData({ ...formData, endDate: e.target.value })
-          }
-          min={formData.startDate}
-        />
+      <div className="bg-blue-50 p-3 rounded-lg">
+        <p className="text-xs text-blue-900">
+          {getTypeDescription(formData.type)}
+        </p>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <p className="text-sm text-gray-700">
+          <strong>Orden de ejecución:</strong> {existingPhases + 1}
+        </p>
+        <p className="text-xs text-gray-500 mt-1">
+          Las fases se ejecutan en orden secuencial
+        </p>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancelar
         </Button>
         <Button type="submit" isLoading={isLoading}>
-          {phase ? "Actualizar" : "Crear"}
+          Crear Fase
         </Button>
       </div>
     </form>

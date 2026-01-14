@@ -1,112 +1,96 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import type { Match, UpdateMatchData, Participation } from "../types";
+import type { Phase } from "../types";
 
 interface MatchFormProps {
-  match: Match;
-  participations: Participation[];
-  onSubmit: (data: UpdateMatchData) => void;
+  phase: Phase;
+  onSubmit: (data: {
+    phaseId: number;
+    matchNumber?: number;
+    round?: string;
+    scheduledTime?: string;
+    platformNumber?: number;
+  }) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
 export function MatchForm({
-  match,
-  participations,
+  phase,
   onSubmit,
   onCancel,
   isLoading,
 }: MatchFormProps) {
-  const [formData, setFormData] = useState<UpdateMatchData>({
-    scoreA: match.scoreA,
-    scoreB: match.scoreB,
-    winnerParticipantId: match.winnerParticipantId,
-    status: match.status,
-    scheduledTime: match.scheduledTime?.split("T")[0] || "",
-    location: match.location || "",
+  const [formData, setFormData] = useState({
+    matchNumber: "",
+    round: "",
+    scheduledTime: "",
+    platformNumber: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      phaseId: phase.phaseId,
+      matchNumber: formData.matchNumber
+        ? Number(formData.matchNumber)
+        : undefined,
+      round: formData.round || undefined,
+      scheduledTime: formData.scheduledTime || undefined,
+      platformNumber: formData.platformNumber
+        ? Number(formData.platformNumber)
+        : undefined,
+    });
   };
 
-  const statusOptions = [
-    { value: "programado", label: "Programado" },
-    { value: "en_curso", label: "En Curso" },
-    { value: "finalizado", label: "Finalizado" },
-    { value: "cancelado", label: "Cancelado" },
-  ];
-
-  const getParticipantName = (participantId?: number) => {
-    if (!participantId) return "TBD";
-    const participation = participations.find(
-      (p) => p.participationId === participantId
-    );
-    return participation?.athlete?.name || participation?.team?.name || "N/A";
-  };
+  const roundOptions =
+    phase.type === "eliminacion"
+      ? [
+          { value: "", label: "Seleccione una ronda" },
+          { value: "final", label: "Final" },
+          { value: "semifinal", label: "Semifinal" },
+          { value: "cuartos", label: "Cuartos de Final" },
+          { value: "octavos", label: "Octavos de Final" },
+          { value: "dieciseisavos", label: "Dieciseisavos de Final" },
+        ]
+      : [];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="font-semibold text-gray-900 mb-2">Participantes</h4>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">
-              {getParticipantName(match.participantA)}
-            </span>
-            <Input
-              type="number"
-              min="0"
-              value={formData.scoreA ?? ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  scoreA: e.target.value ? Number(e.target.value) : undefined,
-                })
-              }
-              placeholder="0"
-              className="w-20 text-center"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">
-              {getParticipantName(match.participantB)}
-            </span>
-            <Input
-              type="number"
-              min="0"
-              value={formData.scoreB ?? ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  scoreB: e.target.value ? Number(e.target.value) : undefined,
-                })
-              }
-              placeholder="0"
-              className="w-20 text-center"
-            />
-          </div>
-        </div>
+      <div className="bg-blue-50 p-3 rounded-lg mb-4">
+        <h4 className="font-semibold text-blue-900">{phase.name}</h4>
+        <p className="text-sm text-blue-700">
+          {phase.type === "grupo" && "Fase de Grupos"}
+          {phase.type === "eliminacion" && "Eliminación Directa"}
+          {phase.type === "repechaje" && "Repechaje"}
+        </p>
       </div>
 
-      <Select
-        label="Estado *"
-        value={formData.status || match.status}
+      <Input
+        label="Número de Partido"
+        type="number"
+        min="1"
+        value={formData.matchNumber}
         onChange={(e) =>
-          setFormData({
-            ...formData,
-            status: e.target.value as UpdateMatchData["status"],
-          })
+          setFormData({ ...formData, matchNumber: e.target.value })
         }
-        options={statusOptions}
-        required
+        placeholder="1"
+        helperText="Número secuencial del partido"
       />
 
+      {phase.type === "eliminacion" && (
+        <Select
+          label="Ronda"
+          value={formData.round}
+          onChange={(e) => setFormData({ ...formData, round: e.target.value })}
+          options={roundOptions}
+        />
+      )}
+
       <Input
-        label="Fecha y Hora Programada"
+        label="Fecha y Hora"
         type="datetime-local"
         value={formData.scheduledTime}
         onChange={(e) =>
@@ -115,18 +99,23 @@ export function MatchForm({
       />
 
       <Input
-        label="Ubicación"
-        value={formData.location}
-        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-        placeholder="Ej: Cancha 1"
+        label="Plataforma/Tatami"
+        type="number"
+        min="1"
+        value={formData.platformNumber}
+        onChange={(e) =>
+          setFormData({ ...formData, platformNumber: e.target.value })
+        }
+        placeholder="1"
+        helperText="Número de plataforma, tatami o cancha"
       />
 
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancelar
         </Button>
         <Button type="submit" isLoading={isLoading}>
-          Actualizar Partido
+          Crear Partido
         </Button>
       </div>
     </form>

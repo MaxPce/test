@@ -1,40 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import type { Phase } from "../types";
+import { phasesApi } from "./phases.api";
 
-export const phaseKeys = {
-  all: ["phases"] as const,
-  lists: () => [...phaseKeys.all, "list"] as const,
-  list: (filters?: { eventCategoryId?: number }) =>
-    [...phaseKeys.lists(), filters] as const,
-  details: () => [...phaseKeys.all, "detail"] as const,
-  detail: (id: number) => [...phaseKeys.details(), id] as const,
-};
-
-interface PhasesParams {
-  eventCategoryId?: number;
+export function usePhases(eventCategoryId?: number) {
+  return useQuery({
+    queryKey: ["phases", eventCategoryId],
+    queryFn: () => phasesApi.getAll(eventCategoryId),
+    enabled: !!eventCategoryId,
+  });
 }
 
-export const usePhases = (params?: PhasesParams) => {
+export function usePhase(id: number) {
   return useQuery({
-    queryKey: phaseKeys.list(params),
-    queryFn: async () => {
-      const { data } = await apiClient.get<Phase[]>(ENDPOINTS.PHASES.LIST, {
-        params,
-      });
-      return data;
-    },
-  });
-};
-
-export const usePhase = (id: number) => {
-  return useQuery({
-    queryKey: phaseKeys.detail(id),
-    queryFn: async () => {
-      const { data } = await apiClient.get<Phase>(ENDPOINTS.PHASES.DETAIL(id));
-      return data;
-    },
+    queryKey: ["phases", id],
+    queryFn: () => phasesApi.getOne(id),
     enabled: !!id,
   });
-};
+}

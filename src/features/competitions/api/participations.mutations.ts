@@ -1,63 +1,32 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import { participationKeys } from "./participations.queries";
-import { phaseKeys } from "./phases.queries";
-import type {
-  CreateParticipationData,
-  BulkParticipationsData,
-  Participation,
-} from "../types";
+import { participationsApi } from "./participations.api";
 
-export const useCreateParticipation = () => {
+export function useCreateParticipation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateParticipationData) => {
-      const response = await apiClient.post<Participation>(
-        ENDPOINTS.PARTICIPATIONS.CREATE,
-        data
-      );
-      return response.data;
-    },
+    mutationFn: participationsApi.create,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: participationKeys.lists() });
-      queryClient.invalidateQueries({
-        queryKey: phaseKeys.detail(data.phaseId),
-      });
+      queryClient.invalidateQueries({ queryKey: ["matches", data.matchId] });
     },
   });
-};
+}
 
-export const useBulkParticipations = () => {
+export function useDeleteParticipation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: BulkParticipationsData) => {
-      const response = await apiClient.post(
-        ENDPOINTS.PARTICIPATIONS.BULK,
-        data
-      );
-      return response.data;
-    },
+    mutationFn: ({
+      matchId,
+      registrationId,
+    }: {
+      matchId: number;
+      registrationId: number;
+    }) => participationsApi.delete(matchId, registrationId),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: participationKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: phaseKeys.detail(variables.phaseId),
+        queryKey: ["matches", variables.matchId],
       });
     },
   });
-};
-
-export const useDeleteParticipation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: number) => {
-      await apiClient.delete(ENDPOINTS.PARTICIPATIONS.DELETE(id));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: participationKeys.lists() });
-    },
-  });
-};
+}

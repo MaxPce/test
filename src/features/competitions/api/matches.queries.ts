@@ -1,40 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import type { Match } from "../types";
+import { matchesApi } from "./matches.api";
 
-export const matchKeys = {
-  all: ["matches"] as const,
-  lists: () => [...matchKeys.all, "list"] as const,
-  list: (filters?: { phaseId?: number }) =>
-    [...matchKeys.lists(), filters] as const,
-  details: () => [...matchKeys.all, "detail"] as const,
-  detail: (id: number) => [...matchKeys.details(), id] as const,
-};
-
-interface MatchesParams {
-  phaseId?: number;
+export function useMatches(phaseId?: number, status?: string) {
+  return useQuery({
+    queryKey: ["matches", phaseId, status],
+    queryFn: () => matchesApi.getAll(phaseId, status),
+  });
 }
 
-export const useMatches = (params?: MatchesParams) => {
+export function useMatch(id: number) {
   return useQuery({
-    queryKey: matchKeys.list(params),
-    queryFn: async () => {
-      const { data } = await apiClient.get<Match[]>(ENDPOINTS.MATCHES.LIST, {
-        params,
-      });
-      return data;
-    },
-  });
-};
-
-export const useMatch = (id: number) => {
-  return useQuery({
-    queryKey: matchKeys.detail(id),
-    queryFn: async () => {
-      const { data } = await apiClient.get<Match>(ENDPOINTS.MATCHES.DETAIL(id));
-      return data;
-    },
+    queryKey: ["matches", id],
+    queryFn: () => matchesApi.getOne(id),
     enabled: !!id,
   });
-};
+}

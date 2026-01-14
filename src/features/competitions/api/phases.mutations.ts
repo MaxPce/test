@@ -1,97 +1,41 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
-import { ENDPOINTS } from "@/lib/api/endpoints";
-import { phaseKeys } from "./phases.queries";
-import type {
-  CreatePhaseData,
-  UpdatePhaseData,
-  Phase,
-  InitializeBracketData,
-  InitializeRoundRobinData,
-} from "../types";
+import { phasesApi } from "./phases.api";
 
-export const useCreatePhase = () => {
+export function useCreatePhase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreatePhaseData) => {
-      const response = await apiClient.post<Phase>(
-        ENDPOINTS.PHASES.CREATE,
-        data
-      );
-      return response.data;
-    },
+    mutationFn: phasesApi.create,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: phaseKeys.lists() });
-    },
-  });
-};
-
-export const useUpdatePhase = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: UpdatePhaseData }) => {
-      const response = await apiClient.patch<Phase>(
-        ENDPOINTS.PHASES.UPDATE(id),
-        data
-      );
-      return response.data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: phaseKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: phaseKeys.detail(variables.id),
+        queryKey: ["phases", data.eventCategoryId],
       });
     },
   });
-};
+}
 
-export const useDeletePhase = () => {
+export function useUpdatePhase() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
-      await apiClient.delete(ENDPOINTS.PHASES.DELETE(id));
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      phasesApi.update(id, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["phases", data.eventCategoryId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["phases", data.phaseId] });
     },
+  });
+}
+
+export function useDeletePhase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: phasesApi.delete,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: phaseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["phases"] });
     },
   });
-};
-
-export const useInitializeBracket = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: InitializeBracketData) => {
-      const response = await apiClient.post(
-        ENDPOINTS.PHASES.INITIALIZE_BRACKET(data.phaseId)
-      );
-      return response.data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: phaseKeys.detail(variables.phaseId),
-      });
-    },
-  });
-};
-
-export const useInitializeRoundRobin = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: InitializeRoundRobinData) => {
-      const response = await apiClient.post(
-        ENDPOINTS.PHASES.INITIALIZE_ROUND_ROBIN(data.phaseId)
-      );
-      return response.data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: phaseKeys.detail(variables.phaseId),
-      });
-    },
-  });
-};
+}
