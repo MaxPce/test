@@ -5,6 +5,7 @@ import {
   Calendar,
   BarChart3,
   Building2,
+  Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -62,6 +63,13 @@ export function CategoryDetailLayout() {
     return variants[status] || "default";
   };
 
+  // Detectar si es un deporte cronometrado (natación, atletismo, etc.)
+  const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+  const isTimedSport =
+    sportName.includes("natación") ||
+    sportName.includes("atletismo") ||
+    sportName.includes("ciclismo");
+
   const tabs = [
     {
       label: "Inscripciones",
@@ -73,6 +81,16 @@ export function CategoryDetailLayout() {
       to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/schedule`,
       icon: <Calendar />,
     },
+    // Tab de Resultados (solo para deportes cronometrados)
+    ...(isTimedSport
+      ? [
+          {
+            label: "Resultados",
+            to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/results`,
+            icon: <Timer />,
+          },
+        ]
+      : []),
     {
       label: "Posiciones",
       to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/standings`,

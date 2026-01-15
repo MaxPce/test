@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import { useStandings } from "@/features/competitions/api/standings.queries";
 import { useUpdateStandings } from "@/features/competitions/api/standings.mutations";
+import { StandingsTable } from "@/features/results/components/StandingsTable";
 import type { EventCategory } from "../../types";
 
 export function CategoryStandingsPage() {
@@ -22,6 +23,33 @@ export function CategoryStandingsPage() {
   );
   const updateStandingsMutation = useUpdateStandings();
 
+  // ✅ Detectar si es un deporte cronometrado (natación, atletismo, etc.)
+  const sportName = eventCategory?.category?.sport?.name?.toLowerCase() || "";
+  const isTimedSport =
+    sportName.includes("natación") ||
+    sportName.includes("natacion") ||
+    sportName.includes("atletismo") ||
+    sportName.includes("ciclismo");
+
+  // ✅ Si es deporte cronometrado, mostrar tabla de posiciones de natación
+  if (isTimedSport) {
+    return (
+      <div className="space-y-6">
+        <header>
+          <h3 className="text-xl font-semibold text-gray-900">
+            Tabla de Posiciones
+          </h3>
+          <p className="text-gray-600 mt-1">
+            Resultados finales ordenados por tiempo
+          </p>
+        </header>
+
+        <StandingsTable eventCategoryId={eventCategory.eventCategoryId} />
+      </div>
+    );
+  }
+
+  // ✅ Para deportes de combate (lógica original)
   const phaseOptions = [
     { value: 0, label: "Seleccione una fase" },
     ...phases

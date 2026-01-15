@@ -1,7 +1,7 @@
-import { http } from "@/lib/http";
+import { apiClient } from "@/lib/api/client";
 
 export interface CreateTimeResultDto {
-  participationId: number;
+  registrationId: number;
   timeValue: string;
   rankPosition?: number;
   notes?: string;
@@ -11,16 +11,15 @@ export interface SwimmingResult {
   resultId: number;
   participationId: number;
   timeValue: string;
-  rankPosition?: number;
-  notes?: string;
+  rankPosition?: number | null;
+  notes?: string | null;
   participation: {
     participationId: number;
     registration: {
       registrationId: number;
       athlete?: {
         athleteId: number;
-        firstName: string;
-        lastName: string;
+        name: string;
         institution: {
           code: string;
           name: string;
@@ -37,8 +36,7 @@ export interface SwimmingResult {
           tmId: number;
           athlete: {
             athleteId: number;
-            firstName: string;
-            lastName: string;
+            name: string;
           };
         }>;
       };
@@ -47,15 +45,35 @@ export interface SwimmingResult {
 }
 
 export const resultsApi = {
-  createTimeResult: (data: CreateTimeResultDto) =>
-    http.post<SwimmingResult>("/results/time", data),
+  createTimeResult: async (
+    data: CreateTimeResultDto
+  ): Promise<SwimmingResult> => {
+    const response = await apiClient.post("/results/time", data);
+    return response.data;
+  },
 
-  getSwimmingResults: (eventCategoryId: number) =>
-    http.get<SwimmingResult[]>(`/results/swimming/${eventCategoryId}`),
+  getSwimmingResults: async (
+    eventCategoryId: number
+  ): Promise<SwimmingResult[]> => {
+    const response = await apiClient.get(
+      `/results/swimming/${eventCategoryId}`
+    );
+    return response.data;
+  },
 
-  updateTimeResult: (resultId: number, data: Partial<CreateTimeResultDto>) =>
-    http.patch<SwimmingResult>(`/results/${resultId}`, data),
+  updateTimeResult: async (
+    resultId: number,
+    data: Partial<CreateTimeResultDto>
+  ): Promise<SwimmingResult> => {
+    const response = await apiClient.patch(`/results/${resultId}`, data);
+    return response.data;
+  },
 
-  deleteTimeResult: (resultId: number) =>
-    http.del<void>(`/results/${resultId}`),
+  deleteTimeResult: async (resultId: number): Promise<void> => {
+    await apiClient.delete(`/results/${resultId}`);
+  },
+
+  recalculatePositions: async (eventCategoryId: number): Promise<void> => {
+    await apiClient.post(`/results/swimming/${eventCategoryId}/recalculate`);
+  },
 };

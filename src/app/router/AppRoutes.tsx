@@ -28,6 +28,9 @@ import { InstitutionsPage } from "@/features/institutions/pages/InstitutionsPage
 import { AthletesPage } from "@/features/institutions/pages/AthletesPage";
 import { TeamsPage } from "@/features/institutions/pages/TeamsPage";
 
+// Results
+import { SwimmingResultsPage } from "@/features/results/pages/SwimmingResultsPage";
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -77,6 +80,7 @@ export function AppRoutes() {
                 path="institutions"
                 element={<CategoryInstitutionsPage />}
               />
+              <Route path="results" element={<SwimmingResultsPage />} />
             </Route>
           </Route>
         </Route>

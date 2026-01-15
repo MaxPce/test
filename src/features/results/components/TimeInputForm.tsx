@@ -1,16 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCreateTimeResult } from "../api/results.queries";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Alert } from "@/components/ui/Alert";
+
+interface Registration {
+  registrationId: number;
+  athlete?: {
+    athleteId: number;
+    name: string;
+  };
+  team?: {
+    teamId: number;
+    name: string;
+    members: Array<{
+      athlete: {
+        name: string;
+      };
+    }>;
+  };
+}
 
 interface TimeInputFormProps {
-  participationId: number;
-  participantName: string;
+  registration: Registration;
+  existingResult?: {
+    resultId: number;
+    timeValue: string;
+    rankPosition?: number;
+    notes?: string;
+  };
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 export function TimeInputForm({
-  participationId,
-  participantName,
+  registration,
+  existingResult,
   onSuccess,
+  onCancel,
 }: TimeInputFormProps) {
   const [timeValue, setTimeValue] = useState("");
   const [rankPosition, setRankPosition] = useState("");
@@ -19,14 +46,30 @@ export function TimeInputForm({
 
   const mutation = useCreateTimeResult();
 
+  // Si hay un resultado existente, cargar los datos
+  useEffect(() => {
+    if (existingResult) {
+      setTimeValue(existingResult.timeValue);
+      setRankPosition(existingResult.rankPosition?.toString() || "");
+      setNotes(existingResult.notes || "");
+      setIsDQ(existingResult.notes?.includes("DQ") || false);
+    }
+  }, [existingResult]);
+
+  const participantName = registration.team
+    ? registration.team.name
+    : registration.athlete?.name || "Desconocido";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const finalTime = isDQ ? `x${timeValue}` : timeValue;
 
+    // Aquí necesitamos obtener el participationId
+    // Por ahora, vamos a enviar el registrationId y lo manejaremos en el backend
     mutation.mutate(
       {
-        participationId,
+        registrationId: registration.registrationId, // ← Cambio aquí
         timeValue: finalTime,
         rankPosition: rankPosition ? parseInt(rankPosition) : undefined,
         notes: notes || undefined,
@@ -44,22 +87,24 @@ export function TimeInputForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4"
-    >
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <p className="text-sm font-medium text-slate-300">{participantName}</p>
+        <p className="text-sm font-medium text-gray-700 mb-1">Participante</p>
+        <p className="text-base font-semibold text-gray-900">
+          {participantName}
+        </p>
+        {registration.team && (
+          <p className="text-xs text-gray-500 mt-1">
+            {registration.team.members.map((m) => m.athlete.name).join(", ")}
+          </p>
+        )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
           Tiempo *
-          <span className="text-xs text-slate-400 ml-2">
-            (Formato: MM:SS.MS ej: 1:15.60)
-          </span>
         </label>
-        <input
+        <Input
           type="text"
           value={timeValue}
           onChange={(e) => setTimeValue(e.target.value)}
@@ -67,76 +112,81 @@ export function TimeInputForm({
           pattern="(\d{1,2}:)?\d{1,2}:\d{2}\.\d{2}"
           required
           disabled={mutation.isPending}
-          className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
+        <p className="text-xs text-gray-500 mt-1">
+          Formato: MM:SS.MS (ejemplo: 1:15.60)
+        </p>
       </div>
 
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
-          id={`dq-${participationId}`}
+          id="dq"
           checked={isDQ}
           onChange={(e) => setIsDQ(e.target.checked)}
           disabled={mutation.isPending}
-          className="h-4 w-4 rounded border-white/10 bg-slate-950/40 text-blue-600 focus:ring-2 focus:ring-blue-500"
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
-        <label
-          htmlFor={`dq-${participationId}`}
-          className="text-sm text-slate-300 cursor-pointer"
-        >
+        <label htmlFor="dq" className="text-sm text-gray-700">
           Descalificado (DQ)
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Posición</label>
-          <input
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Posición
+          </label>
+          <Input
             type="number"
             value={rankPosition}
             onChange={(e) => setRankPosition(e.target.value)}
             placeholder="1"
             min="1"
             disabled={mutation.isPending}
-            className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Notas</label>
-          <input
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notas
+          </label>
+          <Input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Opcional"
             disabled={mutation.isPending}
-            className="w-full rounded-lg border border-white/10 bg-slate-950/40 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
       </div>
 
       {mutation.isError && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
+        <Alert variant="error">
           Error:{" "}
           {mutation.error instanceof Error
             ? mutation.error.message
             : "Error desconocido"}
-        </div>
+        </Alert>
       )}
-
-      <button
-        type="submit"
-        disabled={mutation.isPending || !timeValue}
-        className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {mutation.isPending ? "Guardando..." : "Registrar Tiempo"}
-      </button>
 
       {mutation.isSuccess && (
-        <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-200">
-          ✓ Tiempo registrado exitosamente
-        </div>
+        <Alert variant="success">¡Tiempo registrado exitosamente!</Alert>
       )}
+
+      <div className="flex justify-end gap-3 pt-4">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onCancel}
+          disabled={mutation.isPending}
+        >
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={mutation.isPending || !timeValue}>
+          {mutation.isPending ? "Guardando..." : "Registrar Tiempo"}
+        </Button>
+      </div>
     </form>
   );
 }
