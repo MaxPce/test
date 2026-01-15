@@ -1,6 +1,7 @@
+// src/features/results/components/StandingsTable.tsx
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Trophy, Medal } from "lucide-react";
+import { Trophy, Medal, Users } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { useSwimmingResults } from "../api/results.queries";
 
@@ -75,8 +76,24 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {standings.map((result) => {
-                const isTeam = !!result.participation?.registration?.team;
+                const isTeam = !!result.participation?.registration?.team; // ✅ Detectar equipo
                 const position = result.rankPosition || 0;
+
+                // ✅ Obtener datos según sea equipo o atleta
+                const participantName = isTeam
+                  ? result.participation?.registration?.team?.name
+                  : result.participation?.registration?.athlete?.name;
+
+                const institutionCode = isTeam
+                  ? result.participation?.registration?.team?.institution?.code
+                  : result.participation?.registration?.athlete?.institution
+                      ?.code;
+
+                const teamMembers = isTeam
+                  ? result.participation?.registration?.team?.members
+                      ?.map((m) => m.athlete.name)
+                      .join(", ")
+                  : null;
 
                 return (
                   <tr
@@ -94,31 +111,24 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {isTeam ? (
+                      <div className="flex items-start gap-2">
+                        {isTeam && (
+                          <Users className="h-4 w-4 text-blue-600 mt-0.5" />
+                        )}
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            {result.participation.registration.team?.name}
+                            {participantName}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {result.participation.registration.team?.members
-                              ?.map((m) => m.athlete.name)
-                              .join(", ")}
-                          </p>
+                          {teamMembers && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {teamMembers}
+                            </p>
+                          )}
                         </div>
-                      ) : (
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {result.participation.registration.athlete?.name}
-                          </p>
-                        </div>
-                      )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {isTeam
-                        ? result.participation.registration.team?.institution
-                            ?.code
-                        : result.participation.registration.athlete?.institution
-                            ?.code}
+                      {institutionCode}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-mono font-medium text-gray-900">

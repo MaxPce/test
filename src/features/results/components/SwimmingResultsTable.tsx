@@ -1,8 +1,7 @@
-// src/features/results/components/SwimmingResultsTable.tsx
 import { useState } from "react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Timer, Edit2, Trash2 } from "lucide-react";
+import { Timer, Edit2, Trash2, Users } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { TimeInputForm } from "./TimeInputForm";
 import {
@@ -10,6 +9,7 @@ import {
   useDeleteTimeResult,
 } from "../api/results.queries";
 import { Spinner } from "@/components/ui/Spinner";
+import { Badge } from "@/components/ui/Badge";
 
 interface Registration {
   registrationId: number;
@@ -41,8 +41,8 @@ interface Registration {
 interface SwimmingResult {
   resultId: number;
   timeValue: string;
-  rankPosition?: number;
-  notes?: string;
+  rankPosition?: number | null; // ✅ Permitir null
+  notes?: string | null; // ✅ Permitir null
   participation?: {
     registration?: {
       registrationId: number;
@@ -103,7 +103,8 @@ export function SwimmingResultsTable({
     return (
       <Card>
         <CardBody className="text-center py-12">
-          <p className="text-gray-500">
+          <Timer className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-500 font-medium">
             No hay participantes inscritos en esta categoría
           </p>
           <p className="text-sm text-gray-400 mt-2">
@@ -144,7 +145,7 @@ export function SwimmingResultsTable({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tiempo
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Posición
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -165,20 +166,26 @@ export function SwimmingResultsTable({
                       key={registration.registrationId}
                       className="hover:bg-gray-50 transition-colors"
                     >
+                      {/* Número de fila */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {index + 1}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+
+                      {/* Participante (Equipo o Atleta) */}
+                      <td className="px-6 py-4">
                         {isTeam ? (
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {registration.team?.name}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {registration.team?.members
-                                ?.map((m) => m.athlete.name)
-                                .join(", ")}
-                            </p>
+                          <div className="flex items-start gap-2">
+                            <Users className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {registration.team?.name}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {registration.team?.members
+                                  ?.map((m) => m.athlete.name)
+                                  .join(", ")}
+                              </p>
+                            </div>
                           </div>
                         ) : (
                           <div>
@@ -188,16 +195,22 @@ export function SwimmingResultsTable({
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {isTeam
-                          ? registration.team?.institution?.code
-                          : registration.athlete?.institution?.code}
+
+                      {/* Institución */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant="default" size="sm">
+                          {isTeam
+                            ? registration.team?.institution?.code
+                            : registration.athlete?.institution?.code}
+                        </Badge>
                       </td>
+
+                      {/* Tiempo */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {result ? (
                           <div className="flex items-center gap-2">
                             <span
-                              className={`text-sm font-mono font-medium ${
+                              className={`text-sm font-mono font-bold ${
                                 isDQ
                                   ? "text-red-600 line-through"
                                   : "text-gray-900"
@@ -207,27 +220,43 @@ export function SwimmingResultsTable({
                               {result.timeValue}
                             </span>
                             {isDQ && (
-                              <span className="text-xs text-red-600 font-medium">
+                              <Badge
+                                variant="default"
+                                className="bg-red-100 text-red-700"
+                              >
                                 DQ
-                              </span>
+                              </Badge>
                             )}
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-400">
+                          <span className="text-sm text-gray-400 italic">
                             Sin tiempo
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+
+                      {/* Posición */}
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
                         {result?.rankPosition ? (
-                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-800 text-xs font-medium">
-                            {result.rankPosition}
-                          </span>
+                          <Badge
+                            variant={
+                              result.rankPosition === 1
+                                ? "success"
+                                : result.rankPosition <= 3
+                                ? "primary"
+                                : "default"
+                            }
+                            className="font-bold"
+                          >
+                            {result.rankPosition}°
+                          </Badge>
                         ) : (
                           <span className="text-sm text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+
+                      {/* Acciones */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
                         {result ? (
                           <div className="flex justify-end gap-2">
                             <Button
@@ -248,13 +277,14 @@ export function SwimmingResultsTable({
                               }
                               disabled={deleteResultMutation.isPending}
                               title="Eliminar resultado"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <Trash2 className="h-4 w-4 text-red-600" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         ) : (
                           <Button
-                            variant="ghost"
+                            variant="primary"
                             size="sm"
                             onClick={() => handleRegisterTime(registration)}
                           >
@@ -276,12 +306,20 @@ export function SwimmingResultsTable({
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={selectedResult ? "Editar Tiempo" : "Registrar Tiempo"}
+        title={
+          selectedResult
+            ? `Editar Tiempo${
+                selectedRegistration?.team ? " - Equipo" : " - Atleta"
+              }`
+            : `Registrar Tiempo${
+                selectedRegistration?.team ? " - Equipo" : " - Atleta"
+              }`
+        }
       >
         {selectedRegistration && (
           <TimeInputForm
             registration={selectedRegistration}
-            existingResult={selectedResult}
+            existingResult={selectedResult || undefined}
             onSuccess={handleCloseModal}
             onCancel={handleCloseModal}
           />

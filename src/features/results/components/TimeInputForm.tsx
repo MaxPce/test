@@ -1,3 +1,4 @@
+// src/features/results/components/TimeInputForm.tsx
 import { useState, useEffect } from "react";
 import { useCreateTimeResult } from "../api/results.queries";
 import { Button } from "@/components/ui/Button";
@@ -26,8 +27,8 @@ interface TimeInputFormProps {
   existingResult?: {
     resultId: number;
     timeValue: string;
-    rankPosition?: number;
-    notes?: string;
+    rankPosition?: number | null;
+    notes?: string | null;
   };
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -56,20 +57,24 @@ export function TimeInputForm({
     }
   }, [existingResult]);
 
-  const participantName = registration.team
-    ? registration.team.name
-    : registration.athlete?.name || "Desconocido";
+  // ✅ Soporte para equipos y atletas
+  const isTeam = !!registration.team;
+  const participantName = isTeam
+    ? registration.team?.name || "Equipo Desconocido"
+    : registration.athlete?.name || "Atleta Desconocido";
+
+  const teamMembers = isTeam
+    ? registration.team?.members?.map((m) => m.athlete.name).join(", ")
+    : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const finalTime = isDQ ? `x${timeValue}` : timeValue;
 
-    // Aquí necesitamos obtener el participationId
-    // Por ahora, vamos a enviar el registrationId y lo manejaremos en el backend
     mutation.mutate(
       {
-        registrationId: registration.registrationId, // ← Cambio aquí
+        registrationId: registration.registrationId,
         timeValue: finalTime,
         rankPosition: rankPosition ? parseInt(rankPosition) : undefined,
         notes: notes || undefined,
@@ -88,14 +93,17 @@ export function TimeInputForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* ✅ Muestra nombre del equipo o atleta */}
       <div>
-        <p className="text-sm font-medium text-gray-700 mb-1">Participante</p>
+        <p className="text-sm font-medium text-gray-700 mb-1">
+          {isTeam ? "Equipo" : "Atleta"}
+        </p>
         <p className="text-base font-semibold text-gray-900">
           {participantName}
         </p>
-        {registration.team && (
+        {teamMembers && (
           <p className="text-xs text-gray-500 mt-1">
-            {registration.team.members.map((m) => m.athlete.name).join(", ")}
+            Integrantes: {teamMembers}
           </p>
         )}
       </div>
@@ -145,6 +153,9 @@ export function TimeInputForm({
             min="1"
             disabled={mutation.isPending}
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Se calculará automáticamente
+          </p>
         </div>
 
         <div>
@@ -184,7 +195,11 @@ export function TimeInputForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={mutation.isPending || !timeValue}>
-          {mutation.isPending ? "Guardando..." : "Registrar Tiempo"}
+          {mutation.isPending
+            ? "Guardando..."
+            : existingResult
+            ? "Actualizar Tiempo"
+            : "Registrar Tiempo"}
         </Button>
       </div>
     </form>
