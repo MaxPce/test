@@ -1,19 +1,14 @@
-import { useState } from "react";
+// src/features/competitions/pages/PhaseDetailPage.tsx
+import { useState, useEffect } from "react"; // ✅ Agregado useEffect
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Plus,
-  UserPlus,
-  Play,
-  BarChart3,
-  Grid3x3,
-} from "lucide-react";
+import { ArrowLeft, UserPlus, Play, BarChart3, Grid3x3 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { usePhase } from "../api/phases.queries";
+import { useMatch } from "../api/matches.queries";
 import {
   useInitializeBracket,
   useInitializeRoundRobin,
@@ -29,6 +24,7 @@ import { MatchCard } from "../components/MatchCard";
 import { BracketView } from "../components/BracketView";
 import { StandingsTable } from "../components/StandingsTable";
 import { ParticipationsList } from "../components/ParticipationsList";
+import { TableTennisMatchWrapper } from "../components/table-tennis/TableTennisMatchWrapper";
 import type { Match } from "../types";
 
 export function PhaseDetailPage() {
@@ -39,7 +35,7 @@ export function PhaseDetailPage() {
   const [isEditMatchModalOpen, setIsEditMatchModalOpen] = useState(false);
   const [isAddParticipantsModalOpen, setIsAddParticipantsModalOpen] =
     useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [selectedParticipants, setSelectedParticipants] = useState<number[]>(
     []
   );
@@ -48,6 +44,18 @@ export function PhaseDetailPage() {
   );
 
   const { data: phase, isLoading: phaseLoading } = usePhase(phaseId);
+
+  const { data: selectedMatch, isLoading: selectedMatchLoading } = useMatch(
+    selectedMatchId || 0
+  );
+
+  // ✅ AGREGAR useEffect para depuración
+  useEffect(() => {
+    console.log("👉 4. selectedMatchId changed to:", selectedMatchId);
+    console.log("👉 5. selectedMatch:", selectedMatch);
+    console.log("👉 6. selectedMatchLoading:", selectedMatchLoading);
+  }, [selectedMatchId, selectedMatch, selectedMatchLoading]);
+
   const { data: registrations = [] } = useRegistrations(
     phase ? { eventCategoryId: phase.eventCategoryId } : undefined
   );
@@ -65,7 +73,7 @@ export function PhaseDetailPage() {
         data,
       });
       setIsEditMatchModalOpen(false);
-      setSelectedMatch(null);
+      setSelectedMatchId(null);
     }
   };
 
@@ -101,11 +109,45 @@ export function PhaseDetailPage() {
   };
 
   const openEditMatchModal = (match: Match) => {
-    setSelectedMatch(match);
+    console.log("👉 1. openEditMatchModal called with:", match); // ✅
+    setSelectedMatchId(match.matchId);
+    console.log("👉 2. selectedMatchId set to:", match.matchId); // ✅
     setIsEditMatchModalOpen(true);
+    console.log("👉 3. Modal state set to open"); // ✅
   };
 
-  // Participantes disponibles para agregar
+  const isTableTennisMatch = (match: Match | null) => {
+    if (!match) {
+      console.log("🏓 No match provided");
+      return false;
+    }
+
+    console.log("🏓 Debugging match:", {
+      matchId: match.matchId,
+      phase: match.phase,
+      eventCategory: match.phase?.eventCategory,
+      category: match.phase?.eventCategory?.category,
+      sport: match.phase?.eventCategory?.category?.sport,
+      sportName: match.phase?.eventCategory?.category?.sport?.name,
+    });
+
+    const sportName =
+      match.phase?.eventCategory?.category?.sport?.name?.toLowerCase() || "";
+
+    console.log("🏓 Sport name:", sportName);
+
+    const isTT =
+      sportName.includes("tenis de mesa") ||
+      sportName.includes("tennis de mesa") ||
+      sportName.includes("tenis mesa") ||
+      sportName.includes("ping pong") ||
+      sportName.includes("table tennis");
+
+    console.log("🏓 Is table tennis?:", isTT);
+
+    return isTT;
+  };
+
   const availableParticipants = registrations.filter(
     (reg) =>
       !phase?.participations?.some((p) => {
@@ -155,6 +197,12 @@ export function PhaseDetailPage() {
     };
     return labels[format] || format;
   };
+
+  // ✅ AGREGAR console.logs antes del return
+  console.log("👉 7. Rendering component");
+  console.log("👉 8. isEditMatchModalOpen:", isEditMatchModalOpen);
+  console.log("👉 9. selectedMatchId:", selectedMatchId);
+  console.log("👉 10. selectedMatch:", selectedMatch);
 
   return (
     <div className="space-y-6">
@@ -313,28 +361,62 @@ export function PhaseDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Edit Match Modal */}
-      {selectedMatch && (
-        <Modal
-          isOpen={isEditMatchModalOpen}
-          onClose={() => {
-            setIsEditMatchModalOpen(false);
-            setSelectedMatch(null);
-          }}
-          title="Actualizar Resultado"
-        >
-          <MatchForm
-            match={selectedMatch}
-            participations={phase.participations || []}
-            onSubmit={handleUpdateMatch}
-            onCancel={() => {
-              setIsEditMatchModalOpen(false);
-              setSelectedMatch(null);
-            }}
-            isLoading={updateMatchMutation.isPending}
-          />
-        </Modal>
+      {/* ✅ AGREGAR console.log aquí también */}
+      {console.log(
+        "👉 11. About to render modal, isEditMatchModalOpen:",
+        isEditMatchModalOpen
       )}
+
+      <Modal
+        isOpen={isEditMatchModalOpen}
+        onClose={() => {
+          console.log("👉 12. Modal onClose called");
+          setIsEditMatchModalOpen(false);
+          setSelectedMatchId(null);
+        }}
+        title={
+          selectedMatchLoading
+            ? "Cargando..."
+            : isTableTennisMatch(selectedMatch || null)
+            ? "Gestionar Match - Tenis de Mesa"
+            : "Actualizar Resultado"
+        }
+        size={isTableTennisMatch(selectedMatch || null) ? "full" : "lg"}
+      >
+        {console.log("👉 13. Inside Modal render")}
+        {selectedMatchLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Spinner size="lg" />
+            <span className="ml-3 text-gray-600">Cargando match...</span>
+          </div>
+        ) : selectedMatch ? (
+          isTableTennisMatch(selectedMatch) ? (
+            <>
+              {console.log("👉 14. Rendering TableTennisMatchWrapper")}
+              <TableTennisMatchWrapper match={selectedMatch} />
+            </>
+          ) : (
+            <>
+              {console.log("👉 15. Rendering MatchForm")}
+              <MatchForm
+                match={selectedMatch}
+                participations={phase.participations || []}
+                onSubmit={handleUpdateMatch}
+                onCancel={() => {
+                  setIsEditMatchModalOpen(false);
+                  setSelectedMatchId(null);
+                }}
+                isLoading={updateMatchMutation.isPending}
+              />
+            </>
+          )
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            {console.log("👉 16. Match not found")}
+            Match no encontrado
+          </div>
+        )}
+      </Modal>
 
       {/* Add Participants Modal */}
       <Modal

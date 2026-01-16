@@ -115,16 +115,23 @@ export function LineupSelector({
           disabled={setLineupMutation.isPending}
         >
           <option value="">Seleccionar jugador</option>
-          {value && (
-            <option value={value}>
-              {members.find((m) => m.athleteId === value)?.athlete.name}
-            </option>
-          )}
-          {available.map((member) => (
-            <option key={member.athleteId} value={member.athleteId}>
-              {member.athlete.name}
-            </option>
-          ))}
+          {/* Mostrar el valor actual si existe + todos los disponibles */}
+          {members.map((member) => {
+            // Mostrar si es el valor actual O si está disponible
+            const isSelected = value === member.athleteId;
+            const isAvailable = available.some(
+              (m) => m.athleteId === member.athleteId
+            );
+
+            if (isSelected || isAvailable) {
+              return (
+                <option key={member.athleteId} value={member.athleteId}>
+                  {member.athlete.name}
+                </option>
+              );
+            }
+            return null;
+          })}
         </select>
         {value && (
           <div className="mt-1 flex items-center text-sm text-green-600">

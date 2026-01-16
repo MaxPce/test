@@ -4,7 +4,20 @@ export interface Phase {
   name: string;
   type: "grupo" | "eliminacion" | "repechaje";
   displayOrder?: number;
-  eventCategory?: any;
+  eventCategory?: {
+    eventCategoryId: number;
+    categoryId: number;
+    category?: {
+      categoryId: number;
+      name: string;
+      type: string; // "individual" | "dobles" | "equipo"
+      gender?: string; // "M" | "F" | "MIXTO"
+      sport?: {
+        sportId: number;
+        name: string;
+      };
+    };
+  };
   matches?: Match[];
   standings?: Standing[];
 }
@@ -31,7 +44,44 @@ export interface Participation {
   registrationId: number;
   corner?: "blue" | "white" | "A" | "B";
   match?: Match;
-  registration?: any;
+  registration?: {
+    registrationId: number;
+    athleteId?: number;
+    teamId?: number;
+    athlete?: {
+      athleteId: number;
+      name: string;
+      institution?: {
+        institutionId: number;
+        name: string;
+        code: string;
+      };
+    };
+    team?: {
+      teamId: number;
+      name: string;
+      institution?: {
+        institutionId: number;
+        name: string;
+        code: string;
+      };
+      members?: Array<{
+        tmId: number;
+        athleteId: number;
+        teamId: number;
+        rol?: string;
+        athlete: {
+          athleteId: number;
+          name: string;
+          institution?: {
+            institutionId: number;
+            name: string;
+            code: string;
+          };
+        };
+      }>;
+    };
+  };
 }
 
 export interface Standing {

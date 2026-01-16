@@ -68,7 +68,7 @@ export function TableTennisScorecard({
       <CardHeader>
         <h3 className="font-semibold text-gray-900">Resultados por Juego</h3>
         <p className="text-sm text-gray-600 mt-1">
-          Registra el resultado de cada juego individual (mejor de 3 o 5 sets)
+          Registra el resultado de cada uego individual (mejor de 3 o 5 sets)
         </p>
       </CardHeader>
 

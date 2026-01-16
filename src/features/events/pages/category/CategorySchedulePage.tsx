@@ -11,6 +11,7 @@ import { MatchForm } from "@/features/competitions/components/MatchForm";
 import { AssignParticipantsModal } from "@/features/competitions/components/AssignParticipantsModal";
 import { ResultModal } from "@/features/competitions/components/ResultModal";
 import { BracketView } from "@/features/competitions/components/BracketView";
+import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper"; // ✅ AGREGAR
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import { useMatches } from "@/features/competitions/api/matches.queries";
 import {
@@ -66,6 +67,17 @@ export function CategorySchedulePage() {
   const updateMatchMutation = useUpdateMatch();
   const deleteMatchMutation = useDeleteMatch();
   const createParticipationMutation = useCreateParticipation();
+
+  // ✅ NUEVA FUNCIÓN: Detectar si es tenis de mesa
+  const isTableTennis = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sportName.includes("tenis de mesa") ||
+      sportName.includes("tennis de mesa") ||
+      sportName.includes("ping pong") ||
+      sportName.includes("table tennis")
+    );
+  };
 
   const handleCreatePhase = async (data: any) => {
     await createPhaseMutation.mutateAsync(data);
@@ -269,7 +281,6 @@ export function CategorySchedulePage() {
                         Generar Partidos
                       </Button>
                     )}
-                    {/* ✅ BOTÓN GENERAR SERIE MEJOR DE 3 */}
                     {selectedPhase.type === "mejor_de_3" &&
                       matches.length === 0 && (
                         <Button
@@ -447,19 +458,42 @@ export function CategorySchedulePage() {
                                 Asignar Participantes
                               </Button>
                             )}
-                            {participants.length === 2 &&
-                              match.status !== "finalizado" && (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedMatch(match);
-                                    setIsResultModalOpen(true);
-                                  }}
-                                >
-                                  Registrar Resultado
-                                </Button>
-                              )}
+
+                            {/* ✅ MODIFICADO: Diferentes botones según el deporte */}
+                            {participants.length === 2 && (
+                              <>
+                                {isTableTennis() ? (
+                                  // ✅ Tenis de Mesa: Siempre mostrar botón (incluso si está finalizado)
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMatch(match);
+                                      setIsResultModalOpen(true);
+                                    }}
+                                  >
+                                    <Zap className="h-4 w-4 mr-2" />
+                                    {match.status === "finalizado"
+                                      ? "Ver/Editar Match"
+                                      : "Gestionar Match"}
+                                  </Button>
+                                ) : (
+                                  // Otros deportes: Solo si no está finalizado
+                                  match.status !== "finalizado" && (
+                                    <Button
+                                      variant="primary"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedMatch(match);
+                                        setIsResultModalOpen(true);
+                                      }}
+                                    >
+                                      Registrar Resultado
+                                    </Button>
+                                  )
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       );
@@ -513,7 +547,6 @@ export function CategorySchedulePage() {
             />
           )}
 
-          {/* ✅ MODAL MEJOR DE 3 */}
           {selectedPhase.type === "mejor_de_3" && (
             <GenerateBestOf3Modal
               isOpen={isGenerateBestOf3ModalOpen}
@@ -539,16 +572,34 @@ export function CategorySchedulePage() {
                 isLoading={createParticipationMutation.isPending}
               />
 
-              <ResultModal
-                isOpen={isResultModalOpen}
-                onClose={() => {
-                  setIsResultModalOpen(false);
-                  setSelectedMatch(null);
-                }}
-                match={selectedMatch}
-                onSubmit={handleRegisterResult}
-                isLoading={updateMatchMutation.isPending}
-              />
+              {/* ✅ MODIFICADO: Detectar tenis de mesa y mostrar componente apropiado */}
+              {isTableTennis() ? (
+                <Modal
+                  isOpen={isResultModalOpen}
+                  onClose={() => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                  }}
+                  title="Gestionar Match - Tenis de Mesa"
+                  size="full"
+                >
+                  <TableTennisMatchWrapper
+                    match={selectedMatch}
+                    eventCategory={eventCategory}
+                  />
+                </Modal>
+              ) : (
+                <ResultModal
+                  isOpen={isResultModalOpen}
+                  onClose={() => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                  }}
+                  match={selectedMatch}
+                  onSubmit={handleRegisterResult}
+                  isLoading={updateMatchMutation.isPending}
+                />
+              )}
             </>
           )}
         </>

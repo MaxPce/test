@@ -50,7 +50,65 @@ export interface Match {
   location?: string;
   createdAt: string;
   updatedAt: string;
-  phase?: Phase;
+
+  // ✅ AGREGAR: Relación completa con phase (incluyendo sport)
+  phase?: {
+    phaseId: number;
+    name: string;
+    eventCategoryId: number;
+    eventCategory?: {
+      eventCategoryId: number;
+      category?: {
+        categoryId: number;
+        name: string;
+        type: string;
+        sport?: {
+          sportId: number;
+          name: string; // ← Necesario para detectar "tenis de mesa"
+        };
+      };
+    };
+  };
+
+  // ✅ AGREGAR: Participations con registrations y teams completos
+  participations?: Array<{
+    participationId: number;
+    phaseId: number;
+    athleteId?: number;
+    teamId?: number;
+    registrationId?: number; // ← Agregado
+    registration?: {
+      registrationId: number;
+      athleteId?: number;
+      teamId?: number;
+      athlete?: Athlete;
+      team?: {
+        teamId: number;
+        name: string;
+        institution?: {
+          institutionId: number;
+          name: string;
+          code: string;
+        };
+        members?: Array<{
+          tmId: number;
+          athleteId: number;
+          rol?: string;
+          athlete: {
+            athleteId: number;
+            name: string;
+            institution?: {
+              institutionId: number;
+              name: string;
+              code: string;
+            };
+          };
+        }>;
+      };
+    };
+  }>;
+
+  // Mantener compatibilidad con código existente
   participantAData?: Participation;
   participantBData?: Participation;
   winnerData?: Participation;
@@ -83,6 +141,7 @@ export interface Participation {
   phaseId: number;
   athleteId?: number;
   teamId?: number;
+  registrationId?: number; // ✅ Agregado
   wins: number;
   losses: number;
   points: number;
@@ -93,6 +152,14 @@ export interface Participation {
   phase?: Phase;
   athlete?: Athlete;
   team?: Team;
+  registration?: {
+    // ✅ Agregado
+    registrationId: number;
+    athleteId?: number;
+    teamId?: number;
+    athlete?: Athlete;
+    team?: Team;
+  };
 }
 
 export interface CreateParticipationData {

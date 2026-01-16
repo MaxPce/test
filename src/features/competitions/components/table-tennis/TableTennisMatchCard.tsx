@@ -2,9 +2,11 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Users, Trophy } from "lucide-react";
 import type { LineupData } from "../../api/table-tennis.api";
+import type { Match } from "../../types"; // ✅ AGREGAR
 
 interface TableTennisMatchCardProps {
   lineups: LineupData[];
+  match: Match; // ✅ AGREGAR
   result?: {
     team1: { wins: number; teamName: string };
     team2: { wins: number; teamName: string };
@@ -16,6 +18,7 @@ interface TableTennisMatchCardProps {
 
 export function TableTennisMatchCard({
   lineups,
+  match, // ✅ AGREGAR
   result,
 }: TableTennisMatchCardProps) {
   if (lineups.length !== 2) {
@@ -36,7 +39,7 @@ export function TableTennisMatchCard({
     const sorted = [...lineup.lineups]
       .filter((l) => !l.isSubstitute)
       .sort((a, b) => a.lineupOrder - b.lineupOrder);
-    return sorted.map((l) => l.athlete.name.split(" ")[0]); // Primer nombre
+    return sorted.map((l) => l.athlete.name.split(" ")[0]);
   };
 
   const team1Players = getLineupLetters(team1);
@@ -48,6 +51,20 @@ export function TableTennisMatchCard({
   const isTeam2Winner =
     result?.winner?.registrationId ===
     team2.participation.registration.registrationId;
+
+  // ✅ NUEVA LÓGICA: Usar match.status en lugar de result.isComplete
+  const getMatchStatusBadge = () => {
+    if (match.status === "finalizado") {
+      return <Badge variant="success">Finalizado</Badge>;
+    }
+    if (match.status === "en_curso") {
+      return <Badge variant="warning">En curso</Badge>;
+    }
+    if (result && result.team1.wins + result.team2.wins > 0) {
+      return <Badge variant="default">En juego</Badge>;
+    }
+    return <Badge variant="default">Programado</Badge>;
+  };
 
   return (
     <Card>
@@ -85,14 +102,17 @@ export function TableTennisMatchCard({
                 <div className="text-4xl font-bold text-gray-900 mb-1">
                   {result.team1.wins} - {result.team2.wins}
                 </div>
-                {result.isComplete ? (
-                  <Badge variant="success">Finalizado</Badge>
-                ) : (
-                  <Badge variant="default">En juego</Badge>
-                )}
+                {/* ✅ CAMBIAR ESTA LÍNEA: */}
+                {getMatchStatusBadge()}
               </div>
             ) : (
-              <div className="text-2xl font-bold text-gray-400">VS</div>
+              <div>
+                <div className="text-2xl font-bold text-gray-400 mb-2">
+                  0 - 0
+                </div>
+                {/* ✅ AGREGAR badge incluso sin result */}
+                {getMatchStatusBadge()}
+              </div>
             )}
           </div>
 

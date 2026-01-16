@@ -16,9 +16,19 @@ export const matchesApi = {
     return response.data;
   },
 
+  // ✅ MODIFICAR ESTE MÉTODO
   getOne: async (id: number): Promise<Match> => {
-    const response = await apiClient.get(`/competitions/matches/${id}`);
-    return response.data;
+    // Primero intentar obtener con relaciones completas desde table-tennis
+    try {
+      const response = await apiClient.get(
+        `/competitions/matches/${id}/table-tennis`
+      );
+      return response.data.match; // El endpoint de table-tennis devuelve { match, lineups, games }
+    } catch (error) {
+      // Si falla (por ejemplo, no es tenis de mesa), usar el endpoint normal
+      const response = await apiClient.get(`/competitions/matches/${id}`);
+      return response.data;
+    }
   },
 
   create: async (data: CreateMatchData): Promise<Match> => {

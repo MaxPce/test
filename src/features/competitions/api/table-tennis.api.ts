@@ -9,6 +9,12 @@ export interface Athlete {
     code: string;
   };
 }
+export interface GameSet {
+  setNumber: number;
+  player1Score: number;
+  player2Score: number;
+  winnerId?: number | null;
+}
 
 export interface MatchLineup {
   lineupId: number;
@@ -46,6 +52,7 @@ export interface MatchGame {
   gameNumber: number;
   player1Id: number;
   player2Id: number;
+  sets: GameSet[] | null;
   score1: number | null;
   score2: number | null;
   winnerId: number | null;
@@ -85,6 +92,7 @@ export interface SetLineupDto {
 }
 
 export interface UpdateGameDto {
+  sets?: GameSet[];
   score1?: number;
   score2?: number;
   status?: "pending" | "in_progress" | "completed";
@@ -161,6 +169,20 @@ export const tableTennisApi = {
   getMatchResult: async (matchId: number): Promise<MatchResult> => {
     const response = await apiClient.get(
       `/competitions/matches/${matchId}/result`
+    );
+    return response.data;
+  },
+
+  finalizeMatch: async (matchId: number): Promise<any> => {
+    const response = await apiClient.patch(
+      `/competitions/matches/${matchId}/finalize`
+    );
+    return response.data;
+  },
+
+  reopenMatch: async (matchId: number): Promise<any> => {
+    const response = await apiClient.patch(
+      `/competitions/matches/${matchId}/reopen`
     );
     return response.data;
   },

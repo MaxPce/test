@@ -1,9 +1,14 @@
-// src/features/competitions/components/table-tennis/TableTennisMatchManager.tsx
 import { useState } from "react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+import { Badge } from "@/components/ui/Badge";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/TabsControlled";
 import {
   Users,
   Zap,
@@ -16,14 +21,24 @@ import {
 import { Spinner } from "@/components/ui/Spinner";
 import { LineupSelector } from "./LineupSelector";
 import { TableTennisMatchCard } from "./TableTennisMatchCard";
-import { TableTennisScorecard } from "./TableTennisScorecard";
+import { TableTennisScorecardV2 } from "./TableTennisScorecardV2";
 import {
   useMatchLineups,
   useMatchGames,
   useMatchResult,
   useGenerateGames,
 } from "../../api/table-tennis.queries";
+import {
+  useFinalizeMatch,
+  useReopenMatch,
+} from "../../api/table-tennis.mutations";
 import type { Match } from "../../types";
+import {
+  detectTableTennisModality,
+  getModalityLabel,
+  needsLineup,
+  isTableTennisMatch,
+} from "../../utils/table-tennis.utils";
 
 interface TableTennisMatchManagerProps {
   match: Match;
@@ -32,6 +47,10 @@ interface TableTennisMatchManagerProps {
 export function TableTennisMatchManager({
   match,
 }: TableTennisMatchManagerProps) {
+  // ✅ Detectar modalidad
+  const modality = detectTableTennisModality(match);
+  const requiresLineup = needsLineup(modality);
+
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   // Queries
@@ -49,6 +68,8 @@ export function TableTennisMatchManager({
 
   // Mutations
   const generateGamesMutation = useGenerateGames();
+  const finalizeMatchMutation = useFinalizeMatch();
+  const reopenMatchMutation = useReopenMatch();
 
   // Estados derivados
   const hasLineups = lineups.length === 2 && lineups.every((l) => l.hasLineup);
@@ -56,28 +77,108 @@ export function TableTennisMatchManager({
   const team1 = lineups[0];
   const team2 = lineups[1];
 
+  const participation1 = match.participations?.[0];
+  const participation2 = match.participations?.[1];
+
+  const team1Members = participation1?.registration?.team?.members || [];
+  const team2Members = participation2?.registration?.team?.members || [];
+
+  // ✅ Obtener nombre de participantes según modalidad
+  const getParticipantName = (participationIndex: number): string => {
+    const participation = match.participations?.[participationIndex];
+    if (!participation) return `Participante ${participationIndex + 1}`;
+
+    if (modality === "individual") {
+      return (
+        participation.registration?.athlete?.name ||
+        `Jugador ${participationIndex + 1}`
+      );
+    }
+
+    if (modality === "doubles") {
+      const members = participation.registration?.team?.members || [];
+      if (members.length === 2) {
+        return `${members[0].athlete.name} / ${members[1].athlete.name}`;
+      }
+      return (
+        participation.registration?.team?.name ||
+        `Pareja ${participationIndex + 1}`
+      );
+    }
+
+    // Team
+    return (
+      participation.registration?.team?.name ||
+      `Equipo ${participationIndex + 1}`
+    );
+  };
+
+  const participant1Name = getParticipantName(0);
+  const participant2Name = getParticipantName(1);
+
+  // ✅ Obtener nombre del ganador
+  const getWinnerName = (): string => {
+    if (!result?.winner) return "";
+
+    if (modality === "team") {
+      return result.winner.registrationId ===
+        team1?.participation.registration.registrationId
+        ? result.team1.teamName
+        : result.team2.teamName;
+    }
+
+    // Individual o Dobles
+    return result.winner.registrationId ===
+      participation1?.registration.registrationId
+      ? participant1Name
+      : participant2Name;
+  };
+
   // Handlers
   const handleGenerateGames = () => {
-    if (!hasLineups) {
+    if (requiresLineup && !hasLineups) {
       alert("Ambos equipos deben configurar su lineup primero");
       return;
     }
 
-    if (
-      window.confirm(
-        "¿Generar los 5 juegos automáticamente? Esto eliminará juegos existentes."
-      )
-    ) {
+    const confirmMessage =
+      modality === "team"
+        ? "¿Generar los 5 juegos automáticamente? Esto eliminará juegos existentes."
+        : "¿Generar el juego? Esto eliminará juegos existentes.";
+
+    if (window.confirm(confirmMessage)) {
       generateGamesMutation.mutate(match.matchId, {
         onSuccess: () => {
-          setActiveTab("scorecard");
+          setActiveTab(requiresLineup ? "scorecard" : "results");
+        },
+      });
+    }
+  };
+
+  // Handler para finalizar match
+  const handleFinalizeMatch = () => {
+    if (!result?.winner) {
+      alert("No hay un ganador determinado aún. Completa todos los juegos.");
+      return;
+    }
+
+    const winnerName = getWinnerName();
+
+    if (
+      window.confirm(
+        `¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}\n\nEsta acción marcará el match como finalizado.`
+      )
+    ) {
+      finalizeMatchMutation.mutate(match.matchId, {
+        onSuccess: () => {
+          // Opcional: mostrar mensaje de éxito
+          alert("Match finalizado exitosamente");
         },
       });
     }
   };
 
   const handleLineupSuccess = () => {
-    // Cambiar a la pestaña del otro equipo si falta configurar
     const team1HasLineup = lineups[0]?.hasLineup;
     const team2HasLineup = lineups[1]?.hasLineup;
 
@@ -101,7 +202,8 @@ export function TableTennisMatchManager({
     );
   }
 
-  if (lineups.length !== 2) {
+  // Para individual y dobles, no se requieren lineups
+  if (requiresLineup && lineups.length !== 2) {
     return (
       <Card>
         <CardBody className="text-center py-12">
@@ -117,37 +219,136 @@ export function TableTennisMatchManager({
 
   return (
     <div className="space-y-6">
-      {/* Estado del Match */}
-      <TableTennisMatchCard lineups={lineups} result={result} />
-
-      {/* Indicadores de Estado */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Lineups */}
-        <Card>
-          <CardBody className="flex items-center gap-3">
-            <div
-              className={`p-3 rounded-lg ${
-                hasLineups ? "bg-green-100" : "bg-gray-100"
-              }`}
-            >
-              <Users
-                className={`h-6 w-6 ${
-                  hasLineups ? "text-green-600" : "text-gray-400"
-                }`}
-              />
-            </div>
+      {/* Header con modalidad */}
+      <Card>
+        <CardBody className="p-4">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Lineups</p>
-              <p className="font-semibold text-gray-900">
-                {hasLineups ? (
-                  <span className="text-green-600">Configurados ✓</span>
-                ) : (
-                  <span className="text-gray-500">Pendientes</span>
+              <h2 className="text-xl font-bold text-gray-900">
+                {match.phase?.eventCategory?.category?.name || "Tenis de Mesa"}
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="primary">
+                  {getModalityLabel(
+                    modality,
+                    match.phase?.eventCategory?.category?.gender
+                  )}
+                </Badge>
+                <Badge variant="default">
+                  {match.phase?.name || "Sin fase"}
+                </Badge>
+              </div>
+            </div>
+            <Badge
+              variant={
+                match.status === "finalizado"
+                  ? "success"
+                  : match.status === "en_curso"
+                  ? "warning"
+                  : "default"
+              }
+            >
+              {match.status === "finalizado"
+                ? "Finalizado"
+                : match.status === "en_curso"
+                ? "En curso"
+                : "Programado"}
+            </Badge>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* Card principal del match */}
+      {modality === "team" && lineups.length === 2 ? (
+        <TableTennisMatchCard lineups={lineups} match={match} result={result} />
+      ) : (
+        <Card>
+          <CardBody className="p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 text-center">
+                <h3 className="font-bold text-lg text-gray-900">
+                  {participant1Name}
+                </h3>
+                {modality === "individual" && (
+                  <Badge variant="default" className="mt-2">
+                    {participation1?.registration?.athlete?.institution?.name ||
+                      ""}
+                  </Badge>
                 )}
-              </p>
+              </div>
+
+              <div className="text-center px-6">
+                {result ? (
+                  <div>
+                    <div className="text-4xl font-bold text-gray-900 mb-1">
+                      {result.team1.wins} - {result.team2.wins}
+                    </div>
+                    <Badge
+                      variant={
+                        match.status === "finalizado" ? "success" : "default"
+                      }
+                    >
+                      {match.status === "finalizado"
+                        ? "Finalizado"
+                        : "En juego"}
+                    </Badge>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-2xl font-bold text-gray-400 mb-2">
+                      VS
+                    </div>
+                    <Badge variant="default">Programado</Badge>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 text-center">
+                <h3 className="font-bold text-lg text-gray-900">
+                  {participant2Name}
+                </h3>
+                {modality === "individual" && (
+                  <Badge variant="default" className="mt-2">
+                    {participation2?.registration?.athlete?.institution?.name ||
+                      ""}
+                  </Badge>
+                )}
+              </div>
             </div>
           </CardBody>
         </Card>
+      )}
+
+      {/* Indicadores de Estado */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Lineups (solo para equipos) */}
+        {requiresLineup && (
+          <Card>
+            <CardBody className="flex items-center gap-3">
+              <div
+                className={`p-3 rounded-lg ${
+                  hasLineups ? "bg-green-100" : "bg-gray-100"
+                }`}
+              >
+                <Users
+                  className={`h-6 w-6 ${
+                    hasLineups ? "text-green-600" : "text-gray-400"
+                  }`}
+                />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Lineups</p>
+                <p className="font-semibold text-gray-900">
+                  {hasLineups ? (
+                    <span className="text-green-600">Configurados ✓</span>
+                  ) : (
+                    <span className="text-gray-500">Pendientes</span>
+                  )}
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        )}
 
         {/* Juegos */}
         <Card>
@@ -184,22 +385,26 @@ export function TableTennisMatchManager({
           <CardBody className="flex items-center gap-3">
             <div
               className={`p-3 rounded-lg ${
-                result?.isComplete ? "bg-yellow-100" : "bg-gray-100"
+                match.status === "finalizado" ? "bg-yellow-100" : "bg-gray-100"
               }`}
             >
               <Trophy
                 className={`h-6 w-6 ${
-                  result?.isComplete ? "text-yellow-600" : "text-gray-400"
+                  match.status === "finalizado"
+                    ? "text-yellow-600"
+                    : "text-gray-400"
                 }`}
               />
             </div>
             <div>
               <p className="text-sm text-gray-600">Match</p>
               <p className="font-semibold text-gray-900">
-                {result?.isComplete ? (
+                {match.status === "finalizado" ? (
                   <span className="text-yellow-600">Finalizado ✓</span>
                 ) : hasGames ? (
                   <span className="text-blue-600">En juego</span>
+                ) : match.status === "programado" ? (
+                  <span className="text-gray-500">Programado</span>
                 ) : (
                   <span className="text-gray-500">No iniciado</span>
                 )}
@@ -209,6 +414,36 @@ export function TableTennisMatchManager({
         </Card>
       </div>
 
+      {/* Botón de finalizar match */}
+      {hasGames &&
+        result &&
+        result.winner &&
+        match.status !== "finalizado" && // ✅ CAMBIO: Agregar esta condición
+        games.every((g) => g.status === "completed") && (
+          <Card>
+            <CardBody className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    Todos los juegos completados
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Ganador: {getWinnerName()} ({result.score})
+                  </p>
+                </div>
+                <Button
+                  onClick={handleFinalizeMatch}
+                  isLoading={finalizeMatchMutation.isPending}
+                  variant="default"
+                >
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Finalizar Match
+                </Button>
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
       {/* Tabs principales */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -216,14 +451,18 @@ export function TableTennisMatchManager({
             <BarChart3 className="h-4 w-4 mr-2" />
             Resumen
           </TabsTrigger>
-          <TabsTrigger value="lineup-team1">
-            <Settings className="h-4 w-4 mr-2" />
-            Lineup {team1?.teamName}
-          </TabsTrigger>
-          <TabsTrigger value="lineup-team2">
-            <Settings className="h-4 w-4 mr-2" />
-            Lineup {team2?.teamName}
-          </TabsTrigger>
+          {requiresLineup && team1 && (
+            <TabsTrigger value="lineup-team1">
+              <Settings className="h-4 w-4 mr-2" />
+              Lineup {team1.teamName}
+            </TabsTrigger>
+          )}
+          {requiresLineup && team2 && (
+            <TabsTrigger value="lineup-team2">
+              <Settings className="h-4 w-4 mr-2" />
+              Lineup {team2.teamName}
+            </TabsTrigger>
+          )}
           {hasGames && (
             <TabsTrigger value="scorecard">
               <Zap className="h-4 w-4 mr-2" />
@@ -240,7 +479,26 @@ export function TableTennisMatchManager({
 
         {/* Tab: Resumen */}
         <TabsContent value="overview" className="space-y-4">
-          {!hasLineups && (
+          {/* Individual/Dobles - No requiere lineup */}
+          {!requiresLineup && (
+            <Alert variant="info">
+              <AlertCircle className="h-4 w-4" />
+              <div className="ml-2">
+                <p className="font-medium">
+                  Modalidad{" "}
+                  {modality === "individual" ? "Individual" : "Dobles"}
+                </p>
+                <p className="text-sm">
+                  Este match se juega a{" "}
+                  {modality === "individual" ? "1 juego" : "1 juego"} (mejor de
+                  5 sets)
+                </p>
+              </div>
+            </Alert>
+          )}
+
+          {/* Equipos - Requiere lineup */}
+          {requiresLineup && !hasLineups && (
             <Alert variant="warning">
               <AlertCircle className="h-4 w-4" />
               <div className="ml-2">
@@ -253,7 +511,7 @@ export function TableTennisMatchManager({
             </Alert>
           )}
 
-          {hasLineups && !hasGames && (
+          {requiresLineup && hasLineups && !hasGames && (
             <Alert variant="info">
               <CheckCircle className="h-4 w-4" />
               <div className="ml-2 flex-1">
@@ -269,6 +527,26 @@ export function TableTennisMatchManager({
               >
                 <Zap className="h-4 w-4 mr-2" />
                 Generar Juegos
+              </Button>
+            </Alert>
+          )}
+
+          {!requiresLineup && !hasGames && (
+            <Alert variant="info">
+              <AlertCircle className="h-4 w-4" />
+              <div className="ml-2 flex-1">
+                <p className="font-medium">Listo para generar juego</p>
+                <p className="text-sm">
+                  Genera el juego para comenzar a registrar resultados
+                </p>
+              </div>
+              <Button
+                onClick={handleGenerateGames}
+                isLoading={generateGamesMutation.isPending}
+                className="ml-4"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Generar Juego
               </Button>
             </Alert>
           )}
@@ -315,8 +593,8 @@ export function TableTennisMatchManager({
             </Card>
           )}
 
-          {/* Resumen de lineups */}
-          {hasLineups && (
+          {/* Resumen de lineups (solo para equipos) */}
+          {requiresLineup && hasLineups && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {lineups.map((lineup) => (
                 <Card key={lineup.participation.participationId}>
@@ -363,13 +641,13 @@ export function TableTennisMatchManager({
           )}
         </TabsContent>
 
-        {/* Tab: Lineup Equipo 1 */}
-        <TabsContent value="lineup-team1">
-          {team1 && (
+        {/* Tab: Lineup Equipo 1 (solo para equipos) */}
+        {requiresLineup && team1 && (
+          <TabsContent value="lineup-team1">
             <LineupSelector
               participationId={team1.participation.participationId}
               teamName={team1.teamName}
-              members={team1.participation.registration.team.members || []}
+              members={team1Members}
               existingLineup={team1.lineups.map((l) => ({
                 athleteId: l.athleteId,
                 lineupOrder: l.lineupOrder,
@@ -377,16 +655,16 @@ export function TableTennisMatchManager({
               }))}
               onSuccess={handleLineupSuccess}
             />
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
 
-        {/* Tab: Lineup Equipo 2 */}
-        <TabsContent value="lineup-team2">
-          {team2 && (
+        {/* Tab: Lineup Equipo 2 (solo para equipos) */}
+        {requiresLineup && team2 && (
+          <TabsContent value="lineup-team2">
             <LineupSelector
               participationId={team2.participation.participationId}
               teamName={team2.teamName}
-              members={team2.participation.registration.team.members || []}
+              members={team2Members}
               existingLineup={team2.lineups.map((l) => ({
                 athleteId: l.athleteId,
                 lineupOrder: l.lineupOrder,
@@ -394,70 +672,78 @@ export function TableTennisMatchManager({
               }))}
               onSuccess={handleLineupSuccess}
             />
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
 
         {/* Tab: Scorecard */}
         {hasGames && (
           <TabsContent value="scorecard">
-            <TableTennisScorecard games={games} matchId={match.matchId} />
+            <TableTennisScorecardV2 games={games} matchId={match.matchId} />
           </TabsContent>
         )}
 
         {/* Tab: Resultados */}
         {result && (
           <TabsContent value="results">
-            <Card>
-              <CardBody>
-                <div className="text-center py-8">
-                  <Trophy className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
-                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                    {result.isComplete
-                      ? "¡Match Finalizado!"
-                      : "Match en Progreso"}
-                  </h2>
-                  <p className="text-5xl font-bold text-gray-900 my-6">
-                    {result.score}
-                  </p>
-                  <div className="flex items-center justify-center gap-8">
-                    <div className="text-center">
-                      <p className="text-lg font-semibold text-gray-900">
-                        {result.team1.teamName}
-                      </p>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {result.team1.wins}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        juegos ganados
-                      </p>
+            <div className="space-y-6">
+              <TableTennisScorecardV2 games={games} matchId={match.matchId} />
+
+              <Card>
+                <CardBody>
+                  <div className="text-center py-8">
+                    <Trophy className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
+                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                      {match.status === "finalizado"
+                        ? "¡Match Finalizado!"
+                        : "Match en Progreso"}
+                    </h2>
+                    <p className="text-5xl font-bold text-gray-900 my-6">
+                      {result.score}
+                    </p>
+                    <div className="flex items-center justify-center gap-8">
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-gray-900">
+                          {modality === "team"
+                            ? result.team1.teamName
+                            : participant1Name}
+                        </p>
+                        <p className="text-3xl font-bold text-blue-600">
+                          {result.team1.wins}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {modality === "team"
+                            ? "juegos ganados"
+                            : "sets ganados"}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-gray-900">
+                          {modality === "team"
+                            ? result.team2.teamName
+                            : participant2Name}
+                        </p>
+                        <p className="text-3xl font-bold text-blue-600">
+                          {result.team2.wins}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {modality === "team"
+                            ? "juegos ganados"
+                            : "sets ganados"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-lg font-semibold text-gray-900">
-                        {result.team2.teamName}
-                      </p>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {result.team2.wins}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        juegos ganados
-                      </p>
-                    </div>
+                    {result.winner && (
+                      <Alert variant="success" className="mt-6">
+                        <Trophy className="h-5 w-5" />
+                        <span className="ml-2 font-semibold">
+                          Ganador: {getWinnerName()}
+                        </span>
+                      </Alert>
+                    )}
                   </div>
-                  {result.winner && (
-                    <Alert variant="success" className="mt-6">
-                      <Trophy className="h-5 w-5" />
-                      <span className="ml-2 font-semibold">
-                        Ganador:{" "}
-                        {result.winner.registrationId ===
-                        team1.participation.registration.registrationId
-                          ? result.team1.teamName
-                          : result.team2.teamName}
-                      </span>
-                    </Alert>
-                  )}
-                </div>
-              </CardBody>
-            </Card>
+                </CardBody>
+              </Card>
+            </div>
           </TabsContent>
         )}
       </Tabs>
