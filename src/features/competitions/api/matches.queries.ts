@@ -8,10 +8,17 @@ export function useMatches(phaseId?: number, status?: string) {
   });
 }
 
-export function useMatch(id: number) {
+export const useMatch = (matchId: number) => {
   return useQuery({
-    queryKey: ["matches", id],
-    queryFn: () => matchesApi.getOne(id),
-    enabled: !!id,
+    queryKey: ["match", matchId],
+    queryFn: async () => {
+      // ✅ Ajusta según tu API (puede ser ?populate, ?expand, etc.)
+      const response = await fetch(
+        `/api/matches/${matchId}?populate=participations.registration.athlete,phase`,
+      );
+      if (!response.ok) throw new Error("Failed to fetch match");
+      return response.json();
+    },
+    enabled: matchId > 0,
   });
-}
+};

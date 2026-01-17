@@ -11,9 +11,16 @@ import { MatchForm } from "@/features/competitions/components/MatchForm";
 import { AssignParticipantsModal } from "@/features/competitions/components/AssignParticipantsModal";
 import { ResultModal } from "@/features/competitions/components/ResultModal";
 import { BracketView } from "@/features/competitions/components/BracketView";
-import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper"; // ✅ AGREGAR
+import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
+// ✅ AGREGAR: Imports de Taekwondo
+import { KyoruguiBracketView } from "@/features/competitions/components/taekwondo/KyoruguiBracketView";
+import { PoomsaeScoreTable } from "@/features/competitions/components/taekwondo/PoomsaeScoreTable";
+import { KyoruguiScoreModal } from "@/features/competitions/components/taekwondo/KyoruguiScoreModal";
 import { usePhases } from "@/features/competitions/api/phases.queries";
-import { useMatches } from "@/features/competitions/api/matches.queries";
+import {
+  useMatches,
+  useMatch,
+} from "@/features/competitions/api/matches.queries";
 import {
   useCreatePhase,
   useDeletePhase,
@@ -43,6 +50,7 @@ export function CategorySchedulePage() {
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "bracket">("list");
@@ -55,10 +63,14 @@ export function CategorySchedulePage() {
   const initializeBestOf3Mutation = useInitializeBestOf3();
 
   const { data: phases = [], isLoading: phasesLoading } = usePhases(
-    eventCategory.eventCategoryId
+    eventCategory.eventCategoryId,
   );
   const { data: matches = [], isLoading: matchesLoading } = useMatches(
-    selectedPhase?.phaseId
+    selectedPhase?.phaseId,
+  );
+
+  const { data: fullMatch, isLoading: fullMatchLoading } = useMatch(
+    selectedMatchId || 0,
   );
 
   const createPhaseMutation = useCreatePhase();
@@ -68,7 +80,7 @@ export function CategorySchedulePage() {
   const deleteMatchMutation = useDeleteMatch();
   const createParticipationMutation = useCreateParticipation();
 
-  // ✅ NUEVA FUNCIÓN: Detectar si es tenis de mesa
+  // ✅ FUNCIÓN: Detectar si es tenis de mesa
   const isTableTennis = () => {
     const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
     return (
@@ -79,6 +91,41 @@ export function CategorySchedulePage() {
     );
   };
 
+  // ✅ NUEVA FUNCIÓN: Detectar tipo de Taekwondo
+  const getTaekwondoType = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+
+    if (!sportName.includes("taekwondo")) return null;
+
+    const categoryName = eventCategory.category?.name?.toLowerCase() || "";
+
+    // Si la categoría contiene "poomsae" o "formas", es Poomsae
+    if (
+      categoryName.includes("poomsae") ||
+      categoryName.includes("formas") ||
+      categoryName.includes("forma")
+    ) {
+      return "poomsae";
+    }
+
+    // Si contiene "kyorugui", "combate", o "pelea", es Kyorugui
+    if (
+      categoryName.includes("kyorugui") ||
+      categoryName.includes("combate") ||
+      categoryName.includes("pelea") ||
+      categoryName.includes("lucha")
+    ) {
+      return "kyorugui";
+    }
+
+    // Por defecto, si es eliminación directa, asumimos Kyorugui
+    if (selectedPhase?.type === "eliminacion") {
+      return "kyorugui";
+    }
+
+    return null;
+  };
+
   const handleCreatePhase = async (data: any) => {
     await createPhaseMutation.mutateAsync(data);
     setIsPhaseModalOpen(false);
@@ -87,7 +134,7 @@ export function CategorySchedulePage() {
   const handleDeletePhase = async (phaseId: number) => {
     if (
       confirm(
-        "¿Estás seguro de eliminar esta fase? Se eliminarán todos sus partidos."
+        "¿Estás seguro de eliminar esta fase? Se eliminarán todos sus partidos.",
       )
     ) {
       await deletePhaseMutation.mutateAsync(phaseId);
@@ -255,53 +302,79 @@ export function CategorySchedulePage() {
                       {selectedPhase.name}
                     </h4>
                     <p className="text-sm text-gray-600">
-                      {matches.length} partido{matches.length !== 1 ? "s" : ""}
+                      {/* ✅ MODIFICADO: Texto diferente para Poomsae */}
+                      {getTaekwondoType() === "poomsae"
+                        ? `${eventCategory.registrations?.length || 0} participante${
+                            eventCategory.registrations?.length !== 1 ? "s" : ""
+                          }`
+                        : `${matches.length} partido${matches.length !== 1 ? "s" : ""}`}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    {selectedPhase.type === "eliminacion" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setViewMode(viewMode === "list" ? "bracket" : "list")
-                        }
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        {viewMode === "list" ? "Ver Bracket" : "Ver Lista"}
-                      </Button>
-                    )}
-                    {selectedPhase.type === "grupo" && matches.length === 0 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsGenerateModalOpen(true)}
-                      >
-                        <Zap className="h-4 w-4 mr-2" />
-                        Generar Partidos
-                      </Button>
-                    )}
-                    {selectedPhase.type === "mejor_de_3" &&
-                      matches.length === 0 && (
+                    {/* ✅ MODIFICADO: Ocultar botones para Poomsae */}
+                    {getTaekwondoType() !== "poomsae" && (
+                      <>
+                        {selectedPhase.type === "eliminacion" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setViewMode(
+                                viewMode === "list" ? "bracket" : "list",
+                              )
+                            }
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            {viewMode === "list" ? "Ver Bracket" : "Ver Lista"}
+                          </Button>
+                        )}
+                        {selectedPhase.type === "grupo" &&
+                          matches.length === 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsGenerateModalOpen(true)}
+                            >
+                              <Zap className="h-4 w-4 mr-2" />
+                              Generar Partidos
+                            </Button>
+                          )}
+                        {selectedPhase.type === "mejor_de_3" &&
+                          matches.length === 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setIsGenerateBestOf3ModalOpen(true)
+                              }
+                            >
+                              <Zap className="h-4 w-4 mr-2" />
+                              Generar Serie
+                            </Button>
+                          )}
                         <Button
-                          variant="ghost"
                           size="sm"
-                          onClick={() => setIsGenerateBestOf3ModalOpen(true)}
+                          onClick={() => setIsMatchModalOpen(true)}
                         >
-                          <Zap className="h-4 w-4 mr-2" />
-                          Generar Serie
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nuevo Partido
                         </Button>
-                      )}
-                    <Button size="sm" onClick={() => setIsMatchModalOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nuevo Partido
-                    </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardHeader>
               <CardBody>
                 {matchesLoading ? (
                   <div className="text-center py-8">Cargando partidos...</div>
+                ) : getTaekwondoType() === "poomsae" ? (
+                  // ✅ NUEVO: Vista de Poomsae
+                  <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
+                ) : getTaekwondoType() === "kyorugui" &&
+                  viewMode === "bracket" &&
+                  selectedPhase.type === "eliminacion" ? (
+                  // ✅ NUEVO: Vista de Kyorugui en Bracket
+                  <KyoruguiBracketView phaseId={selectedPhase.phaseId} />
                 ) : matches.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Calendar className="h-10 w-10 mx-auto mb-2 text-gray-400" />
@@ -324,6 +397,8 @@ export function CategorySchedulePage() {
                     {matches.map((match) => {
                       const participants = match.participations || [];
                       const hasParticipants = participants.length > 0;
+                      const isTaekwondoKyorugui =
+                        getTaekwondoType() === "kyorugui";
 
                       return (
                         <div
@@ -359,7 +434,7 @@ export function CategorySchedulePage() {
                                 <p className="text-sm text-gray-600">
                                   📅{" "}
                                   {new Date(match.scheduledTime).toLocaleString(
-                                    "es-ES"
+                                    "es-ES",
                                   )}
                                 </p>
                               )}
@@ -368,6 +443,16 @@ export function CategorySchedulePage() {
                                   🏟️ Plataforma {match.platformNumber}
                                 </p>
                               )}
+
+                              {/* ✅ NUEVO: Mostrar puntajes para Kyorugui */}
+                              {isTaekwondoKyorugui &&
+                                (match.participant1Score !== null ||
+                                  match.participant2Score !== null) && (
+                                  <p className="text-sm font-semibold text-gray-700 mt-1">
+                                    Puntaje: {match.participant1Score ?? "-"} -{" "}
+                                    {match.participant2Score ?? "-"}
+                                  </p>
+                                )}
                             </div>
                             <Button
                               variant="ghost"
@@ -459,11 +544,30 @@ export function CategorySchedulePage() {
                               </Button>
                             )}
 
-                            {/* ✅ MODIFICADO: Diferentes botones según el deporte */}
+                            {/* ✅ MODIFICADO: Botones específicos por deporte */}
                             {participants.length === 2 && (
                               <>
-                                {isTableTennis() ? (
-                                  // ✅ Tenis de Mesa: Siempre mostrar botón (incluso si está finalizado)
+                                {isTaekwondoKyorugui ? (
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => {
+                                      console.log(
+                                        "🔍 Match completo con participations:",
+                                        match,
+                                      );
+                                      // ✅ Pasar el match completo en lugar del ID
+                                      setSelectedMatch(match);
+                                      setIsResultModalOpen(true);
+                                    }}
+                                  >
+                                    <Zap className="h-4 w-4 mr-2" />
+                                    {match.status === "finalizado"
+                                      ? "Editar Puntaje"
+                                      : "Registrar Puntaje"}
+                                  </Button>
+                                ) : isTableTennis() ? (
+                                  // ✅ Tenis de Mesa: Siempre mostrar botón
                                   <Button
                                     variant="primary"
                                     size="sm"
@@ -558,6 +662,7 @@ export function CategorySchedulePage() {
             />
           )}
 
+          {/* Modales para deportes normales */}
           {selectedMatch && (
             <>
               <AssignParticipantsModal
@@ -572,35 +677,51 @@ export function CategorySchedulePage() {
                 isLoading={createParticipationMutation.isPending}
               />
 
-              {/* ✅ MODIFICADO: Detectar tenis de mesa y mostrar componente apropiado */}
-              {isTableTennis() ? (
-                <Modal
-                  isOpen={isResultModalOpen}
-                  onClose={() => {
-                    setIsResultModalOpen(false);
-                    setSelectedMatch(null);
-                  }}
-                  title="Gestionar Match - Tenis de Mesa"
-                  size="full"
-                >
-                  <TableTennisMatchWrapper
-                    match={selectedMatch}
-                    eventCategory={eventCategory}
-                  />
-                </Modal>
-              ) : (
-                <ResultModal
-                  isOpen={isResultModalOpen}
-                  onClose={() => {
-                    setIsResultModalOpen(false);
-                    setSelectedMatch(null);
-                  }}
-                  match={selectedMatch}
-                  onSubmit={handleRegisterResult}
-                  isLoading={updateMatchMutation.isPending}
-                />
+              {/* Otros deportes excepto Kyorugui */}
+              {getTaekwondoType() !== "kyorugui" && (
+                <>
+                  {isTableTennis() ? (
+                    <Modal
+                      isOpen={isResultModalOpen}
+                      onClose={() => {
+                        setIsResultModalOpen(false);
+                        setSelectedMatch(null);
+                      }}
+                      title="Gestionar Match - Tenis de Mesa"
+                      size="full"
+                    >
+                      <TableTennisMatchWrapper
+                        match={selectedMatch}
+                        eventCategory={eventCategory}
+                      />
+                    </Modal>
+                  ) : (
+                    <ResultModal
+                      isOpen={isResultModalOpen}
+                      onClose={() => {
+                        setIsResultModalOpen(false);
+                        setSelectedMatch(null);
+                      }}
+                      match={selectedMatch}
+                      onSubmit={handleRegisterResult}
+                      isLoading={updateMatchMutation.isPending}
+                    />
+                  )}
+                </>
               )}
             </>
+          )}
+
+          {/* Modal específico para Kyorugui */}
+          {getTaekwondoType() === "kyorugui" && selectedMatch && (
+            <KyoruguiScoreModal
+              isOpen={isResultModalOpen}
+              onClose={() => {
+                setIsResultModalOpen(false);
+                setSelectedMatch(null);
+              }}
+              match={selectedMatch} // ✅ Pasar el match completo
+            />
           )}
         </>
       )}

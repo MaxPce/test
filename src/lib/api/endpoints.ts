@@ -116,4 +116,24 @@ export const ENDPOINTS = {
     UPDATE: (id: number) => `/results/${id}`,
     DELETE: (id: number) => `/results/${id}`,
   },
+
+  // Taekwondo
+  TAEKWONDO: {
+    KYORUGUI: {
+      UPDATE_SCORE: (matchId: number) =>
+        `/competitions/taekwondo/kyorugui/matches/${matchId}/score`,
+      MATCH_DETAILS: (matchId: number) =>
+        `/competitions/taekwondo/kyorugui/matches/${matchId}`,
+      BRACKET: (phaseId: number) =>
+        `/competitions/taekwondo/kyorugui/phases/${phaseId}/bracket`,
+    },
+    POOMSAE: {
+      UPDATE_SCORE: (participationId: number) =>
+        `/competitions/taekwondo/poomsae/participations/${participationId}/score`,
+      SCORE_TABLE: (phaseId: number) =>
+        `/competitions/taekwondo/poomsae/phases/${phaseId}/scores`,
+      SCORE_DETAIL: (participationId: number) =>
+        `/competitions/taekwondo/poomsae/participations/${participationId}/score`,
+    },
+  },
 } as const;
