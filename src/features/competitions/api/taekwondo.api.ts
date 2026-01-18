@@ -1,5 +1,3 @@
-// src/features/competitions/api/taekwondo.api.ts
-
 import { apiClient } from "@/lib/api/client";
 import type {
   KyoruguiScore,

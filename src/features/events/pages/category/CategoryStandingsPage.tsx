@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { BarChart3, RefreshCw, Trophy, Timer, Users } from "lucide-react";
+import {
+  BarChart3,
+  RefreshCw,
+  Trophy,
+  Timer,
+  Users,
+  Award,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
@@ -10,6 +17,7 @@ import { useStandings } from "@/features/competitions/api/standings.queries";
 import { useUpdateStandings } from "@/features/competitions/api/standings.mutations";
 import { StandingsTable } from "@/features/results/components/StandingsTable";
 import { SimpleBracket } from "@/features/results/components/SimpleBracket";
+import { PoomsaeResultsTable } from "@/features/results/components/PoomsaeResultsTable";
 import type { EventCategory } from "../../types";
 
 export function CategoryStandingsPage() {
@@ -24,17 +32,22 @@ export function CategoryStandingsPage() {
   );
   const updateStandingsMutation = useUpdateStandings();
 
-  // 🎯 Detectar tipo de deporte
   const sportName = eventCategory?.category?.sport?.name?.toLowerCase() || "";
   const categoryType = eventCategory?.category?.type || "individual";
+  const categoryName = eventCategory?.category?.name?.toLowerCase() || "";
 
-  // Clasificación de deportes
-  const isTaekwondo = sportName.includes("taekwondo");
+  const isTaekwondoKyorugi =
+    sportName.includes("taekwondo") && categoryName.includes("kyorugi");
+
+  const isTaekwondoPoomsae =
+    sportName.includes("taekwondo") && categoryName.includes("poomsae");
+
   const isTimedSport =
     sportName.includes("natación") ||
     sportName.includes("natacion") ||
     sportName.includes("atletismo") ||
     sportName.includes("ciclismo");
+
   const isTableSport =
     sportName.includes("tenis de mesa") ||
     sportName.includes("ping pong") ||
@@ -45,8 +58,7 @@ export function CategoryStandingsPage() {
     sportName.includes("fútbol") ||
     sportName.includes("futbol");
 
-  // 🥋 TAEKWONDO - Sistema de eliminación
-  if (isTaekwondo && categoryType === "individual") {
+  if (isTaekwondoKyorugi && categoryType === "individual") {
     const eliminationPhase = phases.find((p) => p.type === "eliminacion");
 
     return (
@@ -84,7 +96,14 @@ export function CategoryStandingsPage() {
     );
   }
 
-  // 🏊 DEPORTES CRONOMETRADOS (Natación, Atletismo)
+  if (isTaekwondoPoomsae) {
+    return (
+      <div className="space-y-6">
+        <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+      </div>
+    );
+  }
+
   if (isTimedSport) {
     return (
       <div className="space-y-6">
@@ -107,7 +126,6 @@ export function CategoryStandingsPage() {
     );
   }
 
-  // 🏓 DEPORTES DE MESA/EQUIPO (Tenis de Mesa, Voleibol, etc.)
   if (isTableSport) {
     const phaseOptions = [
       { value: "0", label: "Seleccione una fase" },
@@ -335,7 +353,6 @@ export function CategoryStandingsPage() {
                         </table>
                       </div>
 
-                      {/* Leyenda */}
                       <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-600">
                           <span>
@@ -401,7 +418,6 @@ export function CategoryStandingsPage() {
     );
   }
 
-  // ⚽ OTROS DEPORTES - Vista genérica por defecto
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">

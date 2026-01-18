@@ -9,6 +9,14 @@ export function useSwimmingResults(eventCategoryId: number | null) {
   });
 }
 
+export function usePoomsaeResults(eventCategoryId: number) {
+  return useQuery({
+    queryKey: ["poomsae-results", eventCategoryId],
+    queryFn: () => resultsApi.getPoomsaeResults(eventCategoryId),
+    enabled: eventCategoryId > 0,
+  });
+}
+
 export function useCreateTimeResult() {
   const queryClient = useQueryClient();
 

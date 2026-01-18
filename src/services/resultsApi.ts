@@ -44,26 +44,65 @@ export interface SwimmingResult {
   };
 }
 
+export interface PoomsaeResult {
+  resultId: number;
+  participationId: number;
+  finalScore: number | null;
+  rankPosition?: number | null;
+  notes?: string | null;
+  participation: {
+    participationId: number;
+    registration: {
+      registrationId: number;
+      athlete?: {
+        athleteId: number;
+        name: string;
+        institution: {
+          code: string;
+          name: string;
+          abrev: string;
+        };
+      };
+      team?: {
+        teamId: number;
+        name: string;
+        institution: {
+          code: string;
+          name: string;
+          abrev: string;
+        };
+      };
+    };
+  };
+}
+
 export const resultsApi = {
   createTimeResult: async (
-    data: CreateTimeResultDto
+    data: CreateTimeResultDto,
   ): Promise<SwimmingResult> => {
     const response = await apiClient.post("/results/time", data);
     return response.data;
   },
 
   getSwimmingResults: async (
-    eventCategoryId: number
+    eventCategoryId: number,
   ): Promise<SwimmingResult[]> => {
     const response = await apiClient.get(
-      `/results/swimming/${eventCategoryId}`
+      `/results/swimming/${eventCategoryId}`,
     );
+    return response.data;
+  },
+
+  getPoomsaeResults: async (
+    eventCategoryId: number,
+  ): Promise<PoomsaeResult[]> => {
+    const response = await apiClient.get(`/results/poomsae/${eventCategoryId}`);
     return response.data;
   },
 
   updateTimeResult: async (
     resultId: number,
-    data: Partial<CreateTimeResultDto>
+    data: Partial<CreateTimeResultDto>,
   ): Promise<SwimmingResult> => {
     const response = await apiClient.patch(`/results/${resultId}`, data);
     return response.data;
