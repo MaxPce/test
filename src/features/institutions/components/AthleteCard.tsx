@@ -2,6 +2,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Edit2, Trash2 } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Athlete } from "../types";
 
 interface AthleteCardProps {
@@ -25,18 +26,32 @@ export function AthleteCard({ athlete, onEdit, onDelete }: AthleteCardProps) {
     return age;
   };
 
+  const photoUrl = getImageUrl(athlete.photoUrl);
+
   return (
     <Card hover>
       <CardBody>
         <div className="flex items-start gap-4">
-          {athlete.photoUrl ? (
+          {photoUrl ? (
             <img
-              src={athlete.photoUrl}
+              src={photoUrl}
               alt={athlete.name}
               className="h-20 w-20 rounded-lg object-cover"
+              onError={(e) => {
+                // Si falla, mostrar placeholder
+                e.currentTarget.style.display = "none";
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const placeholder = document.createElement("div");
+                  placeholder.className =
+                    "h-20 w-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold";
+                  placeholder.textContent = athlete.name.charAt(0);
+                  parent.appendChild(placeholder);
+                }
+              }}
             />
           ) : (
-            <div className="h-20 w-20 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-2xl font-bold">
+            <div className="h-20 w-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold">
               {athlete.name.charAt(0)}
             </div>
           )}

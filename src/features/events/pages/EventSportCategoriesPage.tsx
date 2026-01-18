@@ -27,7 +27,7 @@ export function EventSportCategoriesPage() {
 
   // Filtrar categorías del deporte específico
   const sportCategories = eventCategories.filter(
-    (ec) => ec.category?.sport?.sportId === Number(sportId)
+    (ec) => ec.category?.sport?.sportId === Number(sportId),
   );
 
   const sportName = sportCategories[0]?.category?.sport?.name || "Deporte";
@@ -68,16 +68,6 @@ export function EventSportCategoriesPage() {
               competencias
             </p>
           </div>
-          <Button
-            onClick={() =>
-              navigate(
-                `/admin/events/${eventId}/sports/${sportId}/categories/add`
-              )
-            }
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Agregar Categoría
-          </Button>
         </div>
       </div>
 
@@ -94,7 +84,7 @@ export function EventSportCategoriesPage() {
                 variant="ghost"
                 onClick={() =>
                   navigate(
-                    `/admin/events/${eventId}/sports/${sportId}/categories/add`
+                    `/admin/events/${eventId}/sports/${sportId}/categories/add`,
                   )
                 }
                 className="mt-4"
@@ -112,7 +102,7 @@ export function EventSportCategoriesPage() {
               className="cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() =>
                 navigate(
-                  `/admin/events/${eventId}/sports/${sportId}/categories/${eventCategory.eventCategoryId}`
+                  `/admin/events/${eventId}/sports/${sportId}/categories/${eventCategory.eventCategoryId}`,
                 )
               }
             >

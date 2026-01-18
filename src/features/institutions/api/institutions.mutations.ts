@@ -15,7 +15,7 @@ export const useCreateInstitution = () => {
     mutationFn: async (data: CreateInstitutionData) => {
       const response = await apiClient.post<Institution>(
         ENDPOINTS.INSTITUTIONS.CREATE,
-        data
+        data,
       );
       return response.data;
     },
@@ -38,7 +38,7 @@ export const useUpdateInstitution = () => {
     }) => {
       const response = await apiClient.patch<Institution>(
         ENDPOINTS.INSTITUTIONS.UPDATE(id),
-        data
+        data,
       );
       return response.data;
     },
@@ -60,6 +60,34 @@ export const useDeleteInstitution = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: institutionKeys.lists() });
+    },
+  });
+};
+
+export const useUploadInstitutionLogo = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await apiClient.post<{ logoUrl: string }>(
+        ENDPOINTS.INSTITUTIONS.UPLOAD_LOGO(id),
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: institutionKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: institutionKeys.detail(variables.id),
+      });
     },
   });
 };

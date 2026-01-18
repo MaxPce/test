@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+import { ImageUpload } from "@/components/ui/ImageUpload";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import { Input } from "@/components/ui/Input";
 import type { Institution, CreateInstitutionData } from "../types";
 
 interface InstitutionFormProps {
   institution?: Institution;
-  onSubmit: (data: CreateInstitutionData) => void;
+  onSubmit: (data: CreateInstitutionData, logoFile?: File) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -22,6 +24,8 @@ export function InstitutionForm({
     logoUrl: "",
   });
 
+  const [logoFile, setLogoFile] = useState<File | undefined>();
+
   useEffect(() => {
     if (institution) {
       setFormData({
@@ -34,7 +38,7 @@ export function InstitutionForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData, logoFile);
   };
 
   return (
@@ -57,13 +61,14 @@ export function InstitutionForm({
         helperText="Máximo 10 caracteres"
       />
 
-      <Input
-        label="URL del Logo"
-        type="url"
-        value={formData.logoUrl}
-        onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-        placeholder="https://ejemplo.com/logo.png"
-        helperText="URL opcional de la imagen del logo"
+      <ImageUpload
+        currentImage={getImageUrl(formData.logoUrl)}
+        onImageSelect={setLogoFile}
+        onImageRemove={() => setLogoFile(undefined)}
+        label="Logo de la Institución"
+        shape="square"
+        size="md"
+        disabled={isLoading}
       />
 
       <div className="flex justify-end gap-3 pt-4">

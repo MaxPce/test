@@ -37,7 +37,7 @@ export function TeamsPage() {
   >(undefined);
 
   const { data: teams = [], isLoading } = useTeams(
-    filterInstitutionId ? { institutionId: filterInstitutionId } : undefined
+    filterInstitutionId ? { institutionId: filterInstitutionId } : undefined,
   );
   const { data: institutions = [] } = useInstitutions();
   const createMutation = useCreateTeam();
@@ -121,7 +121,7 @@ export function TeamsPage() {
                 value={filterInstitutionId || ""}
                 onChange={(e) =>
                   setFilterInstitutionId(
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
                 options={filterOptions}
@@ -165,7 +165,6 @@ export function TeamsPage() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Institución</TableHead>
                   <TableHead>Categoría</TableHead>
-                  <TableHead>Deporte</TableHead>
                   <TableHead>Miembros</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -182,9 +181,6 @@ export function TeamsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {team.category?.name || "N/A"}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {team.category?.sport?.name || "N/A"}
                     </TableCell>
                     <TableCell>
                       <Button

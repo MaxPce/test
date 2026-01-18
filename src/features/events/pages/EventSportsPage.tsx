@@ -22,19 +22,22 @@ export function EventSportsPage() {
   }
 
   // Agrupar categorías por deporte
-  const sportGroups = eventCategories.reduce((acc, eventCategory) => {
-    const sport = eventCategory.category?.sport;
-    if (sport) {
-      if (!acc[sport.sportId]) {
-        acc[sport.sportId] = {
-          sport,
-          categories: [],
-        };
+  const sportGroups = eventCategories.reduce(
+    (acc, eventCategory) => {
+      const sport = eventCategory.category?.sport;
+      if (sport) {
+        if (!acc[sport.sportId]) {
+          acc[sport.sportId] = {
+            sport,
+            categories: [],
+          };
+        }
+        acc[sport.sportId].categories.push(eventCategory);
       }
-      acc[sport.sportId].categories.push(eventCategory);
-    }
-    return acc;
-  }, {} as Record<number, { sport: any; categories: any[] }>);
+      return acc;
+    },
+    {} as Record<number, { sport: any; categories: any[] }>,
+  );
 
   const sports = Object.values(sportGroups);
 

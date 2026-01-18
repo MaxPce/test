@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { ImageUpload } from "@/components/ui/ImageUpload";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Event, CreateEventData } from "../types";
 
 interface EventFormProps {
   event?: Event;
-  onSubmit: (data: CreateEventData) => void;
+  onSubmit: (data: CreateEventData, logoFile?: File) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -26,6 +28,8 @@ export function EventForm({
     logoUrl: "",
   });
 
+  const [logoFile, setLogoFile] = useState<File | undefined>();
+
   useEffect(() => {
     if (event) {
       setFormData({
@@ -41,7 +45,7 @@ export function EventForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData, logoFile);
   };
 
   const statusOptions = [
@@ -104,13 +108,14 @@ export function EventForm({
         required
       />
 
-      <Input
-        label="URL del Logo"
-        type="url"
-        value={formData.logoUrl}
-        onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-        placeholder="https://ejemplo.com/logo.png"
-        helperText="URL opcional del logo del evento"
+      <ImageUpload
+        currentImage={getImageUrl(formData.logoUrl)}
+        onImageSelect={setLogoFile}
+        onImageRemove={() => setLogoFile(undefined)}
+        label="Logo del Evento"
+        shape="square"
+        size="md"
+        disabled={isLoading}
       />
 
       <div className="flex justify-end gap-3 pt-4">

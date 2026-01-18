@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { ImageUpload } from "@/components/ui/ImageUpload";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import { useInstitutions } from "../api/institutions.queries";
 import type { Athlete, CreateAthleteData } from "../types";
 
 interface AthleteFormProps {
   athlete?: Athlete;
-  onSubmit: (data: CreateAthleteData) => void;
+  onSubmit: (data: CreateAthleteData, photoFile?: File) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -30,6 +32,8 @@ export function AthleteForm({
     docNumber: "",
   });
 
+  const [photoFile, setPhotoFile] = useState<File | undefined>();
+
   useEffect(() => {
     if (athlete) {
       setFormData({
@@ -51,7 +55,7 @@ export function AthleteForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData, photoFile);
   };
 
   const institutionOptions = [
@@ -135,13 +139,14 @@ export function AthleteForm({
         />
       </div>
 
-      <Input
-        label="URL de la Foto"
-        type="url"
-        value={formData.photoUrl}
-        onChange={(e) => setFormData({ ...formData, photoUrl: e.target.value })}
-        placeholder="https://ejemplo.com/foto.jpg"
-        helperText="URL opcional de la foto del atleta"
+      <ImageUpload
+        currentImage={getImageUrl(formData.photoUrl)}
+        onImageSelect={setPhotoFile}
+        onImageRemove={() => setPhotoFile(undefined)}
+        label="Foto del Atleta"
+        shape="circle"
+        size="md"
+        disabled={isLoading}
       />
 
       <div className="flex justify-end gap-3 pt-4">

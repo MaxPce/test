@@ -11,11 +11,12 @@ import {
   useCreateEvent,
   useUpdateEvent,
   useDeleteEvent,
+  useUploadEventLogo, // ✅ AGREGAR
 } from "../api/events.mutations";
 import { EventForm } from "../components/EventForm";
 import { EventCard } from "../components/EventCard";
 import { DeleteConfirmModal } from "@/features/sports/components/DeleteConfirmModal";
-import type { Event } from "../types";
+import type { Event, CreateEventData } from "../types"; // ✅ MODIFICAR
 import type { EventStatus } from "@/lib/types/common.types";
 
 export function EventsPage() {
@@ -33,17 +34,51 @@ export function EventsPage() {
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
   const deleteMutation = useDeleteEvent();
+  const uploadLogoMutation = useUploadEventLogo(); // ✅ AGREGAR
 
-  const handleCreate = async (data: any) => {
-    await createMutation.mutateAsync(data);
-    setIsCreateModalOpen(false);
+  // ✅ MODIFICAR: Agregar parámetro logoFile
+  const handleCreate = async (data: CreateEventData, logoFile?: File) => {
+    try {
+      // 1. Crear el evento
+      const event = await createMutation.mutateAsync(data);
+
+      // 2. Si hay archivo de logo, subirlo
+      if (logoFile && event.eventId) {
+        await uploadLogoMutation.mutateAsync({
+          id: event.eventId,
+          file: logoFile,
+        });
+      }
+
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error("Error al crear evento:", error);
+    }
   };
 
-  const handleUpdate = async (data: any) => {
+  // ✅ MODIFICAR: Agregar parámetro logoFile
+  const handleUpdate = async (data: CreateEventData, logoFile?: File) => {
     if (selectedEvent) {
-      await updateMutation.mutateAsync({ id: selectedEvent.eventId, data });
-      setIsEditModalOpen(false);
-      setSelectedEvent(null);
+      try {
+        // 1. Actualizar los datos del evento
+        await updateMutation.mutateAsync({
+          id: selectedEvent.eventId,
+          data,
+        });
+
+        // 2. Si hay nuevo logo, subirlo
+        if (logoFile) {
+          await uploadLogoMutation.mutateAsync({
+            id: selectedEvent.eventId,
+            file: logoFile,
+          });
+        }
+
+        setIsEditModalOpen(false);
+        setSelectedEvent(null);
+      } catch (error) {
+        console.error("Error al actualizar evento:", error);
+      }
     }
   };
 
@@ -184,7 +219,7 @@ export function EventsPage() {
         <EventForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending}
+          isLoading={createMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
         />
       </Modal>
 
@@ -205,7 +240,7 @@ export function EventsPage() {
             setIsEditModalOpen(false);
             setSelectedEvent(null);
           }}
-          isLoading={updateMutation.isPending}
+          isLoading={updateMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
         />
       </Modal>
 

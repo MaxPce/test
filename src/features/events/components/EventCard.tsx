@@ -1,17 +1,10 @@
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import {
-  Calendar,
-  MapPin,
-  Edit2,
-  Trash2,
-  Eye,
-  Users,
-  Trophy,
-} from "lucide-react";
+import { Calendar, MapPin, Edit2, Trash2, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Event } from "../types";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface EventCardProps {
   event: Event;
@@ -49,17 +42,25 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
 
   const statusConfig = getStatusConfig(event.status);
 
+  // ✅ AGREGAR: Obtener URL completa de la imagen
+  const logoUrl = getImageUrl(event.logoUrl);
+
   return (
     <Card hover className="group overflow-hidden">
       <CardBody className="p-0">
         {/* Header con imagen/logo */}
         <div className="relative h-32 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 overflow-hidden">
-          {event.logoUrl ? (
+          {logoUrl ? ( // ✅ CAMBIAR: usar logoUrl en lugar de event.logoUrl
             <>
               <img
-                src={event.logoUrl}
+                src={logoUrl} // ✅ CAMBIAR: usar la URL completa
                 alt={event.name}
                 className="w-full h-full object-cover opacity-50 group-hover:opacity-40 transition-opacity"
+                onError={(e) => {
+                  // ✅ AGREGAR: Manejo de error
+                  // Si la imagen falla al cargar, ocultar el elemento
+                  e.currentTarget.style.display = "none";
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             </>

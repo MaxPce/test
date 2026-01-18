@@ -11,7 +11,7 @@ export const useCreateAthlete = () => {
     mutationFn: async (data: CreateAthleteData) => {
       const response = await apiClient.post<Athlete>(
         ENDPOINTS.ATHLETES.CREATE,
-        data
+        data,
       );
       return response.data;
     },
@@ -34,7 +34,7 @@ export const useUpdateAthlete = () => {
     }) => {
       const response = await apiClient.patch<Athlete>(
         ENDPOINTS.ATHLETES.UPDATE(id),
-        data
+        data,
       );
       return response.data;
     },
@@ -56,6 +56,34 @@ export const useDeleteAthlete = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: athleteKeys.lists() });
+    },
+  });
+};
+
+export const useUploadAthletePhoto = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await apiClient.post<{ photoUrl: string }>(
+        ENDPOINTS.ATHLETES.UPLOAD_PHOTO(id),
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: athleteKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: athleteKeys.detail(variables.id),
+      });
     },
   });
 };

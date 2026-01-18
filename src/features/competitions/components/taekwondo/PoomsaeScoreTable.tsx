@@ -64,9 +64,6 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Rank
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Atleta
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -107,19 +104,6 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                   }`}
                 >
                   {/* Rank */}
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {isTop3 ? (
-                        <span className="text-2xl">
-                          {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
-                        </span>
-                      ) : (
-                        <span className="text-sm font-medium text-gray-900">
-                          {participant.rank || "-"}
-                        </span>
-                      )}
-                    </div>
-                  </td>
 
                   {/* Atleta */}
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -167,19 +151,6 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                 }`}
               >
                 {/* Rank */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center">
-                    {isTop3 ? (
-                      <span className="text-2xl">
-                        {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
-                      </span>
-                    ) : (
-                      <span className="text-sm font-medium text-gray-900">
-                        {participant.rank || "-"}
-                      </span>
-                    )}
-                  </div>
-                </td>
 
                 {/* Atleta */}
                 <td className="px-4 py-3 whitespace-nowrap">

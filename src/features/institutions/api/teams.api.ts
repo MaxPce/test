@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient } from "@/lib/api/client";
 
 export const teamsApi = {
   getAll: async (params?: { institutionId?: number; categoryId?: number }) => {
@@ -31,18 +31,18 @@ export const teamsApi = {
 
   addMember: async (
     teamId: number,
-    data: { athleteId: number; rol: string }
+    data: { athleteId: number; rol: string },
   ) => {
     const response = await apiClient.post(
       `/institutions/teams/${teamId}/members`,
-      data
+      data,
     );
     return response.data;
   },
 
   removeMember: async (teamId: number, athleteId: number) => {
     const response = await apiClient.delete(
-      `/institutions/teams/${teamId}/members/${athleteId}`
+      `/institutions/teams/${teamId}/members/${athleteId}`,
     );
     return response.data;
   },

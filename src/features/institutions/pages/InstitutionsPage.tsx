@@ -17,10 +17,12 @@ import {
   useCreateInstitution,
   useUpdateInstitution,
   useDeleteInstitution,
+  useUploadInstitutionLogo, // ✅ AGREGAR
 } from "../api/institutions.mutations";
 import { InstitutionForm } from "../components/InstitutionForm";
 import { DeleteConfirmModal } from "@/features/sports/components/DeleteConfirmModal";
-import type { Institution } from "../types";
+import { getImageUrl } from "@/lib/utils/imageUrl"; // ✅ AGREGAR
+import type { Institution, CreateInstitutionData } from "../types"; // ✅ MODIFICAR
 
 export function InstitutionsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -33,20 +35,51 @@ export function InstitutionsPage() {
   const createMutation = useCreateInstitution();
   const updateMutation = useUpdateInstitution();
   const deleteMutation = useDeleteInstitution();
+  const uploadLogoMutation = useUploadInstitutionLogo(); // ✅ AGREGAR
 
-  const handleCreate = async (data: any) => {
-    await createMutation.mutateAsync(data);
-    setIsCreateModalOpen(false);
+  // ✅ MODIFICAR: Agregar parámetro logoFile
+  const handleCreate = async (data: CreateInstitutionData, logoFile?: File) => {
+    try {
+      // 1. Crear la institución
+      const institution = await createMutation.mutateAsync(data);
+
+      // 2. Si hay archivo de logo, subirlo
+      if (logoFile && institution.institutionId) {
+        await uploadLogoMutation.mutateAsync({
+          id: institution.institutionId,
+          file: logoFile,
+        });
+      }
+
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error("Error al crear institución:", error);
+    }
   };
 
-  const handleUpdate = async (data: any) => {
+  // ✅ MODIFICAR: Agregar parámetro logoFile
+  const handleUpdate = async (data: CreateInstitutionData, logoFile?: File) => {
     if (selectedInstitution) {
-      await updateMutation.mutateAsync({
-        id: selectedInstitution.institutionId,
-        data,
-      });
-      setIsEditModalOpen(false);
-      setSelectedInstitution(null);
+      try {
+        // 1. Actualizar los datos de la institución
+        await updateMutation.mutateAsync({
+          id: selectedInstitution.institutionId,
+          data,
+        });
+
+        // 2. Si hay nuevo archivo de logo, subirlo
+        if (logoFile) {
+          await uploadLogoMutation.mutateAsync({
+            id: selectedInstitution.institutionId,
+            file: logoFile,
+          });
+        }
+
+        setIsEditModalOpen(false);
+        setSelectedInstitution(null);
+      } catch (error) {
+        console.error("Error al actualizar institución:", error);
+      }
     }
   };
 
@@ -122,11 +155,23 @@ export function InstitutionsPage() {
                       {institution.institutionId}
                     </TableCell>
                     <TableCell>
+                      {/* ✅ MODIFICAR: Usar getImageUrl */}
                       {institution.logoUrl ? (
                         <img
-                          src={institution.logoUrl}
+                          src={getImageUrl(institution.logoUrl)}
                           alt={institution.name}
                           className="h-10 w-10 object-contain rounded"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            const parent = e.currentTarget.parentElement;
+                            if (parent) {
+                              const placeholder = document.createElement("div");
+                              placeholder.className =
+                                "h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs";
+                              placeholder.textContent = "Sin logo";
+                              parent.appendChild(placeholder);
+                            }
+                          }}
                         />
                       ) : (
                         <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
@@ -177,7 +222,7 @@ export function InstitutionsPage() {
         <InstitutionForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending}
+          isLoading={createMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
         />
       </Modal>
 
@@ -197,7 +242,7 @@ export function InstitutionsPage() {
             setIsEditModalOpen(false);
             setSelectedInstitution(null);
           }}
-          isLoading={updateMutation.isPending}
+          isLoading={updateMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
         />
       </Modal>
 

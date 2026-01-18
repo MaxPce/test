@@ -12,11 +12,12 @@ import {
   useCreateAthlete,
   useUpdateAthlete,
   useDeleteAthlete,
+  useUploadAthletePhoto, // ✅ AGREGAR
 } from "../api/athletes.mutations";
 import { AthleteForm } from "../components/AthleteForm";
 import { AthleteCard } from "../components/AthleteCard";
 import { DeleteConfirmModal } from "@/features/sports/components/DeleteConfirmModal";
-import type { Athlete } from "../types";
+import type { Athlete, CreateAthleteData } from "../types"; // ✅ MODIFICAR
 
 export function AthletesPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -29,23 +30,57 @@ export function AthletesPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: athletes = [], isLoading } = useAthletes(
-    filterInstitutionId ? { institutionId: filterInstitutionId } : undefined
+    filterInstitutionId ? { institutionId: filterInstitutionId } : undefined,
   );
   const { data: institutions = [] } = useInstitutions();
   const createMutation = useCreateAthlete();
   const updateMutation = useUpdateAthlete();
   const deleteMutation = useDeleteAthlete();
+  const uploadPhotoMutation = useUploadAthletePhoto(); // ✅ AGREGAR
 
-  const handleCreate = async (data: any) => {
-    await createMutation.mutateAsync(data);
-    setIsCreateModalOpen(false);
+  // ✅ MODIFICAR: Agregar parámetro photoFile
+  const handleCreate = async (data: CreateAthleteData, photoFile?: File) => {
+    try {
+      // 1. Crear el atleta
+      const athlete = await createMutation.mutateAsync(data);
+
+      // 2. Si hay archivo de foto, subirlo
+      if (photoFile && athlete.athleteId) {
+        await uploadPhotoMutation.mutateAsync({
+          id: athlete.athleteId,
+          file: photoFile,
+        });
+      }
+
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error("Error al crear atleta:", error);
+    }
   };
 
-  const handleUpdate = async (data: any) => {
+  // ✅ MODIFICAR: Agregar parámetro photoFile
+  const handleUpdate = async (data: CreateAthleteData, photoFile?: File) => {
     if (selectedAthlete) {
-      await updateMutation.mutateAsync({ id: selectedAthlete.athleteId, data });
-      setIsEditModalOpen(false);
-      setSelectedAthlete(null);
+      try {
+        // 1. Actualizar los datos del atleta
+        await updateMutation.mutateAsync({
+          id: selectedAthlete.athleteId,
+          data,
+        });
+
+        // 2. Si hay nueva foto, subirla
+        if (photoFile) {
+          await uploadPhotoMutation.mutateAsync({
+            id: selectedAthlete.athleteId,
+            file: photoFile,
+          });
+        }
+
+        setIsEditModalOpen(false);
+        setSelectedAthlete(null);
+      } catch (error) {
+        console.error("Error al actualizar atleta:", error);
+      }
     }
   };
 
@@ -69,7 +104,7 @@ export function AthletesPage() {
 
   // Filtrar atletas por búsqueda
   const filteredAthletes = athletes.filter((athlete) =>
-    athlete.name.toLowerCase().includes(searchTerm.toLowerCase())
+    athlete.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const filterOptions = [
@@ -122,7 +157,7 @@ export function AthletesPage() {
                 value={filterInstitutionId || ""}
                 onChange={(e) =>
                   setFilterInstitutionId(
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
                 options={filterOptions}
@@ -187,7 +222,7 @@ export function AthletesPage() {
         <AthleteForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending}
+          isLoading={createMutation.isPending || uploadPhotoMutation.isPending} // ✅ MODIFICAR
         />
       </Modal>
 
@@ -208,7 +243,7 @@ export function AthletesPage() {
             setIsEditModalOpen(false);
             setSelectedAthlete(null);
           }}
-          isLoading={updateMutation.isPending}
+          isLoading={updateMutation.isPending || uploadPhotoMutation.isPending} // ✅ MODIFICAR
         />
       </Modal>
 

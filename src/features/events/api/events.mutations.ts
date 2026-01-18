@@ -11,7 +11,7 @@ export const useCreateEvent = () => {
     mutationFn: async (data: CreateEventData) => {
       const response = await apiClient.post<Event>(
         ENDPOINTS.EVENTS.CREATE,
-        data
+        data,
       );
       return response.data;
     },
@@ -28,7 +28,7 @@ export const useUpdateEvent = () => {
     mutationFn: async ({ id, data }: { id: number; data: UpdateEventData }) => {
       const response = await apiClient.patch<Event>(
         ENDPOINTS.EVENTS.UPDATE(id),
-        data
+        data,
       );
       return response.data;
     },
@@ -50,6 +50,34 @@ export const useDeleteEvent = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+    },
+  });
+};
+
+export const useUploadEventLogo = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await apiClient.post<{ logoUrl: string }>(
+        ENDPOINTS.EVENTS.UPLOAD_LOGO(id),
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: eventKeys.detail(variables.id),
+      });
     },
   });
 };

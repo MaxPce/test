@@ -33,6 +33,7 @@ export const ENDPOINTS = {
     DETAIL: (id: number) => `/institutions/${id}`,
     UPDATE: (id: number) => `/institutions/${id}`,
     DELETE: (id: number) => `/institutions/${id}`,
+    UPLOAD_LOGO: (id: number) => `/institutions/${id}/upload-logo`,
   },
 
   // Athletes
@@ -42,6 +43,7 @@ export const ENDPOINTS = {
     DETAIL: (id: number) => `/institutions/athletes/${id}`,
     UPDATE: (id: number) => `/institutions/athletes/${id}`,
     DELETE: (id: number) => `/institutions/athletes/${id}`,
+    UPLOAD_PHOTO: (id: number) => `/institutions/athletes/${id}/upload-photo`,
   },
 
   // Teams
@@ -63,6 +65,7 @@ export const ENDPOINTS = {
     DETAIL: (id: number) => `/events/${id}`,
     UPDATE: (id: number) => `/events/${id}`,
     DELETE: (id: number) => `/events/${id}`,
+    UPLOAD_LOGO: (id: number) => `/events/${id}/upload-logo`,
   },
 
   // Event Categories
