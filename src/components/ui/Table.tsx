@@ -1,21 +1,21 @@
-import { HTMLAttributes, forwardRef } from "react";
+import { type HTMLAttributes, forwardRef } from "react";
 
 interface TableProps extends HTMLAttributes<HTMLTableElement> {}
 
 export const Table = forwardRef<HTMLTableElement, TableProps>(
   ({ children, className = "", ...props }, ref) => {
     return (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-lg">
         <table
           ref={ref}
-          className={`min-w-full divide-y divide-gray-200 ${className}`}
+          className={`min-w-full divide-y divide-slate-200 ${className}`}
           {...props}
         >
           {children}
         </table>
       </div>
     );
-  }
+  },
 );
 
 Table.displayName = "Table";
@@ -27,7 +27,7 @@ export const TableHeader = forwardRef<
   TableHeaderProps
 >(({ children, className = "", ...props }, ref) => {
   return (
-    <thead ref={ref} className={`bg-gray-50 ${className}`} {...props}>
+    <thead ref={ref} className={`bg-slate-50 ${className}`} {...props}>
       {children}
     </thead>
   );
@@ -42,13 +42,13 @@ export const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(
     return (
       <tbody
         ref={ref}
-        className={`bg-white divide-y divide-gray-200 ${className}`}
+        className={`bg-white divide-y divide-slate-100 ${className}`}
         {...props}
       >
         {children}
       </tbody>
     );
-  }
+  },
 );
 
 TableBody.displayName = "TableBody";
@@ -58,11 +58,15 @@ interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {}
 export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
   ({ children, className = "", ...props }, ref) => {
     return (
-      <tr ref={ref} className={`hover:bg-gray-50 ${className}`} {...props}>
+      <tr
+        ref={ref}
+        className={`hover:bg-slate-50 transition-colors ${className}`}
+        {...props}
+      >
         {children}
       </tr>
     );
-  }
+  },
 );
 
 TableRow.displayName = "TableRow";
@@ -74,13 +78,13 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
     return (
       <th
         ref={ref}
-        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}
+        className={`px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider ${className}`}
         {...props}
       >
         {children}
       </th>
     );
-  }
+  },
 );
 
 TableHead.displayName = "TableHead";
@@ -92,13 +96,13 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
     return (
       <td
         ref={ref}
-        className={`px-6 py-4 whitespace-nowrap text-sm ${className}`}
+        className={`px-6 py-4 whitespace-nowrap text-sm text-slate-700 ${className}`}
         {...props}
       >
         {children}
       </td>
     );
-  }
+  },
 );
 
 TableCell.displayName = "TableCell";

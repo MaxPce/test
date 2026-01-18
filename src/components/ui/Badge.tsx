@@ -1,24 +1,35 @@
-import { HTMLAttributes } from "react";
+import type { HTMLAttributes } from "react";
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: "default" | "primary" | "success" | "warning" | "danger" | "info";
   size?: "sm" | "md" | "lg";
+  dot?: boolean;
 }
 
 export function Badge({
   children,
   variant = "default",
   size = "md",
+  dot = false,
   className = "",
   ...props
 }: BadgeProps) {
   const variants = {
-    default: "bg-gray-100 text-gray-800",
-    primary: "bg-blue-100 text-blue-800",
-    success: "bg-green-100 text-green-800",
-    warning: "bg-yellow-100 text-yellow-800",
-    danger: "bg-red-100 text-red-800",
-    info: "bg-cyan-100 text-cyan-800",
+    default: "bg-slate-100 text-slate-700 border-slate-200",
+    primary: "bg-blue-50 text-blue-700 border-blue-200",
+    success: "bg-green-50 text-green-700 border-green-200",
+    warning: "bg-yellow-50 text-yellow-700 border-yellow-200",
+    danger: "bg-red-50 text-red-700 border-red-200",
+    info: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  };
+
+  const dotColors = {
+    default: "bg-slate-500",
+    primary: "bg-blue-500",
+    success: "bg-green-500",
+    warning: "bg-yellow-500",
+    danger: "bg-red-500",
+    info: "bg-cyan-500",
   };
 
   const sizes = {
@@ -29,9 +40,12 @@ export function Badge({
 
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center gap-1.5 font-semibold rounded-lg border ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
+      {dot && (
+        <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]}`} />
+      )}
       {children}
     </span>
   );

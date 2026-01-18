@@ -1,3 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    /* Colores corporativos */
+    --color-primary: 15 23 42; /* slate-900 */
+    --color-primary-light: 30 41 59; /* slate-800 */
+    --color-secondary: 71 85 105; /* slate-600 */
+    --color-accent: 37 99 235; /* blue-600 */
+    --color-accent-hover: 29 78 216; /* blue-700 */
+
+    /* Backgrounds */
+    --bg-main: 248 250 252; /* slate-50 */
+    --bg-card: 255 255 255; /* white */
+    --bg-hover: 241 245 249; /* slate-100 */
+
+    /* Borders */
+    --border-color: 226 232 240; /* slate-200 */
+    --border-color-dark: 203 213 225; /* slate-300 */
+  }
+
+  body {
+    @apply font-sans antialiased;
+    background-color: rgb(var(--bg-main));
+    color: rgb(var(--color-primary));
+  }
+}
+
+@layer components {
+  .card-shadow {
+    box-shadow:
+      0 1px 3px 0 rgb(0 0 0 / 0.1),
+      0 1px 2px -1px rgb(0 0 0 / 0.1);
+  }
+
+  .card-shadow-lg {
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+}

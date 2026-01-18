@@ -7,12 +7,12 @@ export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar onToggleSidebar={() => setSidebarOpen(true)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="lg:pl-64 pt-16">
-        <main className="py-6 px-4 sm:px-6 lg:px-8">
+      <div className="pt-16">
+        <main className="min-h-[calc(100vh-4rem)] px-2 py-4 sm:py-6">
           <Outlet />
         </main>
       </div>
