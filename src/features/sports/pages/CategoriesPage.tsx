@@ -30,14 +30,14 @@ export function CategoriesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
+    null,
   );
   const [filterSportId, setFilterSportId] = useState<number | undefined>(
-    undefined
+    undefined,
   );
 
   const { data: categories = [], isLoading } = useCategories(
-    filterSportId ? { sportId: filterSportId } : undefined
+    filterSportId ? { sportId: filterSportId } : undefined,
   );
   const { data: sports = [] } = useSports();
   const createMutation = useCreateCategory();
@@ -125,9 +125,6 @@ export function CategoriesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Categorías</h1>
-          <p className="text-gray-600 mt-1">
-            Gestiona las categorías de competencia
-          </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -145,7 +142,7 @@ export function CategoriesPage() {
                 value={filterSportId || ""}
                 onChange={(e) =>
                   setFilterSportId(
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
                 options={filterOptions}
@@ -190,8 +187,7 @@ export function CategoriesPage() {
                   <TableHead>Deporte</TableHead>
                   <TableHead>Género</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Formato</TableHead>
-                  <TableHead>Peso</TableHead>
+
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -219,14 +215,7 @@ export function CategoriesPage() {
                         {getTypeLabel(category.type)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {getFormatTypeLabel(category.formatType)}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {category.weightMin && category.weightMax
-                        ? `${category.weightMin}-${category.weightMax} kg`
-                        : "-"}
-                    </TableCell>
+
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button

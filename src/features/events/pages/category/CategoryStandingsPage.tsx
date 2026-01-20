@@ -48,6 +48,10 @@ export function CategoryStandingsPage() {
     sportName.includes("atletismo") ||
     sportName.includes("ciclismo");
 
+  // ✅ NUEVO: Detectar Tenis de Mesa
+  const isTableTennis =
+    sportName.includes("tenis de mesa") || sportName.includes("ping pong");
+
   const isTableSport =
     sportName.includes("tenis de mesa") ||
     sportName.includes("ping pong") ||
@@ -58,25 +62,12 @@ export function CategoryStandingsPage() {
     sportName.includes("fútbol") ||
     sportName.includes("futbol");
 
+  // ✅ NUEVO: Para Taekwondo Kyorugi Individual - MOSTRAR BRACKET
   if (isTaekwondoKyorugi && categoryType === "individual") {
     const eliminationPhase = phases.find((p) => p.type === "eliminacion");
 
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <Trophy className="h-8 w-8" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold">Llaves de Eliminación</h3>
-              <p className="text-red-100 mt-1">
-                Bracket de eliminación directa - {eventCategory.category?.name}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {eliminationPhase ? (
           <SimpleBracket phaseId={eliminationPhase.phaseId} />
         ) : (
@@ -96,6 +87,53 @@ export function CategoryStandingsPage() {
     );
   }
 
+  // ✅ NUEVO: Para Tenis de Mesa (Individual o Equipos) - MOSTRAR BRACKET SI HAY ELIMINACIÓN
+  if (isTableTennis) {
+    const eliminationPhase = phases.find((p) => p.type === "eliminacion");
+    const groupPhases = phases.filter((p) => p.type === "grupo");
+
+    // Si hay fase de eliminación, mostrar bracket
+    if (eliminationPhase) {
+      return (
+        <div className="space-y-6">
+          <SimpleBracket phaseId={eliminationPhase.phaseId} />
+
+          {/* ✅ OPCIONAL: Si también hay fases de grupo, mostrarlas debajo */}
+          {groupPhases.length > 0 && (
+            <>
+              <div className="border-t-2 border-gray-200 pt-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">
+                  Fase de Grupos
+                </h3>
+              </div>
+              {renderGroupStandings()}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // Si NO hay eliminación pero sí grupos, mostrar tabla de posiciones
+    if (groupPhases.length > 0) {
+      return renderGroupStandings();
+    }
+
+    // Si no hay ni eliminación ni grupos
+    return (
+      <Card>
+        <CardBody>
+          <div className="text-center py-12 text-gray-500">
+            <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p className="font-medium">No hay fases creadas</p>
+            <p className="text-sm mt-1">
+              Crea fases de grupos o eliminación en la sección de Programación
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
   if (isTaekwondoPoomsae) {
     return (
       <div className="space-y-6">
@@ -107,34 +145,55 @@ export function CategoryStandingsPage() {
   if (isTimedSport) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <Timer className="h-8 w-8" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold">Tabla de Posiciones</h3>
-              <p className="text-blue-100 mt-1">
-                Resultados finales ordenados por tiempo
-              </p>
-            </div>
-          </div>
-        </div>
-
         <StandingsTable eventCategoryId={eventCategory.eventCategoryId} />
       </div>
     );
   }
 
+  // ✅ Otros deportes de mesa (Voleibol, Fútbol, etc.) - Solo tabla de grupos
   if (isTableSport) {
+    return renderGroupStandings();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+            <Users className="h-8 w-8" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold">Posiciones</h3>
+            <p className="text-purple-100 mt-1">
+              {eventCategory?.category?.sport?.name}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <Card>
+        <CardBody>
+          <div className="text-center py-16 text-gray-500">
+            <Trophy className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+            <p className="text-lg font-medium">
+              Sistema de posiciones en desarrollo
+            </p>
+            <p className="text-sm mt-2">Deporte: {sportName}</p>
+          </div>
+        </CardBody>
+      </Card>
+    </div>
+  );
+
+  // ✅ FUNCIÓN AUXILIAR: Renderizar tabla de posiciones de grupos
+  function renderGroupStandings() {
+    const groupPhases = phases.filter((p) => p.type === "grupo");
     const phaseOptions = [
       { value: "0", label: "Seleccione una fase" },
-      ...phases
-        .filter((p) => p.type === "grupo")
-        .map((phase) => ({
-          value: String(phase.phaseId),
-          label: phase.name,
-        })),
+      ...groupPhases.map((phase) => ({
+        value: String(phase.phaseId),
+        label: phase.name,
+      })),
     ];
 
     const handleUpdateStandings = async () => {
@@ -162,7 +221,7 @@ export function CategoryStandingsPage() {
           </div>
         </div>
 
-        {phases.filter((p) => p.type === "grupo").length > 0 ? (
+        {groupPhases.length > 0 ? (
           <>
             <Card>
               <CardBody>
@@ -417,34 +476,4 @@ export function CategoryStandingsPage() {
       </div>
     );
   }
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-            <Users className="h-8 w-8" />
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold">Posiciones</h3>
-            <p className="text-purple-100 mt-1">
-              {eventCategory?.category?.sport?.name}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <Card>
-        <CardBody>
-          <div className="text-center py-16 text-gray-500">
-            <Trophy className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-lg font-medium">
-              Sistema de posiciones en desarrollo
-            </p>
-            <p className="text-sm mt-2">Deporte: {sportName}</p>
-          </div>
-        </CardBody>
-      </Card>
-    </div>
-  );
 }

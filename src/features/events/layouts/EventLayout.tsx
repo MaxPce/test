@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { useEvent } from "../api/events.queries";
+import { getImageUrl } from "@/lib/utils/imageUrl"; // ✅ AGREGAR IMPORT
 
 export function EventLayout() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -38,6 +39,9 @@ export function EventLayout() {
     return variants[status] || "default";
   };
 
+  // ✅ AGREGAR: Procesar URL del logo
+  const logoUrl = event.logoUrl ? getImageUrl(event.logoUrl) : null;
+
   return (
     <div className="space-y-6">
       {/* Header del Evento */}
@@ -52,11 +56,23 @@ export function EventLayout() {
         </Button>
 
         <div className="flex items-start gap-4">
-          {event.logoUrl ? (
+          {logoUrl ? ( // ✅ CAMBIAR: usar logoUrl procesada
             <img
-              src={event.logoUrl}
+              src={logoUrl}
               alt={event.name}
-              className="h-20 w-20 rounded-lg object-cover"
+              className="h-20 w-20 rounded-lg object-cover border border-gray-200"
+              onError={(e) => {
+                // ✅ AGREGAR: Manejo de error
+                e.currentTarget.style.display = "none";
+                const parent = e.currentTarget.parentElement;
+                if (parent && !parent.querySelector(".fallback-logo")) {
+                  const placeholder = document.createElement("div");
+                  placeholder.className =
+                    "fallback-logo h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold";
+                  placeholder.textContent = event.name.charAt(0);
+                  parent.appendChild(placeholder);
+                }
+              }}
             />
           ) : (
             <div className="h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold">
@@ -73,11 +89,6 @@ export function EventLayout() {
                 {event.status === "finalizado" && "Finalizado"}
               </Badge>
             </div>
-            <p className="text-gray-600 mt-1">
-              {event.location && `${event.location} • `}
-              {new Date(event.startDate).toLocaleDateString("es-ES")} -{" "}
-              {new Date(event.endDate).toLocaleDateString("es-ES")}
-            </p>
           </div>
         </div>
       </div>

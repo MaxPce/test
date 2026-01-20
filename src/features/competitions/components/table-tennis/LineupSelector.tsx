@@ -82,13 +82,13 @@ export function LineupSelector({
         onSuccess: () => {
           onSuccess?.();
         },
-      }
+      },
     );
   };
 
   const getAvailableMembers = (currentPosition: number | null) => {
     const selected = [selectedA, selectedB, selectedC, selectedSub].filter(
-      (id) => id !== currentPosition
+      (id) => id !== currentPosition,
     );
     return members.filter((m) => !selected.includes(m.athleteId));
   };
@@ -97,7 +97,7 @@ export function LineupSelector({
     label: string,
     value: number | null,
     onChange: (value: number | null) => void,
-    letter: string
+    letter: string,
   ) => {
     const available = getAvailableMembers(value);
 
@@ -120,7 +120,7 @@ export function LineupSelector({
             // Mostrar si es el valor actual O si está disponible
             const isSelected = value === member.athleteId;
             const isAvailable = available.some(
-              (m) => m.athleteId === member.athleteId
+              (m) => m.athleteId === member.athleteId,
             );
 
             if (isSelected || isAvailable) {
@@ -135,7 +135,6 @@ export function LineupSelector({
         </select>
         {value && (
           <div className="mt-1 flex items-center text-sm text-green-600">
-            <CheckCircle className="h-4 w-4 mr-1" />
             Posición {letter} asignada
           </div>
         )}
@@ -168,19 +167,19 @@ export function LineupSelector({
               "Jugador A (1er Juego)",
               selectedA,
               setSelectedA,
-              "A"
+              "A",
             )}
             {renderSelect(
               "Jugador B (2do Juego)",
               selectedB,
               setSelectedB,
-              "B"
+              "B",
             )}
             {renderSelect(
               "Jugador C (3er Juego)",
               selectedC,
               setSelectedC,
-              "C"
+              "C",
             )}
           </div>
 
@@ -194,7 +193,6 @@ export function LineupSelector({
             {/* Resumen */}
             {selectedA && selectedB && selectedC && selectedSub && (
               <Alert variant="success" className="mt-4">
-                <CheckCircle className="h-4 w-4" />
                 <div className="ml-2">
                   <p className="font-medium">Lineup completo</p>
                   <p className="text-sm mt-1">
@@ -238,7 +236,6 @@ export function LineupSelector({
 
         {setLineupMutation.isSuccess && (
           <Alert variant="success">
-            <CheckCircle className="h-4 w-4" />
             <span className="ml-2">¡Lineup configurado exitosamente!</span>
           </Alert>
         )}

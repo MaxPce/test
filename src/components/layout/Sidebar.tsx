@@ -51,7 +51,6 @@ const navItems: NavItem[] = [
     children: [
       { to: "/admin/institutions", label: "Instituciones" },
       { to: "/admin/institutions/athletes", label: "Atletas" },
-      { to: "/admin/institutions/teams", label: "Equipos" },
     ],
   },
   {
@@ -59,11 +58,7 @@ const navItems: NavItem[] = [
     icon: <Calendar className="h-5 w-5" />,
     label: "Eventos",
   },
-  {
-    to: "/admin/competitions",
-    icon: <Medal className="h-5 w-5" />,
-    label: "Competencias",
-  },
+
   {
     to: "/admin/settings",
     icon: <Settings className="h-5 w-5" />,
@@ -109,24 +104,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         } lg:translate-x-0 shadow-lg lg:shadow-none overflow-hidden`}
       >
         <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-4 border-b border-slate-200 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">FS</span>
-              </div>
-              <span className="text-sm font-bold text-slate-900">
-                Menú Principal
-              </span>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 lg:hidden transition"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
           {/* Navigation - scrollable */}
           <nav className="flex-1 overflow-y-auto py-4 px-3">
             <ul className="space-y-1">
@@ -198,9 +175,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="p-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
             <p className="text-xs text-slate-500 text-center font-medium">
               FormatoSoft v1.0.0
-            </p>
-            <p className="text-xs text-slate-400 text-center mt-1">
-              © 2026 Todos los derechos reservados
             </p>
           </div>
         </div>

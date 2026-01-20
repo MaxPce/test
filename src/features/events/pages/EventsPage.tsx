@@ -126,9 +126,6 @@ export function EventsPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Eventos</h1>
-              <p className="text-blue-100 text-sm sm:text-base mt-1">
-                Gestiona los eventos y competencias deportivas
-              </p>
             </div>
           </div>
           <Button
@@ -147,7 +144,6 @@ export function EventsPage() {
         <CardBody>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-2 text-slate-600">
-              <Filter className="h-5 w-5 text-slate-400" />
               <span className="text-sm font-semibold">Filtrar por:</span>
             </div>
             <div className="flex-1 max-w-xs w-full">
@@ -172,9 +168,6 @@ export function EventsPage() {
                 Limpiar filtro
               </Button>
             )}
-            <div className="text-sm text-slate-500 sm:ml-auto">
-              {events.length} {events.length === 1 ? "evento" : "eventos"}
-            </div>
           </div>
         </CardBody>
       </Card>

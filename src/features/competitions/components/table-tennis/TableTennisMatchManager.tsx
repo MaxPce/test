@@ -55,15 +55,15 @@ export function TableTennisMatchManager({
 
   // Queries
   const { data: lineups = [], isLoading: lineupsLoading } = useMatchLineups(
-    match.matchId
+    match.matchId,
   );
 
   const { data: games = [], isLoading: gamesLoading } = useMatchGames(
-    match.matchId
+    match.matchId,
   );
 
   const { data: result, isLoading: resultLoading } = useMatchResult(
-    match.matchId
+    match.matchId,
   );
 
   // Mutations
@@ -166,7 +166,7 @@ export function TableTennisMatchManager({
 
     if (
       window.confirm(
-        `¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}\n\nEsta acción marcará el match como finalizado.`
+        `¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}\n\nEsta acción marcará el match como finalizado.`,
       )
     ) {
       finalizeMatchMutation.mutate(match.matchId, {
@@ -231,7 +231,7 @@ export function TableTennisMatchManager({
                 <Badge variant="primary">
                   {getModalityLabel(
                     modality,
-                    match.phase?.eventCategory?.category?.gender
+                    match.phase?.eventCategory?.category?.gender,
                   )}
                 </Badge>
                 <Badge variant="default">
@@ -244,15 +244,15 @@ export function TableTennisMatchManager({
                 match.status === "finalizado"
                   ? "success"
                   : match.status === "en_curso"
-                  ? "warning"
-                  : "default"
+                    ? "warning"
+                    : "default"
               }
             >
               {match.status === "finalizado"
                 ? "Finalizado"
                 : match.status === "en_curso"
-                ? "En curso"
-                : "Programado"}
+                  ? "En curso"
+                  : "Programado"}
             </Badge>
           </div>
         </CardBody>
@@ -329,13 +329,7 @@ export function TableTennisMatchManager({
                 className={`p-3 rounded-lg ${
                   hasLineups ? "bg-green-100" : "bg-gray-100"
                 }`}
-              >
-                <Users
-                  className={`h-6 w-6 ${
-                    hasLineups ? "text-green-600" : "text-gray-400"
-                  }`}
-                />
-              </div>
+              ></div>
               <div>
                 <p className="text-sm text-gray-600">Lineups</p>
                 <p className="font-semibold text-gray-900">
@@ -357,13 +351,7 @@ export function TableTennisMatchManager({
               className={`p-3 rounded-lg ${
                 hasGames ? "bg-blue-100" : "bg-gray-100"
               }`}
-            >
-              <Zap
-                className={`h-6 w-6 ${
-                  hasGames ? "text-blue-600" : "text-gray-400"
-                }`}
-              />
-            </div>
+            ></div>
             <div>
               <p className="text-sm text-gray-600">Juegos</p>
               <p className="font-semibold text-gray-900">
@@ -387,15 +375,7 @@ export function TableTennisMatchManager({
               className={`p-3 rounded-lg ${
                 match.status === "finalizado" ? "bg-yellow-100" : "bg-gray-100"
               }`}
-            >
-              <Trophy
-                className={`h-6 w-6 ${
-                  match.status === "finalizado"
-                    ? "text-yellow-600"
-                    : "text-gray-400"
-                }`}
-              />
-            </div>
+            ></div>
             <div>
               <p className="text-sm text-gray-600">Match</p>
               <p className="font-semibold text-gray-900">
@@ -436,7 +416,6 @@ export function TableTennisMatchManager({
                   isLoading={finalizeMatchMutation.isPending}
                   variant="default"
                 >
-                  <Trophy className="h-4 w-4 mr-2" />
                   Finalizar Match
                 </Button>
               </div>
@@ -447,34 +426,19 @@ export function TableTennisMatchManager({
       {/* Tabs principales */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="overview">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Resumen
-          </TabsTrigger>
+          <TabsTrigger value="overview">Resumen</TabsTrigger>
           {requiresLineup && team1 && (
             <TabsTrigger value="lineup-team1">
-              <Settings className="h-4 w-4 mr-2" />
               Lineup {team1.teamName}
             </TabsTrigger>
           )}
           {requiresLineup && team2 && (
             <TabsTrigger value="lineup-team2">
-              <Settings className="h-4 w-4 mr-2" />
               Lineup {team2.teamName}
             </TabsTrigger>
           )}
-          {hasGames && (
-            <TabsTrigger value="scorecard">
-              <Zap className="h-4 w-4 mr-2" />
-              Scorecard
-            </TabsTrigger>
-          )}
-          {result && (
-            <TabsTrigger value="results">
-              <Trophy className="h-4 w-4 mr-2" />
-              Resultados
-            </TabsTrigger>
-          )}
+          {hasGames && <TabsTrigger value="scorecard">Scorecard</TabsTrigger>}
+          {result && <TabsTrigger value="results">Resultados</TabsTrigger>}
         </TabsList>
 
         {/* Tab: Resumen */}
@@ -525,7 +489,6 @@ export function TableTennisMatchManager({
                 isLoading={generateGamesMutation.isPending}
                 className="ml-4"
               >
-                <Zap className="h-4 w-4 mr-2" />
                 Generar Juegos
               </Button>
             </Alert>
@@ -691,7 +654,6 @@ export function TableTennisMatchManager({
               <Card>
                 <CardBody>
                   <div className="text-center py-8">
-                    <Trophy className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
                     <h2 className="text-3xl font-bold text-gray-900 mb-2">
                       {match.status === "finalizado"
                         ? "¡Match Finalizado!"
@@ -734,7 +696,6 @@ export function TableTennisMatchManager({
                     </div>
                     {result.winner && (
                       <Alert variant="success" className="mt-6">
-                        <Trophy className="h-5 w-5" />
                         <span className="ml-2 font-semibold">
                           Ganador: {getWinnerName()}
                         </span>

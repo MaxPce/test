@@ -1,5 +1,3 @@
-// src/features/competitions/api/taekwondo.queries.ts
-
 import { useQuery } from "@tanstack/react-query";
 import {
   getKyoruguiMatchDetails,

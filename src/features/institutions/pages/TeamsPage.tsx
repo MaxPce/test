@@ -101,9 +101,6 @@ export function TeamsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Equipos</h1>
-          <p className="text-gray-600 mt-1">
-            Gestiona los equipos y sus integrantes
-          </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -116,7 +113,7 @@ export function TeamsPage() {
         <CardBody>
           <div className="flex items-center gap-4">
             <Filter className="h-5 w-5 text-gray-400" />
-            <div className="flex-1 max-w-xs">
+            <div className="flex-1 max-w-xs text-center">
               <Select
                 value={filterInstitutionId || ""}
                 onChange={(e) =>
@@ -161,11 +158,11 @@ export function TeamsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Institución</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Miembros</TableHead>
+                  <TableHead className="text-center">ID</TableHead>
+                  <TableHead className="text-center">Nombre</TableHead>
+                  <TableHead className="text-center">Institución</TableHead>
+                  <TableHead className="text-center">Categoría</TableHead>
+                  <TableHead className="text-center">Miembros</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>

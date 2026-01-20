@@ -58,24 +58,6 @@ export function GenerateRoundRobinModal({
       size="lg"
     >
       <div className="space-y-6">
-        {/* Información */}
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-start gap-3">
-            <Zap className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-blue-900 mb-1">
-                Generación Automática - Round Robin
-              </h4>
-              <p className="text-sm text-blue-700">
-                Selecciona los equipos/atletas que participarán en{" "}
-                <strong>{phase.name}</strong>. El sistema generará
-                automáticamente todos los partidos para que jueguen todos contra
-                todos.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Estadísticas */}
         {selectedCount > 0 && (
           <div className="grid grid-cols-2 gap-4">
@@ -107,7 +89,7 @@ export function GenerateRoundRobinModal({
               size="sm"
               onClick={() => {
                 const allIds = new Set(
-                  registrations.map((r) => r.registrationId)
+                  registrations.map((r) => r.registrationId),
                 );
                 setSelectedIds(allIds);
               }}

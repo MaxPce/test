@@ -49,9 +49,6 @@ export function EventSportsPage() {
           <h2 className="text-2xl font-bold text-gray-900">
             Deportes del Evento
           </h2>
-          <p className="text-gray-600 mt-1">
-            Selecciona un deporte para ver sus categorías
-          </p>
         </div>
         <Button onClick={() => navigate(`/admin/events/${eventId}/sports/add`)}>
           <Plus className="h-4 w-4 mr-2" />

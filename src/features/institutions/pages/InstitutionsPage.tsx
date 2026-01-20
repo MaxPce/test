@@ -17,12 +17,12 @@ import {
   useCreateInstitution,
   useUpdateInstitution,
   useDeleteInstitution,
-  useUploadInstitutionLogo, // ✅ AGREGAR
+  useUploadInstitutionLogo,
 } from "../api/institutions.mutations";
 import { InstitutionForm } from "../components/InstitutionForm";
 import { DeleteConfirmModal } from "@/features/sports/components/DeleteConfirmModal";
-import { getImageUrl } from "@/lib/utils/imageUrl"; // ✅ AGREGAR
-import type { Institution, CreateInstitutionData } from "../types"; // ✅ MODIFICAR
+import { getImageUrl } from "@/lib/utils/imageUrl";
+import type { Institution, CreateInstitutionData } from "../types";
 
 export function InstitutionsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -114,9 +114,6 @@ export function InstitutionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Instituciones</h1>
-          <p className="text-gray-600 mt-1">
-            Gestiona las instituciones y clubes deportivos
-          </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -141,10 +138,10 @@ export function InstitutionsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Logo</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Abreviatura</TableHead>
+                  <TableHead className="text-center">ID</TableHead>
+                  <TableHead className="text-center">Logo</TableHead>
+                  <TableHead className="text-center">Nombre</TableHead>
+                  <TableHead className="text-center">Abreviatura</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>

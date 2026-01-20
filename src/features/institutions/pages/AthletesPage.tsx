@@ -127,10 +127,7 @@ export function AthletesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Atletas</h1>
-          <p className="text-gray-600 mt-1">
-            Gestiona los atletas registrados en el sistema
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mt-1">Atletas</h1>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -222,7 +219,7 @@ export function AthletesPage() {
         <AthleteForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending || uploadPhotoMutation.isPending} // ✅ MODIFICAR
+          isLoading={createMutation.isPending || uploadPhotoMutation.isPending}
         />
       </Modal>
 

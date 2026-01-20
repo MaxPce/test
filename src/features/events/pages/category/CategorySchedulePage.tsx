@@ -223,9 +223,6 @@ export function CategorySchedulePage() {
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-xl font-semibold text-gray-900">Programación</h3>
-          <p className="text-gray-600 mt-1">
-            Gestiona las fases y partidos de esta categoría
-          </p>
         </div>
         <Button onClick={() => setIsPhaseModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -576,7 +573,6 @@ export function CategorySchedulePage() {
                                       setIsResultModalOpen(true);
                                     }}
                                   >
-                                    <Zap className="h-4 w-4 mr-2" />
                                     {match.status === "finalizado"
                                       ? "Ver/Editar Match"
                                       : "Gestionar Match"}
@@ -720,7 +716,7 @@ export function CategorySchedulePage() {
                 setIsResultModalOpen(false);
                 setSelectedMatch(null);
               }}
-              match={selectedMatch} // ✅ Pasar el match completo
+              match={selectedMatch}
             />
           )}
         </>

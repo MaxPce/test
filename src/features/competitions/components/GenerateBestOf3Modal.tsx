@@ -57,11 +57,6 @@ export function GenerateBestOf3Modal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Generar Serie Mejor de 3">
       <div className="space-y-4">
-        <Alert variant="info">
-          Selecciona exactamente 2 participantes para la serie. Se crearán 3
-          partidos automáticamente.
-        </Alert>
-
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             Participantes ({selectedIds.length}/2)

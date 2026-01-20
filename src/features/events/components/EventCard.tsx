@@ -112,7 +112,6 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
               onClick={() => navigate(`/admin/events/${event.eventId}`)}
               className="flex-1"
             >
-              <Eye className="h-4 w-4 mr-1.5" />
               Ver Detalles
             </Button>
             <Button

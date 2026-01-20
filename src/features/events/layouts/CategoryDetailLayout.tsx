@@ -25,7 +25,7 @@ export function CategoryDetailLayout() {
   });
 
   const eventCategory = eventCategories.find(
-    (ec) => ec.eventCategoryId === Number(categoryId)
+    (ec) => ec.eventCategoryId === Number(categoryId),
   );
 
   if (isLoading) {
@@ -85,7 +85,7 @@ export function CategoryDetailLayout() {
     ...(isTimedSport
       ? [
           {
-            label: "Resultados",
+            label: "Registrar Tiempos",
             to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/results`,
             icon: <Timer />,
           },

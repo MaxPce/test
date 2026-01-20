@@ -35,7 +35,7 @@ export function SportsPage() {
   >(undefined);
 
   const { data: sports = [], isLoading } = useSports(
-    filterSportTypeId ? { sportTypeId: filterSportTypeId } : undefined
+    filterSportTypeId ? { sportTypeId: filterSportTypeId } : undefined,
   );
   const { data: sportTypes = [] } = useSportTypes();
   const createMutation = useCreateSport();
@@ -94,9 +94,6 @@ export function SportsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Deportes</h1>
-          <p className="text-gray-600 mt-1">
-            Gestiona los deportes disponibles en el sistema
-          </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -114,7 +111,7 @@ export function SportsPage() {
                 value={filterSportTypeId || ""}
                 onChange={(e) =>
                   setFilterSportTypeId(
-                    e.target.value ? Number(e.target.value) : undefined
+                    e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
                 options={filterOptions}

@@ -9,7 +9,6 @@ export function CategoryInstitutionsPage() {
     eventCategory: EventCategory;
   }>();
 
-  // Extraer instituciones únicas de las inscripciones
   const institutionsMap = new Map<
     number,
     { id: number; name: string; count: number }

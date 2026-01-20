@@ -45,18 +45,6 @@ export function PhaseForm({
     { value: "mejor_de_3", label: "Mejor de 3" },
   ];
 
-  const getTypeDescription = (type: string) => {
-    const descriptions: Record<string, string> = {
-      grupo:
-        "Sistema de todos contra todos dentro de un grupo. Ideal para fase inicial con múltiples equipos.",
-      eliminacion:
-        "Sistema de eliminación directa. El perdedor queda eliminado del torneo.",
-      repechaje:
-        "Fase especial para perdedores de semifinales que compiten por el tercer lugar.",
-    };
-    return descriptions[type] || "";
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input
@@ -74,21 +62,6 @@ export function PhaseForm({
         options={typeOptions}
         required
       />
-
-      <div className="bg-blue-50 p-3 rounded-lg">
-        <p className="text-xs text-blue-900">
-          {getTypeDescription(formData.type)}
-        </p>
-      </div>
-
-      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-        <p className="text-sm text-gray-700">
-          <strong>Orden de ejecución:</strong> {existingPhases + 1}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          Las fases se ejecutan en orden secuencial
-        </p>
-      </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="ghost" onClick={onCancel}>

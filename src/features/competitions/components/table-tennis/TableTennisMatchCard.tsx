@@ -73,11 +73,9 @@ export function TableTennisMatchCard({
           {/* Equipo 1 */}
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <Users className="h-5 w-5 text-blue-600" />
               <h3 className="font-bold text-lg text-gray-900">
                 {team1.teamName}
               </h3>
-              {isTeam1Winner && <Trophy className="h-5 w-5 text-yellow-500" />}
             </div>
             <Badge variant="default" className="mb-2">
               {team1.institution}
@@ -123,7 +121,6 @@ export function TableTennisMatchCard({
               <h3 className="font-bold text-lg text-gray-900">
                 {team2.teamName}
               </h3>
-              <Users className="h-5 w-5 text-blue-600" />
             </div>
             <div className="flex justify-end mb-2">
               <Badge variant="default">{team2.institution}</Badge>

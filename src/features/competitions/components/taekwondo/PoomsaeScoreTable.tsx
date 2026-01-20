@@ -1,5 +1,3 @@
-// src/features/competitions/components/taekwondo/PoomsaeScoreTable.tsx
-
 import { useState } from "react";
 import { usePoomsaeScoreTable } from "../../api/taekwondo.queries";
 import { useUpdatePoomsaeScore } from "../../api/taekwondo.mutations";
@@ -88,7 +86,6 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
             const isEditing = editingId === participant.participationId;
             const isTop3 = index < 3 && participant.total !== null;
 
-            // ✅ SI ESTÁ EDITANDO: Fila especial con colSpan
             if (isEditing) {
               return (
                 <tr
@@ -103,8 +100,6 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                       : ""
                   }`}
                 >
-                  {/* Rank */}
-
                   {/* Atleta */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
@@ -136,7 +131,6 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
               );
             }
 
-            // ✅ FILA NORMAL: Mostrar datos
             return (
               <tr
                 key={participant.participationId}
@@ -150,8 +144,6 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                     : ""
                 }`}
               >
-                {/* Rank */}
-
                 {/* Atleta */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
@@ -172,7 +164,7 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                 {/* Accuracy */}
                 <td className="px-4 py-3 text-center">
                   <span className="text-sm font-medium text-gray-900">
-                    {participant.accuracy != null // ✅ Cambiar verificación
+                    {participant.accuracy != null
                       ? Number(participant.accuracy).toFixed(1)
                       : "-"}
                   </span>

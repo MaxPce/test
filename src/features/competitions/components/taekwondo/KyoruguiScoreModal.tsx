@@ -158,20 +158,6 @@ export const KyoruguiScoreModal = ({ match, isOpen, onClose }: Props) => {
               placeholder="Puntaje"
             />
           </div>
-
-          {/* Winner info */}
-          <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-md text-sm">
-            <p className="font-bold text-yellow-800">
-              {score1 > score2
-                ? `🥇 Ganador: ${getParticipantName(participant1)}`
-                : score2 > score1
-                  ? `🥇 Ganador: ${getParticipantName(participant2)}`
-                  : "⚖️ Empate"}
-            </p>
-            <p className="text-gray-600 text-xs mt-1">
-              El ganador se determina automáticamente por el puntaje más alto
-            </p>
-          </div>
         </div>
 
         {/* Actions */}

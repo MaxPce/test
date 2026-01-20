@@ -38,9 +38,6 @@ export function Navbar({ onToggleSidebar }: NavbarProps) {
                 <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate">
                   FormatoSoft
                 </h1>
-                <p className="text-xs text-slate-500 truncate">
-                  Panel de Administración
-                </p>
               </div>
             </div>
           </div>

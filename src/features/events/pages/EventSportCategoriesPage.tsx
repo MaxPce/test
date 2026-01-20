@@ -63,10 +63,6 @@ export function EventSportCategoriesPage() {
             <h2 className="text-2xl font-bold text-gray-900">
               Categorías de {sportName}
             </h2>
-            <p className="text-gray-600 mt-1">
-              Selecciona una categoría para gestionar inscripciones y
-              competencias
-            </p>
           </div>
         </div>
       </div>

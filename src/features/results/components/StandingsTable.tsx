@@ -1,7 +1,6 @@
-// src/features/results/components/StandingsTable.tsx
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Trophy, Medal, Users } from "lucide-react";
+import { Trophy, Medal, Clock } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { useSwimmingResults } from "../api/results.queries";
 
@@ -12,10 +11,11 @@ interface StandingsTableProps {
 export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
   const { data: results = [], isLoading } = useSwimmingResults(eventCategoryId);
 
-  // Filtrar y ordenar resultados
   const standings = results
-    .filter((r) => r.rankPosition !== null && r.rankPosition !== undefined)
-    .sort((a, b) => (a.rankPosition || 999) - (b.rankPosition || 999));
+    .filter((r: any) => r.timeValue && r.rankPosition)
+    .sort(
+      (a: any, b: any) => (a.rankPosition || 999) - (b.rankPosition || 999),
+    );
 
   if (isLoading) {
     return (
@@ -31,9 +31,10 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
     return (
       <Card>
         <CardBody className="text-center py-12">
+          <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
           <p className="text-gray-500">No hay resultados registrados aún</p>
           <p className="text-sm text-gray-400 mt-2">
-            Los resultados aparecerán aquí una vez que se registren los tiempos
+            Los resultados aparecerán cuando se registren los tiempos
           </p>
         </CardBody>
       </Card>
@@ -47,53 +48,50 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
     return null;
   };
 
-  const getPositionBadge = (position: number) => {
-    if (position === 1) return "success";
-    if (position <= 3) return "primary";
-    return "default";
-  };
-
   return (
     <Card>
       <CardBody className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b-2 border-blue-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                   Pos.
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                   Participante
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">
                   Institución
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">
                   Tiempo
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {standings.map((result) => {
-                const isTeam = !!result.participation?.registration?.team; // ✅ Detectar equipo
-                const position = result.rankPosition || 0;
+              {standings.map((result: any) => {
+                const position = result.rankPosition;
+                const reg = result.participation?.registration;
+                const isTeam = !!reg?.team;
 
-                // ✅ Obtener datos según sea equipo o atleta
                 const participantName = isTeam
-                  ? result.participation?.registration?.team?.name
-                  : result.participation?.registration?.athlete?.name;
+                  ? reg.team.name
+                  : reg?.athlete?.name || "Sin nombre";
 
-                const institutionCode = isTeam
-                  ? result.participation?.registration?.team?.institution?.code
-                  : result.participation?.registration?.athlete?.institution
-                      ?.code;
+                const institution = isTeam
+                  ? reg.team.institution?.code || reg.team.institution?.name
+                  : reg?.athlete?.institution?.code ||
+                    reg?.athlete?.institution?.name ||
+                    "";
 
-                const teamMembers = isTeam
-                  ? result.participation?.registration?.team?.members
-                      ?.map((m) => m.athlete.name)
-                      .join(", ")
-                  : null;
+                const members =
+                  isTeam && reg.team.members
+                    ? reg.team.members
+                        .map((m: any) => m.athlete?.name)
+                        .filter(Boolean)
+                        .join(", ")
+                    : null;
 
                 return (
                   <tr
@@ -105,35 +103,35 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {getMedalIcon(position)}
-                        <Badge variant={getPositionBadge(position) as any}>
+                        <Badge variant={position <= 3 ? "primary" : "default"}>
                           {position}°
                         </Badge>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-start gap-2">
-                        {isTeam && (
-                          <Users className="h-4 w-4 text-blue-600 mt-0.5" />
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {participantName}
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {participantName}
+                        </p>
+                        {members && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {members}
                           </p>
-                          {teamMembers && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {teamMembers}
-                            </p>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {institutionCode}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-mono font-medium text-gray-900">
-                        {result.timeValue}
-                      </span>
+                      <p className="text-sm text-gray-700 font-medium">
+                        {institution}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-500" />
+                        <span className="text-lg font-bold text-blue-600">
+                          {result.timeValue}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 );

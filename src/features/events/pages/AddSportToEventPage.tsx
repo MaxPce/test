@@ -17,7 +17,7 @@ export function AddSportToEventPage() {
 
   const [selectedSport, setSelectedSport] = useState<number | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<Set<number>>(
-    new Set()
+    new Set(),
   );
 
   const { data: sports = [], isLoading: sportsLoading } = useSports();
@@ -36,12 +36,12 @@ export function AddSportToEventPage() {
 
   // Obtener IDs de categorías ya agregadas al evento
   const existingCategoryIds = new Set(
-    eventCategories.map((ec) => ec.categoryId)
+    eventCategories.map((ec) => ec.categoryId),
   );
 
   // Filtrar categorías que no están en el evento
   const filteredCategories = availableCategories.filter(
-    (cat) => !existingCategoryIds.has(cat.categoryId)
+    (cat) => !existingCategoryIds.has(cat.categoryId),
   );
 
   const toggleCategory = (categoryId: number) => {
@@ -62,7 +62,7 @@ export function AddSportToEventPage() {
           eventId: eventIdNum,
           categoryId,
           status: "pendiente",
-        })
+        }),
       );
 
       await Promise.all(promises);
@@ -117,10 +117,10 @@ export function AddSportToEventPage() {
             {sports.map((sport) => {
               const isSelected = selectedSport === sport.sportId;
               const categoriesInSport = allCategories.filter(
-                (cat) => cat.sport?.sportId === sport.sportId
+                (cat) => cat.sport?.sportId === sport.sportId,
               );
               const availableCount = categoriesInSport.filter(
-                (cat) => !existingCategoryIds.has(cat.categoryId)
+                (cat) => !existingCategoryIds.has(cat.categoryId),
               ).length;
 
               return (
@@ -137,8 +137,8 @@ export function AddSportToEventPage() {
                       isSelected
                         ? "border-blue-500 bg-blue-50"
                         : availableCount === 0
-                        ? "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
-                        : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                          ? "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
+                          : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
                     }
                   `}
                 >
@@ -198,7 +198,7 @@ export function AddSportToEventPage() {
               <div className="space-y-2">
                 {filteredCategories.map((category) => {
                   const isSelected = selectedCategories.has(
-                    category.categoryId
+                    category.categoryId,
                   );
 
                   return (

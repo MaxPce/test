@@ -27,7 +27,7 @@ export function SportTypesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSportType, setSelectedSportType] = useState<SportType | null>(
-    null
+    null,
   );
 
   const { data: sportTypes = [], isLoading } = useSportTypes();
@@ -84,9 +84,6 @@ export function SportTypesPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             Tipos de Deportes
           </h1>
-          <p className="text-gray-600 mt-1">
-            Gestiona los tipos de deportes del sistema
-          </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />

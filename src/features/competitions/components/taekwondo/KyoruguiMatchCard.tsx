@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { KyoruguiMatch } from "../../types/taekwondo.types"; // ✅ Agregar 'type'
+import type { KyoruguiMatch } from "../../types/taekwondo.types";
 import { KyoruguiScoreModal } from "./KyoruguiScoreModal";
 
 interface Props {
@@ -15,14 +15,14 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
   const getParticipantName = (participation: typeof participant1) => {
     if (!participation) return "TBD";
     const athlete = participation.registration?.athlete;
-    return athlete?.name || "TBD"; // ✅ FIX: usar 'name' directamente
+    return athlete?.name || "TBD";
   };
 
   const getInstitution = (participation: typeof participant1) => {
-    return participation?.registration?.athlete?.institution?.code || ""; // ✅ FIX: usar 'code' en lugar de 'acronym'
+    return participation?.registration?.athlete?.institution?.code || "";
   };
 
-  const isCompleted = match.status === "finalizado"; // ✅ FIX: 'finalizado' en lugar de 'COMPLETADO'
+  const isCompleted = match.status === "finalizado";
   const isWinner = (participationId: number) =>
     match.participations?.find((p) => p.participationId === participationId)
       ?.registrationId === match.winnerRegistrationId;

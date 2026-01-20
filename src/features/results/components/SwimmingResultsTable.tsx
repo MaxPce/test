@@ -64,7 +64,7 @@ export function SwimmingResultsTable({
   const [selectedRegistration, setSelectedRegistration] =
     useState<Registration | null>(null);
   const [selectedResult, setSelectedResult] = useState<SwimmingResult | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -74,13 +74,13 @@ export function SwimmingResultsTable({
   // Función para encontrar el resultado de una inscripción
   const getResultForRegistration = (registrationId: number) => {
     return results.find(
-      (r) => r.participation?.registration?.registrationId === registrationId
+      (r) => r.participation?.registration?.registrationId === registrationId,
     );
   };
 
   const handleRegisterTime = (
     registration: Registration,
-    result?: SwimmingResult
+    result?: SwimmingResult,
   ) => {
     setSelectedRegistration(registration);
     setSelectedResult(result || null);
@@ -140,9 +140,6 @@ export function SwimmingResultsTable({
                     Participante
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Institución
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tiempo
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -156,7 +153,7 @@ export function SwimmingResultsTable({
               <tbody className="bg-white divide-y divide-gray-200">
                 {registrations.map((registration, index) => {
                   const result = getResultForRegistration(
-                    registration.registrationId
+                    registration.registrationId,
                   );
                   const isTeam = !!registration.team;
                   const isDQ = result?.notes?.includes("DQ");
@@ -194,15 +191,6 @@ export function SwimmingResultsTable({
                             </p>
                           </div>
                         )}
-                      </td>
-
-                      {/* Institución */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant="default" size="sm">
-                          {isTeam
-                            ? registration.team?.institution?.code
-                            : registration.athlete?.institution?.code}
-                        </Badge>
                       </td>
 
                       {/* Tiempo */}
@@ -243,8 +231,8 @@ export function SwimmingResultsTable({
                               result.rankPosition === 1
                                 ? "success"
                                 : result.rankPosition <= 3
-                                ? "primary"
-                                : "default"
+                                  ? "primary"
+                                  : "default"
                             }
                             className="font-bold"
                           >
