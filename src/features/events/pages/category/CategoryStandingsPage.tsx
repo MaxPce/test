@@ -18,6 +18,8 @@ import { useUpdateStandings } from "@/features/competitions/api/standings.mutati
 import { StandingsTable } from "@/features/results/components/StandingsTable";
 import { SimpleBracket } from "@/features/results/components/SimpleBracket";
 import { PoomsaeResultsTable } from "@/features/results/components/PoomsaeResultsTable";
+import { Switch } from "@/components/ui/Switch";
+import { PodiumTable } from "@/features/results/components/PodiumTable";
 import type { EventCategory } from "../../types";
 
 export function CategoryStandingsPage() {
@@ -30,6 +32,8 @@ export function CategoryStandingsPage() {
   const { data: standings = [], isLoading: standingsLoading } = useStandings(
     selectedPhaseId || undefined,
   );
+
+  const [showPodium, setShowPodium] = useState(false);
   const updateStandingsMutation = useUpdateStandings();
 
   const sportName = eventCategory?.category?.sport?.name?.toLowerCase() || "";
@@ -62,26 +66,68 @@ export function CategoryStandingsPage() {
     sportName.includes("fútbol") ||
     sportName.includes("futbol");
 
-  // ✅ NUEVO: Para Taekwondo Kyorugi Individual - MOSTRAR BRACKET
+  // Taekwondo Kyorugi Individual - MOSTRAR BRACKET
   if (isTaekwondoKyorugi && categoryType === "individual") {
     const eliminationPhase = phases.find((p) => p.type === "eliminacion");
 
+    if (!eliminationPhase) {
+      return (
+        <Card>
+          <CardBody>
+            <div className="text-center py-12 text-gray-500">
+              <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p className="font-medium">No hay fase de eliminación creada</p>
+              <p className="text-sm mt-1">
+                Crea una fase de eliminación en la sección de Programación
+              </p>
+            </div>
+          </CardBody>
+        </Card>
+      );
+    }
+
     return (
       <div className="space-y-6">
-        {eliminationPhase ? (
-          <SimpleBracket phaseId={eliminationPhase.phaseId} />
-        ) : (
-          <Card>
-            <CardBody>
-              <div className="text-center py-12 text-gray-500">
-                <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="font-medium">No hay fase de eliminación creada</p>
-                <p className="text-sm mt-1">
-                  Crea una fase de eliminación en la sección de Programación
+        {/* Header con Switch */}
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <h3 className="text-2xl font-bold">
+                  {showPodium ? "Podio Final" : "Llave de Eliminación"}
+                </h3>
+                <p className="text-purple-100 mt-1">
+                  {showPodium
+                    ? "Top 3 de la competencia"
+                    : "Diagrama de enfrentamientos"}
                 </p>
               </div>
-            </CardBody>
-          </Card>
+            </div>
+
+            {/* Switch para alternar vistas */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`text-sm font-medium ${!showPodium ? "text-white" : "text-white/60"}`}
+                >
+                  Llaves
+                </span>
+                <Switch checked={showPodium} onChange={setShowPodium} />
+                <span
+                  className={`text-sm font-medium ${showPodium ? "text-white" : "text-white/60"}`}
+                >
+                  Podio
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mostrar Bracket o Podio según el estado */}
+        {showPodium ? (
+          <PodiumTable phaseId={eliminationPhase.phaseId} />
+        ) : (
+          <SimpleBracket phaseId={eliminationPhase.phaseId} />
         )}
       </div>
     );
@@ -92,13 +138,56 @@ export function CategoryStandingsPage() {
     const eliminationPhase = phases.find((p) => p.type === "eliminacion");
     const groupPhases = phases.filter((p) => p.type === "grupo");
 
-    // Si hay fase de eliminación, mostrar bracket
+    // Si hay fase de eliminación, mostrar bracket CON TOGGLE
     if (eliminationPhase) {
       return (
         <div className="space-y-6">
-          <SimpleBracket phaseId={eliminationPhase.phaseId} />
+          {/* Header con Switch */}
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <Trophy className="h-8 w-8" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">
+                    {showPodium ? "Podio Final" : "Llave de Eliminación"}
+                  </h3>
+                  <p className="text-purple-100 mt-1">
+                    {showPodium
+                      ? "Top 3 de la competencia"
+                      : "Diagrama de enfrentamientos"}
+                  </p>
+                </div>
+              </div>
 
-          {/* ✅ OPCIONAL: Si también hay fases de grupo, mostrarlas debajo */}
+              {/* Switch para alternar vistas */}
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-sm font-medium ${!showPodium ? "text-white" : "text-white/60"}`}
+                  >
+                    Llaves
+                  </span>
+                  <Switch checked={showPodium} onChange={setShowPodium} />
+                  <span
+                    className={`text-sm font-medium ${showPodium ? "text-white" : "text-white/60"}`}
+                  >
+                    Podio
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mostrar Bracket o Podio según el estado */}
+          {showPodium ? (
+            <PodiumTable phaseId={eliminationPhase.phaseId} />
+          ) : (
+            <SimpleBracket phaseId={eliminationPhase.phaseId} />
+          )}
+
+          {/* Si también hay fases de grupo, mostrarlas debajo */}
           {groupPhases.length > 0 && (
             <>
               <div className="border-t-2 border-gray-200 pt-6">

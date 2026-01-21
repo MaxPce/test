@@ -17,6 +17,14 @@ export function usePoomsaeResults(eventCategoryId: number) {
   });
 }
 
+export function usePhaseResults(phaseId: number) {
+  return useQuery({
+    queryKey: ["phase-results", phaseId],
+    queryFn: () => resultsApi.getPhaseResults(phaseId),
+    enabled: phaseId > 0,
+  });
+}
+
 export function useCreateTimeResult() {
   const queryClient = useQueryClient();
 

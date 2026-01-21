@@ -115,4 +115,9 @@ export const resultsApi = {
   recalculatePositions: async (eventCategoryId: number): Promise<void> => {
     await apiClient.post(`/results/swimming/${eventCategoryId}/recalculate`);
   },
+
+  async getPhaseResults(phaseId: number) {
+    const response = await apiClient.get(`/results/phase/${phaseId}`);
+    return response.data;
+  },
 };
