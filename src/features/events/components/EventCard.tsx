@@ -49,7 +49,7 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
     <Card hover className="group overflow-hidden">
       <CardBody className="p-0">
         {/* Header con imagen/logo */}
-        <div className="relative h-32 bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 overflow-hidden">
+        <div className="relative h-32 bg-gradient-to-br  overflow-hidden">
           {logoUrl ? ( // ✅ CAMBIAR: usar logoUrl en lugar de event.logoUrl
             <>
               <img

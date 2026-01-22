@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePoomsaeScoreTable } from "../../api/taekwondo.queries";
 import { useUpdatePoomsaeScore } from "../../api/taekwondo.mutations";
 import { PoomsaeScoreInput } from "./PoomsaeScoreInput";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { PoomsaeParticipant } from "../../types/taekwondo.types";
 import { toast } from "sonner";
 
@@ -11,6 +12,7 @@ interface Props {
 
 export const PoomsaeScoreTable = ({ phaseId }: Props) => {
   const { data: participants = [], isLoading } = usePoomsaeScoreTable(phaseId);
+
   const updateScoreMutation = useUpdatePoomsaeScore();
 
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -61,10 +63,10 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
       <table className="min-w-full bg-white border border-gray-200 rounded-lg">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Atleta
             </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Institución
             </th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -82,23 +84,14 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {participants.map((participant, index) => {
+          {participants.map((participant) => {
             const isEditing = editingId === participant.participationId;
-            const isTop3 = index < 3 && participant.total !== null;
 
             if (isEditing) {
               return (
                 <tr
                   key={participant.participationId}
-                  className={`hover:bg-gray-50 transition-colors ${
-                    isTop3
-                      ? index === 0
-                        ? "bg-yellow-50"
-                        : index === 1
-                          ? "bg-gray-100"
-                          : "bg-orange-50"
-                      : ""
-                  }`}
+                  className="hover:bg-gray-50 transition-colors"
                 >
                   {/* Atleta */}
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -112,8 +105,20 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
 
                   {/* Institución */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-700">
-                      {participant.institution}
+                    <div className="flex items-center gap-2">
+                      {participant.institutionLogo && (
+                        <img
+                          src={getImageUrl(participant.institutionLogo)}
+                          alt={participant.institution}
+                          className="h-6 w-6 object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
+                      <div className="text-sm text-gray-700">
+                        {participant.institution}
+                      </div>
                     </div>
                   </td>
 
@@ -134,15 +139,7 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
             return (
               <tr
                 key={participant.participationId}
-                className={`hover:bg-gray-50 transition-colors ${
-                  isTop3
-                    ? index === 0
-                      ? "bg-yellow-50"
-                      : index === 1
-                        ? "bg-gray-100"
-                        : "bg-orange-50"
-                    : ""
-                }`}
+                className="hover:bg-gray-50 transition-colors"
               >
                 {/* Atleta */}
                 <td className="px-4 py-3 whitespace-nowrap">
@@ -156,8 +153,20 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
 
                 {/* Institución */}
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="text-sm text-gray-700">
-                    {participant.institution}
+                  <div className="flex items-center gap-2">
+                    {participant.institutionLogo && (
+                      <img
+                        src={getImageUrl(participant.institutionLogo)}
+                        alt={participant.institution}
+                        className="h-6 w-6 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                    <div className="text-sm text-gray-700">
+                      {participant.institution}
+                    </div>
                   </div>
                 </td>
 

@@ -151,9 +151,6 @@ export function LineupSelector({
             Configurar Lineup - {teamName}
           </h3>
         </div>
-        <p className="text-sm text-gray-600 mt-1">
-          Selecciona 3 jugadores titulares y 1 suplente
-        </p>
       </CardHeader>
 
       <CardBody className="space-y-4">
@@ -189,39 +186,6 @@ export function LineupSelector({
               Jugador Suplente
             </h4>
             {renderSelect("Suplente", selectedSub, setSelectedSub, "Suplente")}
-
-            {/* Resumen */}
-            {selectedA && selectedB && selectedC && selectedSub && (
-              <Alert variant="success" className="mt-4">
-                <div className="ml-2">
-                  <p className="font-medium">Lineup completo</p>
-                  <p className="text-sm mt-1">
-                    A, B, C:{" "}
-                    {
-                      members.find((m) => m.athleteId === selectedA)?.athlete
-                        .name
-                    }
-                    ,{" "}
-                    {
-                      members.find((m) => m.athleteId === selectedB)?.athlete
-                        .name
-                    }
-                    ,{" "}
-                    {
-                      members.find((m) => m.athleteId === selectedC)?.athlete
-                        .name
-                    }
-                  </p>
-                  <p className="text-sm">
-                    Suplente:{" "}
-                    {
-                      members.find((m) => m.athleteId === selectedSub)?.athlete
-                        .name
-                    }
-                  </p>
-                </div>
-              </Alert>
-            )}
           </div>
         </div>
 
@@ -236,7 +200,7 @@ export function LineupSelector({
 
         {setLineupMutation.isSuccess && (
           <Alert variant="success">
-            <span className="ml-2">¡Lineup configurado exitosamente!</span>
+            <span className="ml-2">Participantes registrados</span>
           </Alert>
         )}
 

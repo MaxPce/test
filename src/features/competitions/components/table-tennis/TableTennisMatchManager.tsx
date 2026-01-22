@@ -461,28 +461,10 @@ export function TableTennisMatchManager({
             </Alert>
           )}
 
-          {/* Equipos - Requiere lineup */}
-          {requiresLineup && !hasLineups && (
-            <Alert variant="warning">
-              <AlertCircle className="h-4 w-4" />
-              <div className="ml-2">
-                <p className="font-medium">Configuración pendiente</p>
-                <p className="text-sm">
-                  Ambos equipos deben configurar su lineup (3 titulares + 1
-                  suplente)
-                </p>
-              </div>
-            </Alert>
-          )}
-
           {requiresLineup && hasLineups && !hasGames && (
             <Alert variant="info">
-              <CheckCircle className="h-4 w-4" />
               <div className="ml-2 flex-1">
                 <p className="font-medium">Lineups configurados</p>
-                <p className="text-sm">
-                  Ahora puedes generar los 5 juegos automáticamente
-                </p>
               </div>
               <Button
                 onClick={handleGenerateGames}

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Trophy, Medal, Clock } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { useSwimmingResults } from "../api/results.queries";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface StandingsTableProps {
   eventCategoryId: number;
@@ -79,11 +80,17 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
                   ? reg.team.name
                   : reg?.athlete?.name || "Sin nombre";
 
-                const institution = isTeam
-                  ? reg.team.institution?.code || reg.team.institution?.name
-                  : reg?.athlete?.institution?.code ||
-                    reg?.athlete?.institution?.name ||
-                    "";
+                // Obtener objeto completo de institución
+                const institutionObj = isTeam
+                  ? reg.team.institution
+                  : reg?.athlete?.institution;
+
+                const institutionName =
+                  institutionObj?.code ||
+                  institutionObj?.name ||
+                  "Sin institución";
+
+                const institutionLogo = institutionObj?.logoUrl;
 
                 const members =
                   isTeam && reg.team.members
@@ -121,9 +128,22 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-sm text-gray-700 font-medium">
-                        {institution}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        {/* Logo de la institución */}
+                        {institutionLogo && (
+                          <img
+                            src={getImageUrl(institutionLogo)}
+                            alt={institutionName}
+                            className="h-6 w-6 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        )}
+                        <p className="text-sm text-gray-700 font-medium">
+                          {institutionName}
+                        </p>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">

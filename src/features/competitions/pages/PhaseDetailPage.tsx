@@ -1,5 +1,4 @@
-// src/features/competitions/pages/PhaseDetailPage.tsx
-import { useState, useEffect } from "react"; // ✅ Agregado useEffect
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, UserPlus, Play, BarChart3, Grid3x3 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +24,8 @@ import { BracketView } from "../components/BracketView";
 import { StandingsTable } from "../components/StandingsTable";
 import { ParticipationsList } from "../components/ParticipationsList";
 import { TableTennisMatchWrapper } from "../components/table-tennis/TableTennisMatchWrapper";
+import { JudoScoreModal } from "../components/judo/JudoScoreModal";
+import { KyoruguiScoreModal } from "../components/taekwondo/KyoruguiScoreModal";
 import type { Match } from "../types";
 
 export function PhaseDetailPage() {
@@ -37,27 +38,20 @@ export function PhaseDetailPage() {
     useState(false);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [selectedParticipants, setSelectedParticipants] = useState<number[]>(
-    []
+    [],
   );
   const [viewMode, setViewMode] = useState<"list" | "bracket" | "standings">(
-    "list"
+    "list",
   );
 
   const { data: phase, isLoading: phaseLoading } = usePhase(phaseId);
 
   const { data: selectedMatch, isLoading: selectedMatchLoading } = useMatch(
-    selectedMatchId || 0
+    selectedMatchId || 0,
   );
 
-  // ✅ AGREGAR useEffect para depuración
-  useEffect(() => {
-    console.log("👉 4. selectedMatchId changed to:", selectedMatchId);
-    console.log("👉 5. selectedMatch:", selectedMatch);
-    console.log("👉 6. selectedMatchLoading:", selectedMatchLoading);
-  }, [selectedMatchId, selectedMatch, selectedMatchLoading]);
-
   const { data: registrations = [] } = useRegistrations(
-    phase ? { eventCategoryId: phase.eventCategoryId } : undefined
+    phase ? { eventCategoryId: phase.eventCategoryId } : undefined,
   );
 
   const updateMatchMutation = useUpdateMatch();
@@ -109,43 +103,59 @@ export function PhaseDetailPage() {
   };
 
   const openEditMatchModal = (match: Match) => {
-    console.log("👉 1. openEditMatchModal called with:", match); // ✅
     setSelectedMatchId(match.matchId);
-    console.log("👉 2. selectedMatchId set to:", match.matchId); // ✅
     setIsEditMatchModalOpen(true);
-    console.log("👉 3. Modal state set to open"); // ✅
   };
 
   const isTableTennisMatch = (match: Match | null) => {
-    if (!match) {
-      console.log("🏓 No match provided");
-      return false;
-    }
-
-    console.log("🏓 Debugging match:", {
-      matchId: match.matchId,
-      phase: match.phase,
-      eventCategory: match.phase?.eventCategory,
-      category: match.phase?.eventCategory?.category,
-      sport: match.phase?.eventCategory?.category?.sport,
-      sportName: match.phase?.eventCategory?.category?.sport?.name,
-    });
+    if (!match) return false;
 
     const sportName =
       match.phase?.eventCategory?.category?.sport?.name?.toLowerCase() || "";
 
-    console.log("🏓 Sport name:", sportName);
-
-    const isTT =
+    return (
       sportName.includes("tenis de mesa") ||
       sportName.includes("tennis de mesa") ||
       sportName.includes("tenis mesa") ||
-      sportName.includes("ping pong") ||
-      sportName.includes("table tennis");
+      sportName.includes("tenis de campo") ||
+      sportName.includes("table tennis")
+    );
+  };
 
-    console.log("🏓 Is table tennis?:", isTT);
+  const isJudoMatch = (match: Match | null) => {
+    if (!match) return false;
 
-    return isTT;
+    const sportName =
+      match.phase?.eventCategory?.category?.sport?.name?.toLowerCase() || "";
+
+    return sportName.includes("judo");
+  };
+
+  const isTaekwondoKyorugiMatch = (match: Match | null) => {
+    if (!match) return false;
+
+    const sportName =
+      match.phase?.eventCategory?.category?.sport?.name?.toLowerCase() || "";
+    const categoryName =
+      match.phase?.eventCategory?.category?.name?.toLowerCase() || "";
+
+    return sportName.includes("taekwondo") && categoryName.includes("kyorugi");
+  };
+
+  const getModalTitle = (match: Match | null) => {
+    if (!match) return "Actualizar Resultado";
+    if (isTableTennisMatch(match)) return "Gestionar Match - Tenis de Mesa";
+    if (isJudoMatch(match)) return "Editar Puntaje - Judo";
+    if (isTaekwondoKyorugiMatch(match))
+      return "Editar Puntaje - Taekwondo Kyorugi";
+    return "Actualizar Resultado";
+  };
+
+  const getModalSize = (match: Match | null) => {
+    if (!match) return "lg";
+    if (isTableTennisMatch(match)) return "full";
+    if (isJudoMatch(match) || isTaekwondoKyorugiMatch(match)) return "md";
+    return "lg";
   };
 
   const availableParticipants = registrations.filter(
@@ -155,7 +165,7 @@ export function PhaseDetailPage() {
           return p.teamId === reg.teamId;
         }
         return p.athleteId === reg.athleteId;
-      })
+      }),
   );
 
   if (phaseLoading) {
@@ -198,15 +208,8 @@ export function PhaseDetailPage() {
     return labels[format] || format;
   };
 
-  // ✅ AGREGAR console.logs antes del return
-  console.log("👉 7. Rendering component");
-  console.log("👉 8. isEditMatchModalOpen:", isEditMatchModalOpen);
-  console.log("👉 9. selectedMatchId:", selectedMatchId);
-  console.log("👉 10. selectedMatch:", selectedMatch);
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <Button
           variant="ghost"
@@ -275,7 +278,6 @@ export function PhaseDetailPage() {
         </div>
       </div>
 
-      {/* Participantes */}
       <Card>
         <CardHeader>
           <h2 className="text-lg font-semibold text-gray-900">
@@ -291,7 +293,6 @@ export function PhaseDetailPage() {
         </CardBody>
       </Card>
 
-      {/* Partidos */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -361,43 +362,45 @@ export function PhaseDetailPage() {
         </CardBody>
       </Card>
 
-      {/* ✅ AGREGAR console.log aquí también */}
-      {console.log(
-        "👉 11. About to render modal, isEditMatchModalOpen:",
-        isEditMatchModalOpen
-      )}
-
       <Modal
         isOpen={isEditMatchModalOpen}
         onClose={() => {
-          console.log("👉 12. Modal onClose called");
           setIsEditMatchModalOpen(false);
           setSelectedMatchId(null);
         }}
         title={
-          selectedMatchLoading
-            ? "Cargando..."
-            : isTableTennisMatch(selectedMatch || null)
-            ? "Gestionar Match - Tenis de Mesa"
-            : "Actualizar Resultado"
+          selectedMatchLoading ? "Cargando..." : getModalTitle(selectedMatch)
         }
-        size={isTableTennisMatch(selectedMatch || null) ? "full" : "lg"}
+        size={getModalSize(selectedMatch)}
       >
-        {console.log("👉 13. Inside Modal render")}
         {selectedMatchLoading ? (
           <div className="flex justify-center items-center py-12">
             <Spinner size="lg" />
             <span className="ml-3 text-gray-600">Cargando match...</span>
           </div>
         ) : selectedMatch ? (
-          isTableTennisMatch(selectedMatch) ? (
-            <>
-              {console.log("👉 14. Rendering TableTennisMatchWrapper")}
+          <>
+            {isTableTennisMatch(selectedMatch) ? (
               <TableTennisMatchWrapper match={selectedMatch} />
-            </>
-          ) : (
-            <>
-              {console.log("👉 15. Rendering MatchForm")}
+            ) : isJudoMatch(selectedMatch) ? (
+              <JudoScoreModal
+                match={selectedMatch as any}
+                isOpen={true}
+                onClose={() => {
+                  setIsEditMatchModalOpen(false);
+                  setSelectedMatchId(null);
+                }}
+              />
+            ) : isTaekwondoKyorugiMatch(selectedMatch) ? (
+              <KyoruguiScoreModal
+                match={selectedMatch as any}
+                isOpen={true}
+                onClose={() => {
+                  setIsEditMatchModalOpen(false);
+                  setSelectedMatchId(null);
+                }}
+              />
+            ) : (
               <MatchForm
                 match={selectedMatch}
                 participations={phase.participations || []}
@@ -408,17 +411,15 @@ export function PhaseDetailPage() {
                 }}
                 isLoading={updateMatchMutation.isPending}
               />
-            </>
-          )
+            )}
+          </>
         ) : (
           <div className="text-center py-8 text-gray-500">
-            {console.log("👉 16. Match not found")}
             Match no encontrado
           </div>
         )}
       </Modal>
 
-      {/* Add Participants Modal */}
       <Modal
         isOpen={isAddParticipantsModalOpen}
         onClose={() => {
@@ -454,8 +455,8 @@ export function PhaseDetailPage() {
                         availableParticipants.map((reg) =>
                           phase.eventCategory?.category?.type === "equipo"
                             ? reg.teamId!
-                            : reg.athleteId!
-                        )
+                            : reg.athleteId!,
+                        ),
                       );
                     }
                   }}
@@ -498,8 +499,8 @@ export function PhaseDetailPage() {
                           } else {
                             setSelectedParticipants(
                               selectedParticipants.filter(
-                                (id) => id !== participantId
-                              )
+                                (id) => id !== participantId,
+                              ),
                             );
                           }
                         }}

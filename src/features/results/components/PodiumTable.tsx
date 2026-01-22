@@ -1,9 +1,9 @@
-// src/features/results/components/PodiumTable.tsx
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Trophy, Medal, Award } from "lucide-react";
+import { Trophy, Medal, Award, User } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMatches } from "@/features/competitions/api/matches.queries";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface PodiumTableProps {
   phaseId: number;
@@ -64,18 +64,14 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
   );
 
   if (winner) {
+    const reg = winner.registration;
+    const isAthlete = !!reg?.athlete;
     podiumData.push({
       position: 1,
-      name:
-        winner.registration?.athlete?.name ||
-        winner.registration?.team?.name ||
-        "Sin nombre",
-      institution:
-        winner.registration?.athlete?.institution?.code ||
-        winner.registration?.athlete?.institution?.name ||
-        winner.registration?.team?.institution?.code ||
-        winner.registration?.team?.institution?.name ||
-        "",
+      name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
+      institution: reg?.athlete?.institution || reg?.team?.institution,
+      photoUrl: reg?.athlete?.photoUrl,
+      isAthlete,
     });
   }
 
@@ -86,18 +82,14 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
   );
 
   if (runnerUp) {
+    const reg = runnerUp.registration;
+    const isAthlete = !!reg?.athlete;
     podiumData.push({
       position: 2,
-      name:
-        runnerUp.registration?.athlete?.name ||
-        runnerUp.registration?.team?.name ||
-        "Sin nombre",
-      institution:
-        runnerUp.registration?.athlete?.institution?.code ||
-        runnerUp.registration?.athlete?.institution?.name ||
-        runnerUp.registration?.team?.institution?.code ||
-        runnerUp.registration?.team?.institution?.name ||
-        "",
+      name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
+      institution: reg?.athlete?.institution || reg?.team?.institution,
+      photoUrl: reg?.athlete?.photoUrl,
+      isAthlete,
     });
   }
 
@@ -113,18 +105,14 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     );
 
     if (thirdPlace) {
+      const reg = thirdPlace.registration;
+      const isAthlete = !!reg?.athlete;
       podiumData.push({
         position: 3,
-        name:
-          thirdPlace.registration?.athlete?.name ||
-          thirdPlace.registration?.team?.name ||
-          "Sin nombre",
-        institution:
-          thirdPlace.registration?.athlete?.institution?.code ||
-          thirdPlace.registration?.athlete?.institution?.name ||
-          thirdPlace.registration?.team?.institution?.code ||
-          thirdPlace.registration?.team?.institution?.name ||
-          "",
+        name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
+        institution: reg?.athlete?.institution || reg?.team?.institution,
+        photoUrl: reg?.athlete?.photoUrl,
+        isAthlete,
       });
     }
   }
@@ -145,8 +133,6 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
 
   return (
     <div className="space-y-6">
-      {/* ✅ ELIMINADO: Header del Podio */}
-
       {/* Tabla del Podio */}
       <Card>
         <CardBody className="p-0">
@@ -157,10 +143,10 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                   <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase">
                     Posición
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">
                     Participante
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase">
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">
                     Institución
                   </th>
                 </tr>
@@ -172,7 +158,7 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                     className={`bg-gradient-to-r ${getMedalColor(item.position)} border-l-4 transition-all hover:shadow-md`}
                   >
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center gap-3">
                         {getMedalIcon(item.position)}
                         <Badge
                           variant={item.position === 1 ? "warning" : "default"}
@@ -183,14 +169,78 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <p className="text-base font-bold text-gray-900">
-                        {item.name}
-                      </p>
+                      <div className="flex items-center gap-4">
+                        {/* Foto del atleta o avatar */}
+                        {item.isAthlete && item.photoUrl ? (
+                          <img
+                            src={getImageUrl(item.photoUrl)}
+                            alt={item.name}
+                            className="w-14 h-14 rounded-full object-cover border-3 border-white shadow-lg"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = "none";
+                              const parent = target.parentElement;
+                              if (parent) {
+                                const placeholder =
+                                  document.createElement("div");
+                                placeholder.className =
+                                  "w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg";
+                                const icon = document.createElementNS(
+                                  "http://www.w3.org/2000/svg",
+                                  "svg",
+                                );
+                                icon.setAttribute(
+                                  "class",
+                                  "h-7 w-7 text-white",
+                                );
+                                icon.setAttribute("fill", "currentColor");
+                                icon.setAttribute("viewBox", "0 0 24 24");
+                                icon.innerHTML =
+                                  '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
+                                placeholder.appendChild(icon);
+                                parent.appendChild(placeholder);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg">
+                            <User className="h-7 w-7 text-white" />
+                          </div>
+                        )}
+
+                        <div>
+                          <p className="text-base font-bold text-gray-900">
+                            {item.name}
+                          </p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <p className="text-sm text-gray-700 font-semibold">
-                        {item.institution}
-                      </p>
+                    <td className="px-6 py-5">
+                      {item.institution && (
+                        <div className="flex items-center gap-3">
+                          {/* Logo de la institución */}
+                          {item.institution.logoUrl && (
+                            <img
+                              src={getImageUrl(item.institution.logoUrl)}
+                              alt={item.institution.name}
+                              className="h-8 w-8 object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
+                          <div>
+                            <p className="text-sm text-gray-700 font-semibold">
+                              {item.institution.name}
+                            </p>
+                            {item.institution.abrev && (
+                              <p className="text-xs text-gray-500">
+                                {item.institution.abrev}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

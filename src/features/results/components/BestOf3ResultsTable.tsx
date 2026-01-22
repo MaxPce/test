@@ -1,0 +1,445 @@
+import { useState } from "react";
+import { useMatches } from "@/features/competitions/api/matches.queries";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { Trophy, Calendar, User } from "lucide-react";
+import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
+import { KyoruguiScoreModal } from "@/features/competitions/components/taekwondo/KyoruguiScoreModal";
+import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
+import { ResultModal } from "@/features/competitions/components/ResultModal";
+import { useUpdateMatch } from "@/features/competitions/api/matches.mutations";
+import { getImageUrl } from "@/lib/utils/imageUrl";
+import type { Match } from "@/features/competitions/types";
+
+interface BestOf3ResultsTableProps {
+  phaseId: number;
+  eventCategory?: any;
+}
+
+export function BestOf3ResultsTable({
+  phaseId,
+  eventCategory,
+}: BestOf3ResultsTableProps) {
+  const { data: matches = [], isLoading } = useMatches(phaseId);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const updateMatchMutation = useUpdateMatch();
+
+  const getSportType = () => {
+    if (!eventCategory) return "generic";
+
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    const categoryName = eventCategory.category?.name?.toLowerCase() || "";
+
+    if (sportName.includes("judo")) return "judo";
+    if (sportName.includes("taekwondo") && categoryName.includes("kyorugi"))
+      return "kyorugi";
+    if (
+      sportName.includes("tenis de mesa") ||
+      sportName.includes("table tennis") ||
+      sportName.includes("ping pong")
+    )
+      return "table-tennis";
+
+    return "generic";
+  };
+
+  const handleEditMatch = (match: Match) => {
+    setSelectedMatch(match);
+    setIsEditModalOpen(true);
+  };
+
+  const handleRegisterResult = async (matchId: number, winnerId: number) => {
+    await updateMatchMutation.mutateAsync({
+      id: matchId,
+      data: {
+        status: "finalizado",
+        winnerRegistrationId: winnerId,
+      },
+    });
+    setIsEditModalOpen(false);
+    setSelectedMatch(null);
+  };
+
+  const sportType = getSportType();
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Cargando serie...</p>
+      </div>
+    );
+  }
+
+  if (matches.length === 0) {
+    return (
+      <Card>
+        <CardBody>
+          <div className="text-center py-12 text-gray-500">
+            <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+            <p className="font-medium">No hay partidos en esta serie</p>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  }
+
+  const participant1 = matches[0]?.participations?.find(
+    (p) => p.corner === "blue" || p.corner === "A",
+  );
+  const participant2 = matches[0]?.participations?.find(
+    (p) => p.corner === "white" || p.corner === "B",
+  );
+
+  const participant1Reg = participant1?.registration;
+  const participant2Reg = participant2?.registration;
+
+  const participant1Name =
+    participant1Reg?.athlete?.name ||
+    participant1Reg?.team?.name ||
+    "Participante 1";
+  const participant2Name =
+    participant2Reg?.athlete?.name ||
+    participant2Reg?.team?.name ||
+    "Participante 2";
+
+  const participant1Institution =
+    participant1Reg?.athlete?.institution || participant1Reg?.team?.institution;
+  const participant2Institution =
+    participant2Reg?.athlete?.institution || participant2Reg?.team?.institution;
+
+  const participant1Photo = participant1Reg?.athlete?.photoUrl;
+  const participant2Photo = participant2Reg?.athlete?.photoUrl;
+
+  const participant1Logo = participant1Institution?.logoUrl;
+  const participant2Logo = participant2Institution?.logoUrl;
+
+  const participant1Wins = matches.filter(
+    (m) => m.winnerRegistrationId === participant1Reg?.registrationId,
+  ).length;
+  const participant2Wins = matches.filter(
+    (m) => m.winnerRegistrationId === participant2Reg?.registrationId,
+  ).length;
+
+  const seriesWinner =
+    participant1Wins >= 2
+      ? participant1Name
+      : participant2Wins >= 2
+        ? participant2Name
+        : null;
+
+  return (
+    <>
+      <div className="space-y-6">
+        <Card className="overflow-hidden">
+          <CardBody className="p-0">
+            <div className="grid md:grid-cols-3 gap-0 items-stretch">
+              {/* Participante 1 */}
+              <div
+                className={`
+                p-8 flex flex-col items-center justify-center transition-all
+                ${
+                  seriesWinner === participant1Name
+                    ? "bg-gradient-to-br from-green-100 via-emerald-50 to-green-100 border-4 border-green-500"
+                    : "bg-gradient-to-br from-blue-50 to-cyan-50"
+                }
+              `}
+              >
+                {seriesWinner === participant1Name && (
+                  <Trophy className="h-12 w-12 text-green-600 mb-3 animate-pulse" />
+                )}
+
+                {/* Foto del atleta */}
+                {participant1Photo ? (
+                  <img
+                    src={getImageUrl(participant1Photo)}
+                    alt={participant1Name}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg mb-4"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.style.display = "none";
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const placeholder = document.createElement("div");
+                        placeholder.className =
+                          "w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center border-4 border-white shadow-lg mb-4";
+                        const icon = document.createElementNS(
+                          "http://www.w3.org/2000/svg",
+                          "svg",
+                        );
+                        icon.setAttribute("class", "h-12 w-12 text-white");
+                        icon.innerHTML =
+                          '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
+                        placeholder.appendChild(icon);
+                        parent.appendChild(placeholder);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center border-4 border-white shadow-lg mb-4">
+                    <User className="h-12 w-12 text-white" />
+                  </div>
+                )}
+
+                <h4 className="font-bold text-xl text-gray-900 text-center mb-2">
+                  {participant1Name}
+                </h4>
+
+                {participant1Institution && (
+                  <div className="flex items-center gap-2 mb-4">
+                    {participant1Logo && (
+                      <img
+                        src={getImageUrl(participant1Logo)}
+                        alt={participant1Institution.name}
+                        className="h-6 w-6 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                    <p className="text-sm text-gray-600 font-medium text-center">
+                      {participant1Institution.name}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-auto">
+                  <span className="text-6xl font-bold text-blue-600">
+                    {participant1Wins}
+                  </span>
+                </div>
+              </div>
+
+              {/* Centro: VS estático */}
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 p-8 flex items-center justify-center border-x-2 border-orange-200">
+                <p className="text-8xl font-bold text-orange-500">VS</p>
+              </div>
+
+              {/* Participante 2 */}
+              <div
+                className={`
+                p-8 flex flex-col items-center justify-center transition-all
+                ${
+                  seriesWinner === participant2Name
+                    ? "bg-gradient-to-br from-green-100 via-emerald-50 to-green-100 border-4 border-green-500"
+                    : "bg-gradient-to-br from-gray-50 to-slate-50"
+                }
+              `}
+              >
+                {seriesWinner === participant2Name && (
+                  <Trophy className="h-12 w-12 text-green-600 mb-3 animate-pulse" />
+                )}
+
+                {/* Foto del atleta */}
+                {participant2Photo ? (
+                  <img
+                    src={getImageUrl(participant2Photo)}
+                    alt={participant2Name}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg mb-4"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.style.display = "none";
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const placeholder = document.createElement("div");
+                        placeholder.className =
+                          "w-24 h-24 rounded-full bg-gray-500 flex items-center justify-center border-4 border-white shadow-lg mb-4";
+                        const icon = document.createElementNS(
+                          "http://www.w3.org/2000/svg",
+                          "svg",
+                        );
+                        icon.setAttribute("class", "h-12 w-12 text-white");
+                        icon.innerHTML =
+                          '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
+                        placeholder.appendChild(icon);
+                        parent.appendChild(placeholder);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gray-500 flex items-center justify-center border-4 border-white shadow-lg mb-4">
+                    <User className="h-12 w-12 text-white" />
+                  </div>
+                )}
+
+                <h4 className="font-bold text-xl text-gray-900 text-center mb-2">
+                  {participant2Name}
+                </h4>
+
+                {participant2Institution && (
+                  <div className="flex items-center gap-2 mb-4">
+                    {participant2Logo && (
+                      <img
+                        src={getImageUrl(participant2Logo)}
+                        alt={participant2Institution.name}
+                        className="h-6 w-6 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                    <p className="text-sm text-gray-600 font-medium text-center">
+                      {participant2Institution.name}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-auto">
+                  <span className="text-6xl font-bold text-red-600">
+                    {participant2Wins}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Detalle de Partidos */}
+        <Card>
+          <CardBody>
+            <h4 className="font-bold text-gray-900 mb-4 text-lg">
+              Detalle de Partidos
+            </h4>
+            <div className="space-y-3">
+              {matches.map((match, index) => {
+                const participants = match.participations || [];
+                const p1 = participants.find(
+                  (p) => p.corner === "blue" || p.corner === "A",
+                );
+                const p2 = participants.find(
+                  (p) => p.corner === "white" || p.corner === "B",
+                );
+
+                const isP1Winner =
+                  match.winnerRegistrationId ===
+                  p1?.registration?.registrationId;
+                const isP2Winner =
+                  match.winnerRegistrationId ===
+                  p2?.registration?.registrationId;
+
+                return (
+                  <div
+                    key={match.matchId}
+                    className="p-5 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border-2 border-gray-200 hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-bold text-gray-700 text-lg">
+                        Partido {index + 1}
+                      </span>
+                      <Badge
+                        variant={
+                          match.status === "finalizado" ? "success" : "default"
+                        }
+                      >
+                        {match.status === "programado" && "Programado"}
+                        {match.status === "en_curso" && "En Curso"}
+                        {match.status === "finalizado" && "Finalizado"}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 items-center">
+                      <div
+                        className={`text-right ${isP1Winner ? "font-bold" : ""}`}
+                      >
+                        <p
+                          className={`text-base ${
+                            isP1Winner ? "text-green-600" : "text-gray-700"
+                          }`}
+                        >
+                          {participant1Name}
+                        </p>
+                      </div>
+
+                      <div className="text-center bg-white rounded-lg py-3 px-4 border-2 border-gray-200">
+                        <span className="text-3xl font-bold text-gray-900">
+                          {match.participant1Score ?? "-"}
+                        </span>
+                        <span className="mx-3 text-gray-400 text-2xl">:</span>
+                        <span className="text-3xl font-bold text-gray-900">
+                          {match.participant2Score ?? "-"}
+                        </span>
+                      </div>
+
+                      <div
+                        className={`text-left ${isP2Winner ? "font-bold" : ""}`}
+                      >
+                        <p
+                          className={`text-base ${
+                            isP2Winner ? "text-green-600" : "text-gray-700"
+                          }`}
+                        >
+                          {participant2Name}
+                        </p>
+                      </div>
+                    </div>
+
+                    {match.scheduledTime && (
+                      <p className="text-xs text-gray-500 mt-3 text-center">
+                        📅{" "}
+                        {new Date(match.scheduledTime).toLocaleString("es-ES")}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      {/* Modales de edición */}
+      {selectedMatch && (
+        <>
+          {sportType === "judo" ? (
+            <JudoScoreModal
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setSelectedMatch(null);
+              }}
+              match={selectedMatch}
+            />
+          ) : sportType === "kyorugi" ? (
+            <KyoruguiScoreModal
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setSelectedMatch(null);
+              }}
+              match={selectedMatch}
+            />
+          ) : sportType === "table-tennis" ? (
+            <Modal
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setSelectedMatch(null);
+              }}
+              title="Gestionar Match - Tenis de Mesa"
+              size="full"
+            >
+              <TableTennisMatchWrapper
+                match={selectedMatch}
+                eventCategory={eventCategory}
+              />
+            </Modal>
+          ) : (
+            <ResultModal
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setSelectedMatch(null);
+              }}
+              match={selectedMatch}
+              onSubmit={handleRegisterResult}
+              isLoading={updateMatchMutation.isPending}
+            />
+          )}
+        </>
+      )}
+    </>
+  );
+}

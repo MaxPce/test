@@ -51,7 +51,9 @@ export interface PoomsaeParticipant {
   participationId: number;
   rank: number | null;
   athleteName: string;
+  athletePhoto: string | null;
   institution: string;
+  institutionLogo: string | null;
   gender: string;
   accuracy: number | null;
   presentation: number | null;

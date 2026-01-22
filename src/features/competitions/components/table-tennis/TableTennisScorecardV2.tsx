@@ -60,7 +60,7 @@ export function TableTennisScorecardV2({
   const handleSetScoreChange = (
     index: number,
     player: "player1" | "player2",
-    value: string
+    value: string,
   ) => {
     const score = parseInt(value) || 0;
     const updatedSets = [...currentSets];
@@ -123,7 +123,7 @@ export function TableTennisScorecardV2({
         onError: (error: any) => {
           alert(error.response?.data?.message || "Error al guardar");
         },
-      }
+      },
     );
   };
 
@@ -139,7 +139,7 @@ export function TableTennisScorecardV2({
 
   const getSetWinner = (
     set: GameSet,
-    game: MatchGame
+    game: MatchGame,
   ): "player1" | "player2" | null => {
     if (set.player1Score > set.player2Score) return "player1";
     if (set.player2Score > set.player1Score) return "player2";
@@ -148,13 +148,6 @@ export function TableTennisScorecardV2({
 
   return (
     <Card>
-      <CardHeader>
-        <h3 className="font-semibold text-gray-900">Resultados por Juego</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Registra los sets de cada juego (hasta 5 sets, mejor de 5)
-        </p>
-      </CardHeader>
-
       <CardBody className="p-0">
         <div className="divide-y divide-gray-200">
           {games.map((game) => {
@@ -264,7 +257,7 @@ export function TableTennisScorecardV2({
                                   handleSetScoreChange(
                                     index,
                                     "player1",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 className="w-20 px-3 py-2 text-center border rounded focus:ring-2 focus:ring-blue-500"
@@ -279,7 +272,7 @@ export function TableTennisScorecardV2({
                                   handleSetScoreChange(
                                     index,
                                     "player2",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 className="w-20 px-3 py-2 text-center border rounded focus:ring-2 focus:ring-blue-500"

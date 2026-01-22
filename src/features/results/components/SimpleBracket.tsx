@@ -1,12 +1,19 @@
-import { useState } from "react"; // ✅ AGREGAR
+import { useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Trophy } from "lucide-react";
 import { useMatches } from "@/features/competitions/api/matches.queries";
-import { MatchDetailsModal } from "./MatchDetailsModal"; // ✅ AGREGAR
+import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries";
+import { MatchDetailsModal } from "./MatchDetailsModal";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface SimpleBracketProps {
   phaseId: number;
+  sportConfig?: {
+    sportType: string;
+    scoreLabel: string;
+    showScores: boolean;
+  };
 }
 
 type RoundType = "quarters" | "semis" | "final" | "third" | "other";
@@ -25,8 +32,7 @@ function classifyRound(rawRound?: string | null): RoundType {
   return "other";
 }
 
-export function SimpleBracket({ phaseId }: SimpleBracketProps) {
-  // ✅ AGREGAR estado para el modal
+export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
   const { data: matches = [], isLoading } = useMatches(phaseId);
@@ -56,7 +62,6 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
     return (
       <Card>
         <CardBody className="text-center py-12 text-gray-500">
-          <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-400" />
           <p className="font-medium">No hay combates definidos aún</p>
           <p className="text-sm mt-1">
             Los combates aparecerán cuando se asignen los participantes
@@ -84,10 +89,10 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
 
   return (
     <>
-      {/* ✅ AGREGAR el modal */}
       {selectedMatchId && (
         <MatchDetailsModal
           matchId={selectedMatchId}
+          sportConfig={sportConfig}
           onClose={() => setSelectedMatchId(null)}
         />
       )}
@@ -106,7 +111,8 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
                       <MatchCard
                         key={match.matchId}
                         match={match}
-                        onClick={() => setSelectedMatchId(match.matchId)} // ✅ AGREGAR
+                        sportConfig={sportConfig}
+                        onClick={() => setSelectedMatchId(match.matchId)}
                       />
                     ))}
                   </div>
@@ -129,7 +135,8 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
                           key={match.matchId}
                           match={match}
                           size="lg"
-                          onClick={() => setSelectedMatchId(match.matchId)} // ✅ AGREGAR
+                          sportConfig={sportConfig}
+                          onClick={() => setSelectedMatchId(match.matchId)}
                         />
                       ))}
                     </div>
@@ -151,7 +158,8 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
                       match={final}
                       size="xl"
                       isFinal
-                      onClick={() => setSelectedMatchId(final.matchId)} // ✅ AGREGAR
+                      sportConfig={sportConfig}
+                      onClick={() => setSelectedMatchId(final.matchId)}
                     />
                   </div>
                 )}
@@ -165,7 +173,8 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
                     </h3>
                     <MatchCard
                       match={third}
-                      onClick={() => setSelectedMatchId(third.matchId)} // ✅ AGREGAR
+                      sportConfig={sportConfig}
+                      onClick={() => setSelectedMatchId(third.matchId)}
                     />
                   </div>
                 </div>
@@ -185,7 +194,8 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
                   <MatchCard
                     key={match.matchId}
                     match={match}
-                    onClick={() => setSelectedMatchId(match.matchId)} // ✅ AGREGAR
+                    sportConfig={sportConfig}
+                    onClick={() => setSelectedMatchId(match.matchId)}
                   />
                 ))}
               </div>
@@ -206,7 +216,8 @@ export function SimpleBracket({ phaseId }: SimpleBracketProps) {
                   <MatchCard
                     key={match.matchId}
                     match={match}
-                    onClick={() => setSelectedMatchId(match.matchId)} // ✅ AGREGAR
+                    sportConfig={sportConfig}
+                    onClick={() => setSelectedMatchId(match.matchId)}
                   />
                 ))}
               </div>
@@ -224,7 +235,12 @@ interface MatchCardProps {
   match: any;
   size?: "sm" | "lg" | "xl";
   isFinal?: boolean;
-  onClick?: () => void; // ✅ AGREGAR
+  onClick?: () => void;
+  sportConfig?: {
+    sportType: string;
+    scoreLabel: string;
+    showScores: boolean;
+  };
 }
 
 function MatchCard({
@@ -232,7 +248,14 @@ function MatchCard({
   size = "sm",
   isFinal = false,
   onClick,
+  sportConfig,
 }: MatchCardProps) {
+  const shouldFetchTT = sportConfig?.sportType === "table-tennis";
+
+  const { data: ttDetails } = useMatchDetails(
+    shouldFetchTT ? match.matchId : 0,
+  );
+
   const p1Data = match.participations?.[0]?.registration;
   const p2Data = match.participations?.[1]?.registration;
 
@@ -240,16 +263,78 @@ function MatchCard({
   const name2 = p2Data?.athlete?.name || p2Data?.team?.name || "Por definir";
 
   const institution1 =
-    p1Data?.athlete?.institution?.abrev ||
-    p1Data?.team?.institution?.abrev ||
-    "";
+    p1Data?.athlete?.institution || p1Data?.team?.institution;
   const institution2 =
-    p2Data?.athlete?.institution?.abrev ||
-    p2Data?.team?.institution?.abrev ||
-    "";
+    p2Data?.athlete?.institution || p2Data?.team?.institution;
 
-  const score1 = match.participant1Score ?? "-";
-  const score2 = match.participant2Score ?? "-";
+  const logo1 = institution1?.logoUrl;
+  const logo2 = institution2?.logoUrl;
+
+  const calculateTableTennisSets = (games: any[]): [number, number] => {
+    if (!games || games.length === 0) return [0, 0];
+
+    let p1SetsWon = 0;
+    let p2SetsWon = 0;
+
+    games.forEach((game) => {
+      if (!game.sets || game.sets.length === 0) return;
+
+      let p1GameSets = 0;
+      let p2GameSets = 0;
+
+      game.sets.forEach((set: any) => {
+        if (set.player1Score > set.player2Score) {
+          p1GameSets++;
+        } else if (set.player2Score > set.player1Score) {
+          p2GameSets++;
+        }
+      });
+
+      if (p1GameSets > p2GameSets) p1SetsWon++;
+      else if (p2GameSets > p1GameSets) p2SetsWon++;
+    });
+
+    return [p1SetsWon, p2SetsWon];
+  };
+
+  const formatScore = (score: any, isParticipant1: boolean): string => {
+    if (sportConfig?.sportType === "table-tennis") {
+      if (
+        match.status === "finalizado" &&
+        score !== null &&
+        score !== undefined
+      ) {
+        return String(score);
+      }
+
+      if (ttDetails?.games && ttDetails.games.length > 0) {
+        const [p1Sets, p2Sets] = calculateTableTennisSets(ttDetails.games);
+        return String(isParticipant1 ? p1Sets : p2Sets);
+      }
+
+      return "-";
+    }
+
+    if (score === null || score === undefined) return "-";
+
+    if (!sportConfig) return String(score);
+
+    const sportType = sportConfig.sportType;
+
+    if (sportType === "judo") {
+      if (score === 10 || score === "10") return "Ippon";
+      return String(score);
+    }
+
+    if (sportType === "kyorugi") {
+      return String(score);
+    }
+
+    return String(score);
+  };
+
+  const score1 = formatScore(match.participant1Score, true);
+  const score2 = formatScore(match.participant2Score, false);
 
   const winnerId = match.winnerRegistrationId;
   const isP1Winner = winnerId === p1Data?.registrationId;
@@ -270,16 +355,28 @@ function MatchCard({
     xl: "text-lg",
   } as const;
 
+  const getScoreClass = (score: string, isWinner: boolean) => {
+    const baseSize =
+      size === "xl" ? "text-3xl" : size === "lg" ? "text-2xl" : "text-xl";
+    const smallSize =
+      size === "xl" ? "text-xl" : size === "lg" ? "text-lg" : "text-base";
+
+    const fontSize = score.length > 3 ? smallSize : baseSize;
+    const color = isWinner ? "text-green-600" : "text-gray-500";
+
+    return `${fontSize} font-bold ml-2 flex-shrink-0 ${color}`;
+  };
+
   return (
     <div
-      onClick={onClick} // ✅ AGREGAR
+      onClick={onClick}
       className={`${sizeClasses[size]} border-2 ${
         isFinal
           ? "border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50"
           : "border-gray-300 bg-white"
-      } rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer hover:scale-105`} // ✅ AGREGAR cursor y hover
+      } rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer hover:scale-105`}
     >
-      {/* ... resto del código sin cambios ... */}
+      {/* Participante 1 */}
       <div
         className={`flex items-center justify-between p-3 ${
           isP1Winner
@@ -290,12 +387,17 @@ function MatchCard({
         } rounded-t-xl`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {isP1Winner && (
-            <Trophy className="h-4 w-4 text-green-600 flex-shrink-0" />
+          {logo1 && (
+            <img
+              src={getImageUrl(logo1)}
+              alt={institution1?.name || ""}
+              className="h-6 w-6 object-contain flex-shrink-0"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
           )}
-          {p1Corner === "blue" && !isP1Winner && (
-            <div className="h-2 w-2 rounded-full bg-blue-600 flex-shrink-0" />
-          )}
+
           <div className="min-w-0 flex-1">
             <p
               className={`font-bold text-gray-900 truncate ${textSizeClasses[size]}`}
@@ -303,33 +405,37 @@ function MatchCard({
               {name1}
             </p>
             {institution1 && (
-              <p className="text-xs text-gray-600 truncate">{institution1}</p>
+              <p className="text-xs text-gray-600 truncate">
+                {institution1.abrev || institution1.name}
+              </p>
             )}
           </div>
         </div>
-        <span
-          className={`${
-            size === "xl" ? "text-3xl" : size === "lg" ? "text-2xl" : "text-xl"
-          } font-bold ml-2 flex-shrink-0 ${
-            isP1Winner ? "text-green-600" : "text-gray-500"
-          }`}
-        >
-          {score1}
-        </span>
+        <span className={getScoreClass(score1, isP1Winner)}>{score1}</span>
       </div>
 
+      {/* Participante 2 */}
       <div
         className={`flex items-center justify-between p-3 ${
-          isP2Winner ? "bg-green-100" : "bg-white"
+          isP2Winner
+            ? "bg-green-100"
+            : p2Corner === "white"
+              ? "bg-gray-50"
+              : "bg-white"
         } rounded-b-xl`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {isP2Winner && (
-            <Trophy className="h-4 w-4 text-green-600 flex-shrink-0" />
+          {logo2 && (
+            <img
+              src={getImageUrl(logo2)}
+              alt={institution2?.name || ""}
+              className="h-6 w-6 object-contain flex-shrink-0"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
           )}
-          {p2Corner === "white" && !isP2Winner && (
-            <div className="h-2 w-2 rounded-full bg-gray-400 flex-shrink-0" />
-          )}
+
           <div className="min-w-0 flex-1">
             <p
               className={`font-bold text-gray-900 truncate ${textSizeClasses[size]}`}
@@ -337,21 +443,16 @@ function MatchCard({
               {name2}
             </p>
             {institution2 && (
-              <p className="text-xs text-gray-600 truncate">{institution2}</p>
+              <p className="text-xs text-gray-600 truncate">
+                {institution2.abrev || institution2.name}
+              </p>
             )}
           </div>
         </div>
-        <span
-          className={`${
-            size === "xl" ? "text-3xl" : size === "lg" ? "text-2xl" : "text-xl"
-          } font-bold ml-2 flex-shrink-0 ${
-            isP2Winner ? "text-green-600" : "text-gray-500"
-          }`}
-        >
-          {score2}
-        </span>
+        <span className={getScoreClass(score2, isP2Winner)}>{score2}</span>
       </div>
 
+      {/* Footer del match */}
       <div className="px-3 py-2 bg-gray-50 rounded-b-xl border-t">
         <div className="flex items-center justify-between">
           <Badge

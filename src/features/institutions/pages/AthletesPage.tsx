@@ -12,12 +12,12 @@ import {
   useCreateAthlete,
   useUpdateAthlete,
   useDeleteAthlete,
-  useUploadAthletePhoto, // ✅ AGREGAR
+  useUploadAthletePhoto,
 } from "../api/athletes.mutations";
 import { AthleteForm } from "../components/AthleteForm";
 import { AthleteCard } from "../components/AthleteCard";
 import { DeleteConfirmModal } from "@/features/sports/components/DeleteConfirmModal";
-import type { Athlete, CreateAthleteData } from "../types"; // ✅ MODIFICAR
+import type { Athlete, CreateAthleteData } from "../types";
 
 export function AthletesPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

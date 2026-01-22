@@ -76,11 +76,16 @@ export function CategoryDetailLayout() {
       to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}`,
       icon: <UserPlus />,
     },
-    {
-      label: "Programación",
-      to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/schedule`,
-      icon: <Calendar />,
-    },
+    // Tab de Programación (solo para deportes NO cronometrados)
+    ...(!isTimedSport
+      ? [
+          {
+            label: "Programación",
+            to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/schedule`,
+            icon: <Calendar />,
+          },
+        ]
+      : []),
     // Tab de Resultados (solo para deportes cronometrados)
     ...(isTimedSport
       ? [

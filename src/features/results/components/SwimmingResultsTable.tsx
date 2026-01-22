@@ -10,6 +10,7 @@ import {
 } from "../api/results.queries";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface Registration {
   registrationId: number;
@@ -19,6 +20,7 @@ interface Registration {
     institution: {
       code: string;
       name: string;
+      logoUrl?: string;
     };
   };
   team?: {
@@ -27,6 +29,7 @@ interface Registration {
     institution: {
       code: string;
       name: string;
+      logoUrl?: string;
     };
     members: Array<{
       tmId: number;
@@ -41,8 +44,8 @@ interface Registration {
 interface SwimmingResult {
   resultId: number;
   timeValue: string;
-  rankPosition?: number | null; // ✅ Permitir null
-  notes?: string | null; // ✅ Permitir null
+  rankPosition?: number | null;
+  notes?: string | null;
   participation?: {
     registration?: {
       registrationId: number;
@@ -140,6 +143,9 @@ export function SwimmingResultsTable({
                     Participante
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Institución
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tiempo
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -157,6 +163,11 @@ export function SwimmingResultsTable({
                   );
                   const isTeam = !!registration.team;
                   const isDQ = result?.notes?.includes("DQ");
+
+                  // Obtener institución
+                  const institution = isTeam
+                    ? registration.team?.institution
+                    : registration.athlete?.institution;
 
                   return (
                     <tr
@@ -191,6 +202,25 @@ export function SwimmingResultsTable({
                             </p>
                           </div>
                         )}
+                      </td>
+
+                      {/* Institución con Logo */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {institution?.logoUrl && (
+                            <img
+                              src={getImageUrl(institution.logoUrl)}
+                              alt={institution.name}
+                              className="h-6 w-6 object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
+                          <span className="text-sm text-gray-700">
+                            {institution?.name || "Sin institución"}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Tiempo */}

@@ -2,18 +2,25 @@ import { X, Trophy, Users, Clock, Award } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
-import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries"; // ✅ TU IMPORT
+import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface MatchDetailsModalProps {
   matchId: number;
   onClose: () => void;
+  sportConfig?: {
+    sportType: string;
+    scoreLabel: string;
+    showScores: boolean;
+  };
 }
 
 export function MatchDetailsModal({
   matchId,
   onClose,
+  sportConfig,
 }: MatchDetailsModalProps) {
-  const { data, isLoading } = useMatchDetails(matchId); // ✅ TU HOOK
+  const { data, isLoading } = useMatchDetails(matchId);
 
   if (isLoading) {
     return (
@@ -32,9 +39,49 @@ export function MatchDetailsModal({
 
   const { match, lineups, games, result } = data;
 
-  // Determinar modalidad
+  // Detectar tipo de deporte si no se provee sportConfig
+  const detectSportType = (): string => {
+    if (sportConfig?.sportType) return sportConfig.sportType;
+
+    const categoryName =
+      match.phase?.eventCategory?.category?.name?.toLowerCase() || "";
+    const sportName =
+      match.phase?.eventCategory?.category?.sport?.name?.toLowerCase() || "";
+
+    if (sportName.includes("judo")) return "judo";
+    if (sportName.includes("taekwondo") && categoryName.includes("kyorugi"))
+      return "kyorugi";
+    if (sportName.includes("tenis de mesa")) return "table-tennis";
+    if (
+      sportName.includes("voleibol") ||
+      sportName.includes("básquetbol") ||
+      sportName.includes("fútbol")
+    )
+      return "team";
+
+    return "generic";
+  };
+
+  const sportType = detectSportType();
   const isTeamMatch = lineups.length > 0 && lineups[0].lineups.length > 0;
-  const isIndividualOrDoubles = games.length === 1;
+  const isTableTennis = sportType === "table-tennis";
+  const isJudo = sportType === "judo";
+  const isKyorugi = sportType === "kyorugi";
+
+  // Obtener label de score según deporte
+  const getScoreLabel = () => {
+    if (sportConfig?.scoreLabel) return sportConfig.scoreLabel;
+    if (isTableTennis) return "Sets ganados";
+    if (isJudo) return "Puntos";
+    if (isKyorugi) return "Puntos";
+    return "Puntos";
+  };
+
+  // Formatear score según deporte
+  const formatScore = (score: number) => {
+    if (isJudo && score === 10) return "Ippon";
+    return score;
+  };
 
   return (
     <div
@@ -101,19 +148,39 @@ export function MatchDetailsModal({
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
+                    {result?.team1?.participation?.registration?.athlete
+                      ?.photoUrl && (
+                      <img
+                        src={getImageUrl(
+                          result.team1.participation.registration.athlete
+                            .photoUrl,
+                        )}
+                        alt={result.team1.teamName}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
                     <h4 className="font-bold text-gray-900">
                       {result?.team1?.teamName}
                     </h4>
+                    {result?.winner?.registrationId ===
+                      result?.team1?.participation?.registrationId && (
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
-                      Juegos ganados
+                      {getScoreLabel()}
                     </span>
                     <Badge
                       variant="primary"
                       className="text-2xl font-bold px-4"
                     >
-                      {result?.team1?.wins || 0}
+                      {isTableTennis
+                        ? result?.team1?.wins || 0
+                        : formatScore(match.participant1Score || 0)}
                     </Badge>
                   </div>
                 </div>
@@ -128,25 +195,89 @@ export function MatchDetailsModal({
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
+                    {result?.team2?.participation?.registration?.athlete
+                      ?.photoUrl && (
+                      <img
+                        src={getImageUrl(
+                          result.team2.participation.registration.athlete
+                            .photoUrl,
+                        )}
+                        alt={result.team2.teamName}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
                     <h4 className="font-bold text-gray-900">
                       {result?.team2?.teamName}
                     </h4>
+                    {result?.winner?.registrationId ===
+                      result?.team2?.participation?.registrationId && (
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
-                      Juegos ganados
+                      {getScoreLabel()}
                     </span>
                     <Badge
                       variant="primary"
                       className="text-2xl font-bold px-4"
                     >
-                      {result?.team2?.wins || 0}
+                      {isTableTennis
+                        ? result?.team2?.wins || 0
+                        : formatScore(match.participant2Score || 0)}
                     </Badge>
                   </div>
                 </div>
               </div>
             </CardBody>
           </Card>
+
+          {/* Información adicional para Judo/Kyorugi */}
+          {(isJudo || isKyorugi) && match.participant1Score !== null && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-purple-600" />
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Detalle del Combate
+                  </h3>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">
+                      {result?.team1?.teamName}
+                    </p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {formatScore(match.participant1Score || 0)}
+                    </p>
+                    {isJudo && match.participant1Score === 10 && (
+                      <Badge variant="success" className="mt-2">
+                        ¡Ippon!
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-center p-4 bg-red-50 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">
+                      {result?.team2?.teamName}
+                    </p>
+                    <p className="text-3xl font-bold text-red-600">
+                      {formatScore(match.participant2Score || 0)}
+                    </p>
+                    {isJudo && match.participant2Score === 10 && (
+                      <Badge variant="success" className="mt-2">
+                        ¡Ippon!
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          )}
 
           {/* Lineups (Solo para Equipos) */}
           {isTeamMatch && lineups.length > 0 && (
@@ -210,8 +341,8 @@ export function MatchDetailsModal({
             </Card>
           )}
 
-          {/* Juegos */}
-          {games.length > 0 && (
+          {/* Juegos/Sets (Solo para Tenis de Mesa) */}
+          {isTableTennis && games.length > 0 && (
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -229,22 +360,13 @@ export function MatchDetailsModal({
               </CardBody>
             </Card>
           )}
-
-          {games.length === 0 && (
-            <Card>
-              <CardBody className="text-center py-8 text-gray-500">
-                <Clock className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                <p className="font-medium">No hay juegos registrados aún</p>
-              </CardBody>
-            </Card>
-          )}
         </div>
       </div>
     </div>
   );
 }
 
-// Componente para mostrar detalles de cada juego
+// Componente para mostrar detalles de cada juego (Tenis de Mesa)
 function GameDetails({ game }: { game: any }) {
   const hasWinner = !!game.winnerId;
   const player1Won = game.winnerId === game.player1Id;

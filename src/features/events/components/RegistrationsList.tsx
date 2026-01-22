@@ -35,10 +35,10 @@ export function RegistrationsList({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Participante</TableHead>
-          <TableHead>Institución</TableHead>
-          <TableHead>Seed</TableHead>
-          <TableHead className="text-right">Acciones</TableHead>
+          <TableHead className="text-center">Participante</TableHead>
+          <TableHead className="text-center">Institución</TableHead>
+          <TableHead className="text-center">Seed</TableHead>
+          <TableHead className="text-center">Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
