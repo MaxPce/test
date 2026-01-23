@@ -44,8 +44,6 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     return (
       <Card>
         <CardBody className="text-center py-12">
-          <Award className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500">La competencia aún no ha finalizado</p>
           <p className="text-sm text-gray-400 mt-2">
             El podio aparecerá cuando termine la final
           </p>
@@ -249,14 +247,6 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
           </div>
         </CardBody>
       </Card>
-
-      {/* Nota informativa */}
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-        <p className="text-sm text-blue-700">
-          <strong>Nota:</strong> El podio se genera automáticamente al finalizar
-          los matches.
-        </p>
-      </div>
     </div>
   );
 }

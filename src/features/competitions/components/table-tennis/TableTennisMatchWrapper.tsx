@@ -23,7 +23,6 @@ export function TableTennisMatchWrapper({
 
   const categoryType = eventCategory.category?.type?.toLowerCase() || "";
 
-  // ✅ Enriquecer match con eventCategory
   const enrichedMatch: Match = {
     ...match,
     phase: {
@@ -57,7 +56,7 @@ export function TableTennisMatchWrapper({
   if (categoryType === "individual") {
     // Para individual, verificar que ambos tienen registration.athlete
     const individualsWithAthlete = match.participations.filter(
-      (p) => p.registration?.athlete != null
+      (p) => p.registration?.athlete != null,
     );
 
     if (individualsWithAthlete.length < 2) {
@@ -77,7 +76,8 @@ export function TableTennisMatchWrapper({
     // Para equipos, verificar que tienen al menos 2 miembros
     const teamsWithMembers = match.participations.filter(
       (p) =>
-        p.registration?.team?.members && p.registration.team.members.length >= 2
+        p.registration?.team?.members &&
+        p.registration.team.members.length >= 2,
     );
 
     if (teamsWithMembers.length < 2) {

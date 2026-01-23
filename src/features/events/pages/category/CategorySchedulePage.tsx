@@ -16,6 +16,7 @@ import { KyoruguiBracketView } from "@/features/competitions/components/taekwond
 import { PoomsaeScoreTable } from "@/features/competitions/components/taekwondo/PoomsaeScoreTable";
 import { KyoruguiScoreModal } from "@/features/competitions/components/taekwondo/KyoruguiScoreModal";
 import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
+import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import {
   useMatches,
@@ -39,6 +40,8 @@ import { useUpdateStandings } from "@/features/competitions/api/standings.mutati
 import { BestOf3View } from "@/features/competitions/components/BestOf3View";
 import { GenerateBestOf3Modal } from "@/features/competitions/components/GenerateBestOf3Modal";
 import { useInitializeBestOf3 } from "@/features/competitions/api/best-of-3.mutations";
+import { GenerateBracketModal } from "@/features/competitions/components/GenerateBracketModal";
+import { useGenerateBracket } from "@/features/competitions/api/bracket.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function CategorySchedulePage() {
@@ -58,10 +61,14 @@ export function CategorySchedulePage() {
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] =
     useState(false);
+  const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
+    useState(false);
 
   const initializeRoundRobinMutation = useInitializeRoundRobin();
   const updateStandingsMutation = useUpdateStandings();
   const initializeBestOf3Mutation = useInitializeBestOf3();
+  const generateBracketMutation = useGenerateBracket();
+  const advanceWinnerMutation = useAdvanceWinner();
 
   const { data: phases = [], isLoading: phasesLoading } = usePhases(
     eventCategory.eventCategoryId,
@@ -161,16 +168,26 @@ export function CategorySchedulePage() {
   };
 
   const handleRegisterResult = async (matchId: number, winnerId: number) => {
-    await updateMatchMutation.mutateAsync({
-      id: matchId,
-      data: {
-        status: "finalizado",
+    // Si es una fase de eliminación, usar el endpoint de avance automático
+    if (selectedPhase?.type === "eliminacion") {
+      await advanceWinnerMutation.mutateAsync({
+        matchId,
         winnerRegistrationId: winnerId,
-      },
-    });
+      });
+    } else {
+      // Para otras fases (grupo, mejor_de_3), usar el método tradicional
+      await updateMatchMutation.mutateAsync({
+        id: matchId,
+        data: {
+          status: "finalizado",
+          winnerRegistrationId: winnerId,
+        },
+      });
 
-    if (selectedPhase?.type === "grupo") {
-      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+      // Si es fase de grupo, actualizar standings
+      if (selectedPhase?.type === "grupo") {
+        await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+      }
     }
   };
 
@@ -180,6 +197,15 @@ export function CategorySchedulePage() {
   }) => {
     await initializeBestOf3Mutation.mutateAsync(data);
     setIsGenerateBestOf3ModalOpen(false);
+  };
+
+  const handleGenerateBracket = async (data: {
+    phaseId: number;
+    registrationIds: number[];
+    includeThirdPlace?: boolean;
+  }) => {
+    await generateBracketMutation.mutateAsync(data);
+    setIsGenerateBracketModalOpen(false);
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -326,7 +352,6 @@ export function CategorySchedulePage() {
                               size="sm"
                               onClick={() => setIsGenerateModalOpen(true)}
                             >
-                              <Zap className="h-4 w-4 mr-2" />
                               Generar Partidos
                             </Button>
                           )}
@@ -339,8 +364,19 @@ export function CategorySchedulePage() {
                                 setIsGenerateBestOf3ModalOpen(true)
                               }
                             >
-                              <Zap className="h-4 w-4 mr-2" />
                               Generar Serie
+                            </Button>
+                          )}
+                        {selectedPhase.type === "eliminacion" &&
+                          matches.length === 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setIsGenerateBracketModalOpen(true)
+                              }
+                            >
+                              Generar Bracket Completo
                             </Button>
                           )}
                         <Button
@@ -419,7 +455,7 @@ export function CategorySchedulePage() {
                               </div>
                               {match.scheduledTime && (
                                 <p className="text-sm text-gray-600">
-                                  📅{" "}
+                                  Fecha:{" "}
                                   {new Date(match.scheduledTime).toLocaleString(
                                     "es-ES",
                                   )}
@@ -427,7 +463,7 @@ export function CategorySchedulePage() {
                               )}
                               {match.platformNumber && (
                                 <p className="text-sm text-gray-600">
-                                  🏟️ Plataforma {match.platformNumber}
+                                  Plataforma {match.platformNumber}
                                 </p>
                               )}
 
@@ -457,7 +493,6 @@ export function CategorySchedulePage() {
                                   ? reg.athlete.name
                                   : reg?.team?.name || "Sin nombre";
 
-                                // Obtener institución completa
                                 const institution =
                                   reg?.athlete?.institution ||
                                   reg?.team?.institution;
@@ -475,7 +510,6 @@ export function CategorySchedulePage() {
                                     }`}
                                   >
                                     <div className="flex items-center gap-2">
-                                      {/* Logo de la institución */}
                                       {logoUrl && (
                                         <img
                                           src={getImageUrl(logoUrl)}
@@ -648,6 +682,17 @@ export function CategorySchedulePage() {
             />
           )}
 
+          {selectedPhase.type === "eliminacion" && (
+            <GenerateBracketModal
+              isOpen={isGenerateBracketModalOpen}
+              onClose={() => setIsGenerateBracketModalOpen(false)}
+              phase={selectedPhase}
+              availableRegistrations={
+                eventCategory.registrations?.map((r) => r.registrationId) || []
+              }
+            />
+          )}
+
           {selectedMatch && (
             <>
               <AssignParticipantsModal
@@ -670,6 +715,7 @@ export function CategorySchedulePage() {
                     setSelectedMatch(null);
                   }}
                   match={selectedMatch}
+                  phase={selectedPhase}
                 />
               ) : isJudo() ? (
                 <JudoScoreModal
@@ -679,6 +725,7 @@ export function CategorySchedulePage() {
                     setSelectedMatch(null);
                   }}
                   match={selectedMatch}
+                  phase={selectedPhase}
                 />
               ) : isTableTennis() ? (
                 <Modal
@@ -704,7 +751,11 @@ export function CategorySchedulePage() {
                   }}
                   match={selectedMatch}
                   onSubmit={handleRegisterResult}
-                  isLoading={updateMatchMutation.isPending}
+                  isLoading={
+                    selectedPhase?.type === "eliminacion"
+                      ? advanceWinnerMutation.isPending
+                      : updateMatchMutation.isPending
+                  }
                 />
               )}
             </>

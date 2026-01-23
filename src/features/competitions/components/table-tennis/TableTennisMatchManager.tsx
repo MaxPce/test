@@ -32,7 +32,8 @@ import {
   useFinalizeMatch,
   useReopenMatch,
 } from "../../api/table-tennis.mutations";
-import type { Match } from "../../types";
+import { useAdvanceWinner } from "../../api/bracket.mutations";
+import type { Match, Phase } from "../../types";
 import {
   detectTableTennisModality,
   getModalityLabel,
@@ -42,12 +43,13 @@ import {
 
 interface TableTennisMatchManagerProps {
   match: Match;
+  phase: Phase;
 }
 
 export function TableTennisMatchManager({
   match,
+  phase,
 }: TableTennisMatchManagerProps) {
-  // ✅ Detectar modalidad
   const modality = detectTableTennisModality(match);
   const requiresLineup = needsLineup(modality);
 
@@ -70,6 +72,7 @@ export function TableTennisMatchManager({
   const generateGamesMutation = useGenerateGames();
   const finalizeMatchMutation = useFinalizeMatch();
   const reopenMatchMutation = useReopenMatch();
+  const advanceWinnerMutation = useAdvanceWinner(); // ✅ NUEVO
 
   // Estados derivados
   const hasLineups = lineups.length === 2 && lineups.every((l) => l.hasLineup);
@@ -83,7 +86,6 @@ export function TableTennisMatchManager({
   const team1Members = participation1?.registration?.team?.members || [];
   const team2Members = participation2?.registration?.team?.members || [];
 
-  // ✅ Obtener nombre de participantes según modalidad
   const getParticipantName = (participationIndex: number): string => {
     const participation = match.participations?.[participationIndex];
     if (!participation) return `Participante ${participationIndex + 1}`;
@@ -116,7 +118,6 @@ export function TableTennisMatchManager({
   const participant1Name = getParticipantName(0);
   const participant2Name = getParticipantName(1);
 
-  // ✅ Obtener nombre del ganador
   const getWinnerName = (): string => {
     if (!result?.winner) return "";
 
@@ -127,7 +128,6 @@ export function TableTennisMatchManager({
         : result.team2.teamName;
     }
 
-    // Individual o Dobles
     return result.winner.registrationId ===
       participation1?.registration.registrationId
       ? participant1Name
@@ -155,7 +155,6 @@ export function TableTennisMatchManager({
     }
   };
 
-  // Handler para finalizar match
   const handleFinalizeMatch = () => {
     if (!result?.winner) {
       alert("No hay un ganador determinado aún. Completa todos los juegos.");
@@ -169,12 +168,32 @@ export function TableTennisMatchManager({
         `¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}\n\nEsta acción marcará el match como finalizado.`,
       )
     ) {
-      finalizeMatchMutation.mutate(match.matchId, {
-        onSuccess: () => {
-          // Opcional: mostrar mensaje de éxito
-          alert("Match finalizado exitosamente");
-        },
-      });
+      if (phase.type === "eliminacion") {
+        advanceWinnerMutation.mutate(
+          {
+            matchId: match.matchId,
+            winnerRegistrationId: result.winner.registrationId,
+          },
+          {
+            onSuccess: () => {
+              alert("Match finalizado y ganador avanzado exitosamente");
+            },
+            onError: () => {
+              alert("Error al finalizar el match");
+            },
+          },
+        );
+      } else {
+        // Para otras fases (grupo, mejor_de_3), usar el método tradicional
+        finalizeMatchMutation.mutate(match.matchId, {
+          onSuccess: () => {
+            alert("Match finalizado exitosamente");
+          },
+          onError: () => {
+            alert("Error al finalizar el match");
+          },
+        });
+      }
     }
   };
 
@@ -398,7 +417,7 @@ export function TableTennisMatchManager({
       {hasGames &&
         result &&
         result.winner &&
-        match.status !== "finalizado" && // ✅ CAMBIO: Agregar esta condición
+        match.status !== "finalizado" &&
         games.every((g) => g.status === "completed") && (
           <Card>
             <CardBody className="p-4">
@@ -413,7 +432,10 @@ export function TableTennisMatchManager({
                 </div>
                 <Button
                   onClick={handleFinalizeMatch}
-                  isLoading={finalizeMatchMutation.isPending}
+                  isLoading={
+                    finalizeMatchMutation.isPending ||
+                    advanceWinnerMutation.isPending
+                  } // ✅ ACTUALIZADO
                   variant="default"
                 >
                   Finalizar Match

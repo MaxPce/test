@@ -1,20 +1,24 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import type { JudoMatch } from "../../types/judo.types";
+import type { Phase } from "../../types";
 import { useUpdateJudoScore } from "../../api/judo.mutations";
+import { useAdvanceWinner } from "../../api/bracket.mutations";
 import { toast } from "sonner";
 
 interface Props {
   match: JudoMatch;
+  phase: Phase; // ✅ NUEVO: recibir la fase
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const JudoScoreModal = ({ match, isOpen, onClose }: Props) => {
+export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
   const [score1, setScore1] = useState(match.participant1Score || 0);
   const [score2, setScore2] = useState(match.participant2Score || 0);
 
   const updateMutation = useUpdateJudoScore();
+  const advanceWinnerMutation = useAdvanceWinner(); // ✅ NUEVO
 
   useEffect(() => {
     setScore1(match.participant1Score || 0);
@@ -22,24 +26,57 @@ export const JudoScoreModal = ({ match, isOpen, onClose }: Props) => {
   }, [match]);
 
   const handleSubmit = () => {
-    updateMutation.mutate(
-      {
-        matchId: match.matchId,
-        data: {
+    // Determinar ganador
+    const winnerId =
+      score1 > score2
+        ? match.participations?.[0]?.registrationId
+        : match.participations?.[1]?.registrationId;
+
+    if (!winnerId) {
+      toast.error("No se pudo determinar el ganador");
+      return;
+    }
+
+    // ✅ NUEVO: Si es eliminación, usar avance automático
+    if (phase.type === "eliminacion") {
+      advanceWinnerMutation.mutate(
+        {
+          matchId: match.matchId,
+          winnerRegistrationId: winnerId,
           participant1Score: score1,
           participant2Score: score2,
         },
-      },
-      {
-        onSuccess: () => {
-          toast.success("Puntaje actualizado correctamente");
-          onClose();
+        {
+          onSuccess: () => {
+            toast.success("Puntaje actualizado y ganador avanzado");
+            onClose();
+          },
+          onError: () => {
+            toast.error("Error al actualizar puntaje");
+          },
         },
-        onError: () => {
-          toast.error("Error al actualizar puntaje");
+      );
+    } else {
+      // Para otras fases, usar el método tradicional
+      updateMutation.mutate(
+        {
+          matchId: match.matchId,
+          data: {
+            participant1Score: score1,
+            participant2Score: score2,
+          },
         },
-      },
-    );
+        {
+          onSuccess: () => {
+            toast.success("Puntaje actualizado correctamente");
+            onClose();
+          },
+          onError: () => {
+            toast.error("Error al actualizar puntaje");
+          },
+        },
+      );
+    }
   };
 
   if (!isOpen) return null;
@@ -78,6 +115,8 @@ export const JudoScoreModal = ({ match, isOpen, onClose }: Props) => {
       </div>
     );
   }
+
+  const isLoading = updateMutation.isPending || advanceWinnerMutation.isPending;
 
   return (
     <div
@@ -138,16 +177,16 @@ export const JudoScoreModal = ({ match, isOpen, onClose }: Props) => {
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            disabled={updateMutation.isPending}
+            disabled={isLoading}
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-            disabled={updateMutation.isPending}
+            disabled={isLoading || score1 === score2}
           >
-            {updateMutation.isPending ? "Guardando..." : "Guardar"}
+            {isLoading ? "Guardando..." : "Guardar"}
           </button>
         </div>
       </div>

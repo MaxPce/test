@@ -1,84 +1,101 @@
-// src/features/competitions/components/taekwondo/KyoruguiScoreModal.tsx
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import type { KyoruguiMatch } from "../../types/taekwondo.types";
+import type { Phase } from "../../types";
 import { useUpdateKyoruguiScore } from "../../api/taekwondo.mutations";
+import { useAdvanceWinner } from "../../api/bracket.mutations";
 import { toast } from "sonner";
 
 interface Props {
   match: KyoruguiMatch;
+  phase: Phase; // ✅ NUEVO: recibir la fase
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const KyoruguiScoreModal = ({ match, isOpen, onClose }: Props) => {
+export const KyoruguiScoreModal = ({
+  match,
+  phase,
+  isOpen,
+  onClose,
+}: Props) => {
   const [score1, setScore1] = useState(match.participant1Score || 0);
   const [score2, setScore2] = useState(match.participant2Score || 0);
 
   const updateMutation = useUpdateKyoruguiScore();
+  const advanceWinnerMutation = useAdvanceWinner(); // ✅ NUEVO
 
   useEffect(() => {
     setScore1(match.participant1Score || 0);
     setScore2(match.participant2Score || 0);
   }, [match]);
 
-  // ✅ DEBUG
-  useEffect(() => {
-    console.log("🎯 Modal recibió match:", match);
-    console.log("🎯 Participations:", match.participations);
-  }, [match]);
-
   const handleSubmit = () => {
-    updateMutation.mutate(
-      {
-        matchId: match.matchId,
-        data: {
+    // Determinar ganador
+    const winnerId =
+      score1 > score2
+        ? match.participations?.[0]?.registrationId
+        : match.participations?.[1]?.registrationId;
+
+    if (!winnerId) {
+      toast.error("No se pudo determinar el ganador");
+      return;
+    }
+
+    // ✅ NUEVO: Si es eliminación, usar avance automático
+    if (phase.type === "eliminacion") {
+      advanceWinnerMutation.mutate(
+        {
+          matchId: match.matchId,
+          winnerRegistrationId: winnerId,
           participant1Score: score1,
           participant2Score: score2,
         },
-      },
-      {
-        onSuccess: () => {
-          toast.success("Puntaje actualizado correctamente");
-          onClose();
+        {
+          onSuccess: () => {
+            toast.success("Puntaje actualizado y ganador avanzado");
+            onClose();
+          },
+          onError: () => {
+            toast.error("Error al actualizar puntaje");
+          },
         },
-        onError: () => {
-          toast.error("Error al actualizar puntaje");
+      );
+    } else {
+      // Para otras fases, usar el método tradicional
+      updateMutation.mutate(
+        {
+          matchId: match.matchId,
+          data: {
+            participant1Score: score1,
+            participant2Score: score2,
+          },
         },
-      },
-    );
+        {
+          onSuccess: () => {
+            toast.success("Puntaje actualizado correctamente");
+            onClose();
+          },
+          onError: () => {
+            toast.error("Error al actualizar puntaje");
+          },
+        },
+      );
+    }
   };
 
   if (!isOpen) return null;
 
-  // ✅ VERIFICAR que participations exista
   const participant1 = match.participations?.[0];
   const participant2 = match.participations?.[1];
 
   const getParticipantName = (participation: typeof participant1) => {
-    console.log("🔍 getParticipantName recibió:", participation);
-
-    if (!participation) {
-      console.log("❌ No hay participation");
-      return "Sin asignar";
-    }
-
+    if (!participation) return "Sin asignar";
     const registration = participation.registration;
-    if (!registration) {
-      console.log("❌ No hay registration");
-      return `Participation #${participation.participationId}`;
-    }
-
+    if (!registration) return `Participation #${participation.participationId}`;
     const athlete = registration.athlete;
-    if (!athlete) {
-      console.log("❌ No hay athlete");
-      return `Registration #${registration.registrationId}`;
-    }
+    if (!athlete) return `Registration #${registration.registrationId}`;
 
-    console.log("✅ Athlete encontrado:", athlete);
-
-    // Intentar varios campos posibles
     const name =
       athlete.name ||
       `${athlete.firstName || ""} ${athlete.lastName || ""}`.trim() ||
@@ -87,7 +104,6 @@ export const KyoruguiScoreModal = ({ match, isOpen, onClose }: Props) => {
     return name;
   };
 
-  // ✅ VERIFICAR si hay participantes
   if (!match.participations || match.participations.length < 2) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -111,6 +127,8 @@ export const KyoruguiScoreModal = ({ match, isOpen, onClose }: Props) => {
       </div>
     );
   }
+
+  const isLoading = updateMutation.isPending || advanceWinnerMutation.isPending;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -165,16 +183,16 @@ export const KyoruguiScoreModal = ({ match, isOpen, onClose }: Props) => {
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            disabled={updateMutation.isPending}
+            disabled={isLoading}
           >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-            disabled={updateMutation.isPending}
+            disabled={isLoading || score1 === score2}
           >
-            {updateMutation.isPending ? "Guardando..." : "Guardar"}
+            {isLoading ? "Guardando..." : "Guardar"}
           </button>
         </div>
       </div>
