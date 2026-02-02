@@ -165,10 +165,6 @@ export function MatchDetailsModal({
                     <h4 className="font-bold text-gray-900">
                       {result?.team1?.teamName}
                     </h4>
-                    {result?.winner?.registrationId ===
-                      result?.team1?.participation?.registrationId && (
-                      <Trophy className="h-5 w-5 text-yellow-500" />
-                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
@@ -212,10 +208,6 @@ export function MatchDetailsModal({
                     <h4 className="font-bold text-gray-900">
                       {result?.team2?.teamName}
                     </h4>
-                    {result?.winner?.registrationId ===
-                      result?.team2?.participation?.registrationId && (
-                      <Trophy className="h-5 w-5 text-yellow-500" />
-                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">

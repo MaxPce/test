@@ -148,9 +148,7 @@ export function SwimmingResultsTable({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tiempo
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Posición
-                  </th>
+
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
@@ -250,26 +248,6 @@ export function SwimmingResultsTable({
                           <span className="text-sm text-gray-400 italic">
                             Sin tiempo
                           </span>
-                        )}
-                      </td>
-
-                      {/* Posición */}
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {result?.rankPosition ? (
-                          <Badge
-                            variant={
-                              result.rankPosition === 1
-                                ? "success"
-                                : result.rankPosition <= 3
-                                  ? "primary"
-                                  : "default"
-                            }
-                            className="font-bold"
-                          >
-                            {result.rankPosition}°
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-gray-400">-</span>
                         )}
                       </td>
 
