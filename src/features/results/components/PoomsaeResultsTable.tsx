@@ -1,6 +1,8 @@
-import { Card, CardBody } from "@/components/ui/Card";
+import { useState } from "react";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Award, Star, User } from "lucide-react";
+import { Select } from "@/components/ui/Select";
+import { Award, Star, User, Trophy, Target } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import { usePoomsaeScoreTable } from "@/features/competitions/api/taekwondo.queries";
@@ -13,16 +15,17 @@ interface PoomsaeResultsTableProps {
 export function PoomsaeResultsTable({
   eventCategoryId,
 }: PoomsaeResultsTableProps) {
+  const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
+
   const { data: phases = [], isLoading: phasesLoading } =
     usePhases(eventCategoryId);
 
-  const poomsaePhase =
-    phases.find((p) => p.type === "individual" || p.type === "poomsae") ||
-    phases[0];
-  const phaseId = poomsaePhase?.phaseId || 0;
+  const groupPhases = phases.filter((p) => p.type === "grupo");
+  const effectivePhaseId =
+    selectedPhaseId || groupPhases[0]?.phaseId || phases[0]?.phaseId || 0;
 
   const { data: scores = [], isLoading: scoresLoading } =
-    usePoomsaeScoreTable(phaseId);
+    usePoomsaeScoreTable(effectivePhaseId);
 
   const standings = scores
     .map((s: any) => ({
@@ -34,7 +37,7 @@ export function PoomsaeResultsTable({
     .filter((s: any) => s.total > 0)
     .sort((a: any, b: any) => b.total - a.total);
 
-  if (phasesLoading || scoresLoading) {
+  if (phasesLoading) {
     return (
       <Card>
         <CardBody className="flex justify-center items-center py-12">
@@ -44,152 +47,262 @@ export function PoomsaeResultsTable({
     );
   }
 
-  if (standings.length === 0) {
-    return (
-      <Card>
-        <CardBody className="text-center py-12">
-          <Award className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500">No hay resultados registrados aún</p>
-          <p className="text-sm text-gray-400 mt-2">
-            Los resultados aparecerán cuando los jueces califiquen las formas
-          </p>
-        </CardBody>
-      </Card>
-    );
-  }
+  const phaseOptions = [
+    { value: "0", label: "Seleccione una fase" },
+    ...groupPhases.map((phase) => ({
+      value: String(phase.phaseId),
+      label: phase.name,
+    })),
+  ];
+
+  const selectedPhase = phases.find((p) => p.phaseId === effectivePhaseId);
+
+  // Función para obtener el color de medalla
+  const getMedalColor = (position: number) => {
+    switch (position) {
+      case 1:
+        return { bg: "bg-yellow-50", border: "border-yellow-400", text: "text-yellow-700", icon: "🥇" };
+      case 2:
+        return { bg: "bg-gray-50", border: "border-gray-400", text: "text-gray-700", icon: "🥈" };
+      case 3:
+        return { bg: "bg-orange-50", border: "border-orange-400", text: "text-orange-700", icon: "🥉" };
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardBody className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-purple-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                    Pos.
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                    Atleta
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">
-                    Institución
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                    Accuracy
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                    Presentation
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {standings.map((score: any, index: number) => {
-                  const position = index + 1;
-
-                  return (
-                    <tr
-                      key={score.participationId}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant={position <= 3 ? "primary" : "default"}>
-                          {position}°
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          {/* Foto del atleta */}
-                          {score.athletePhoto ? (
-                            <img
-                              src={getImageUrl(score.athletePhoto)}
-                              alt={score.athleteName}
-                              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = "none";
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  const placeholder =
-                                    document.createElement("div");
-                                  placeholder.className =
-                                    "w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center border-2 border-white shadow";
-                                  const icon = document.createElementNS(
-                                    "http://www.w3.org/2000/svg",
-                                    "svg",
-                                  );
-                                  icon.setAttribute(
-                                    "class",
-                                    "h-5 w-5 text-white",
-                                  );
-                                  icon.setAttribute("fill", "currentColor");
-                                  icon.setAttribute("viewBox", "0 0 24 24");
-                                  icon.innerHTML =
-                                    '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
-                                  placeholder.appendChild(icon);
-                                  parent.appendChild(placeholder);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center border-2 border-white shadow">
-                              <User className="h-5 w-5 text-white" />
-                            </div>
-                          )}
-
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {score.athleteName}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          {/* Logo de la institución */}
-                          {score.institutionLogo && (
-                            <img
-                              src={getImageUrl(score.institutionLogo)}
-                              alt={score.institution}
-                              className="h-6 w-6 object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          )}
-                          <span className="text-sm text-gray-500">
-                            {score.institution}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="text-sm font-medium text-gray-700">
-                          {score.accuracy.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="text-sm font-medium text-gray-700">
-                          {score.presentation.toFixed(2)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="text-lg font-bold text-purple-600">
-                            {score.total.toFixed(2)}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      {/* Header profesional */}
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+            <Star className="h-8 w-8" />
           </div>
-        </CardBody>
-      </Card>
+          <div>
+            <h3 className="text-2xl font-bold">Resultados de Poomsae</h3>
+            <p className="text-purple-100 mt-1">
+              Calificaciones de Precisión y Presentación
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Selector de fase */}
+      {groupPhases.length > 1 && (
+        <Card>
+          <CardBody>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 max-w-md">
+                <Select
+                  label="Seleccionar Fase"
+                  value={String(effectivePhaseId)}
+                  onChange={(e) => setSelectedPhaseId(Number(e.target.value))}
+                  options={phaseOptions}
+                />
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Tabla de resultados */}
+      {effectivePhaseId > 0 ? (
+        <Card>
+          {selectedPhase && (
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-gray-900 text-lg">
+                  {selectedPhase.name}
+                </h4>
+                <Badge variant="primary">{standings.length} participantes</Badge>
+              </div>
+            </CardHeader>
+          )}
+          <CardBody className="p-0">
+            {scoresLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando resultados...</p>
+              </div>
+            ) : standings.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Award className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <p className="font-medium">No hay resultados registrados</p>
+                <p className="text-sm mt-1">
+                  Los resultados aparecerán cuando se completen las evaluaciones
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-300">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Pos
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Atleta
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          <div className="flex items-center justify-center gap-1">
+                            <Target className="h-3 w-3" />
+                            Accuracy
+                          </div>
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          <div className="flex items-center justify-center gap-1">
+                            <Star className="h-3 w-3" />
+                            Presentation
+                          </div>
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {standings.map((score: any, index: number) => {
+                        const position = index + 1;
+                        const medalColor = getMedalColor(position);
+                        const isMedalist = position <= 3;
+
+                        return (
+                          <tr
+                            key={score.participationId}
+                            className={`
+                              transition-colors
+                              ${isMedalist ? `${medalColor?.bg} border-l-4 ${medalColor?.border}` : "hover:bg-gray-50"}
+                            `}
+                          >
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-2">
+                                {isMedalist && (
+                                  <span className="text-xl">{medalColor?.icon}</span>
+                                )}
+                                <Badge
+                                  variant={isMedalist ? "primary" : "default"}
+                                  size="sm"
+                                  className="font-bold"
+                                >
+                                  {position}°
+                                </Badge>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-3">
+                                {score.athletePhoto ? (
+                                  <img
+                                    src={getImageUrl(score.athletePhoto)}
+                                    alt={score.athleteName}
+                                    className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
+                                    onError={(e) => {
+                                      const target = e.currentTarget;
+                                      target.style.display = "none";
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        const placeholder = document.createElement("div");
+                                        placeholder.className = "w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center border-2 border-white shadow";
+                                        const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                                        icon.setAttribute("class", "h-5 w-5 text-white");
+                                        icon.setAttribute("fill", "currentColor");
+                                        icon.setAttribute("viewBox", "0 0 24 24");
+                                        icon.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
+                                        placeholder.appendChild(icon);
+                                        parent.appendChild(placeholder);
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center border-2 border-white shadow">
+                                    <User className="h-5 w-5 text-white" />
+                                  </div>
+                                )}
+
+                                <div className="flex-1">
+                                  <p className="font-semibold text-gray-900">
+                                    {score.athleteName}
+                                  </p>
+                                  {score.institution && (
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      {score.institutionLogo && (
+                                        <img
+                                          src={getImageUrl(score.institutionLogo)}
+                                          alt={score.institution}
+                                          className="h-4 w-4 object-contain"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = "none";
+                                          }}
+                                        />
+                                      )}
+                                      <p className="text-xs text-gray-600 font-medium">
+                                        {score.institution}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-center">
+                              <div className="inline-flex items-center gap-2">
+                                <span className="text-sm font-semibold text-purple-700">
+                                  {score.accuracy.toFixed(2)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-center">
+                              <div className="inline-flex items-center gap-2">
+                                <span className="text-sm font-semibold text-pink-700">
+                                  {score.presentation.toFixed(2)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-center">
+                              <Badge
+                                variant="primary"
+                                className={`font-bold text-base px-3 ${isMedalist ? medalColor?.text : ""}`}
+                              >
+                                {score.total.toFixed(2)}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Leyenda */}
+                <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-600">
+                    <span>
+                      <strong>Accuracy:</strong> Precisión técnica de la forma
+                    </span>
+                    <span>
+                      <strong>Presentation:</strong> Presentación y ejecución
+                    </span>
+                    <span>
+                      <strong>Total:</strong> Puntuación final (Accuracy + Presentation)
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardBody>
+        </Card>
+      ) : (
+        <Card>
+          <CardBody>
+            <div className="text-center py-12 text-gray-500">
+              <Award className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p className="font-medium">
+                Selecciona una fase para ver los resultados
+              </p>
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }

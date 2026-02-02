@@ -304,11 +304,7 @@ export function CategoryStandingsPage() {
           {/* Si también hay fase de grupos, mostrar tabla de Poomsae */}
           {groupPhases.length > 0 && (
             <>
-              <div className="border-t-2 border-gray-200 pt-6 mt-8">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">
-                  Resultados de Fase de Grupos
-                </h3>
-              </div>
+              
               <PoomsaeResultsTable
                 eventCategoryId={eventCategory.eventCategoryId}
               />

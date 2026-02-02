@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { useEvent } from "../api/events.queries";
-import { getImageUrl } from "@/lib/utils/imageUrl"; // ✅ AGREGAR IMPORT
+import { getImageUrl } from "@/lib/utils/imageUrl"; 
 
 export function EventLayout() {
   const { eventId } = useParams<{ eventId: string }>();
