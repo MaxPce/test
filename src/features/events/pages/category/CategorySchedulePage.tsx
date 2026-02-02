@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
-import { Tabs } from "@/components/ui/Tabs";
 import { PhaseForm } from "@/features/competitions/components/PhaseForm";
 import { MatchForm } from "@/features/competitions/components/MatchForm";
 import { AssignParticipantsModal } from "@/features/competitions/components/AssignParticipantsModal";
@@ -13,6 +12,7 @@ import { ResultModal } from "@/features/competitions/components/ResultModal";
 import { BracketView } from "@/features/competitions/components/BracketView";
 import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
 import { KyoruguiBracketView } from "@/features/competitions/components/taekwondo/KyoruguiBracketView";
+import { PoomsaeScoreModal } from "@/features/competitions/components/taekwondo/PoomsaeScoreModal";
 import { PoomsaeScoreTable } from "@/features/competitions/components/taekwondo/PoomsaeScoreTable";
 import { KyoruguiScoreModal } from "@/features/competitions/components/taekwondo/KyoruguiScoreModal";
 import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
@@ -57,7 +57,6 @@ export function CategorySchedulePage() {
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "bracket">("list");
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] =
     useState(false);
@@ -168,14 +167,12 @@ export function CategorySchedulePage() {
   };
 
   const handleRegisterResult = async (matchId: number, winnerId: number) => {
-    // Si es una fase de eliminación, usar el endpoint de avance automático
     if (selectedPhase?.type === "eliminacion") {
       await advanceWinnerMutation.mutateAsync({
         matchId,
         winnerRegistrationId: winnerId,
       });
     } else {
-      // Para otras fases (grupo, mejor_de_3), usar el método tradicional
       await updateMatchMutation.mutateAsync({
         id: matchId,
         data: {
@@ -184,7 +181,6 @@ export function CategorySchedulePage() {
         },
       });
 
-      // Si es fase de grupo, actualizar standings
       if (selectedPhase?.type === "grupo") {
         await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
       }
@@ -330,21 +326,36 @@ export function CategorySchedulePage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
+                    {/* Generar Bracket - para Kyorugui y Poomsae en eliminación */}
+                    {selectedPhase.type === "eliminacion" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            console.log(
+                              "📊 EventCategory registrations:",
+                              eventCategory.registrations,
+                            );
+                            console.log(
+                              "📊 Total registrations:",
+                              eventCategory.registrations?.length || 0,
+                            );
+                            console.log(
+                              "📊 RegistrationIds:",
+                              eventCategory.registrations?.map(
+                                (r) => r.registrationId,
+                              ),
+                            );
+                            setIsGenerateBracketModalOpen(true);
+                          }}
+                        >
+                          Generar Bracket Completo
+                        </Button>
+                      )}
+
                     {getTaekwondoType() !== "poomsae" && (
                       <>
-                        {selectedPhase.type === "eliminacion" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setViewMode(
-                                viewMode === "list" ? "bracket" : "list",
-                              )
-                            }
-                          >
-                            {viewMode === "list" ? "Ver Bracket" : "Ver Lista"}
-                          </Button>
-                        )}
                         {selectedPhase.type === "grupo" &&
                           matches.length === 0 && (
                             <Button
@@ -367,26 +378,21 @@ export function CategorySchedulePage() {
                               Generar Serie
                             </Button>
                           )}
-                        {selectedPhase.type === "eliminacion" &&
-                          matches.length === 0 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                setIsGenerateBracketModalOpen(true)
-                              }
-                            >
-                              Generar Bracket Completo
-                            </Button>
-                          )}
-                        <Button
-                          size="sm"
-                          onClick={() => setIsMatchModalOpen(true)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nuevo Partido
-                        </Button>
                       </>
+                    )}
+
+                    {/* Nuevo Partido - disponible para todos excepto Poomsae en grupo */}
+                    {!(
+                      getTaekwondoType() === "poomsae" &&
+                      selectedPhase.type === "grupo"
+                    ) && (
+                      <Button
+                        size="sm"
+                        onClick={() => setIsMatchModalOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuevo Partido
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -394,20 +400,14 @@ export function CategorySchedulePage() {
               <CardBody>
                 {matchesLoading ? (
                   <div className="text-center py-8">Cargando partidos...</div>
-                ) : getTaekwondoType() === "poomsae" ? (
+                ) : getTaekwondoType() === "poomsae" &&
+                  selectedPhase.type !== "eliminacion" ? (
                   <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
-                ) : getTaekwondoType() === "kyorugui" &&
-                  viewMode === "bracket" &&
-                  selectedPhase.type === "eliminacion" ? (
-                  <KyoruguiBracketView phaseId={selectedPhase.phaseId} />
                 ) : matches.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Calendar className="h-10 w-10 mx-auto mb-2 text-gray-400" />
                     <p>No hay partidos en esta fase</p>
                   </div>
-                ) : viewMode === "bracket" &&
-                  selectedPhase.type === "eliminacion" ? (
-                  <BracketView matches={matches} phase={selectedPhase} />
                 ) : selectedPhase.type === "mejor_de_3" ? (
                   <BestOf3View
                     matches={matches}
@@ -707,7 +707,17 @@ export function CategorySchedulePage() {
                 isLoading={createParticipationMutation.isPending}
               />
 
-              {getTaekwondoType() === "kyorugui" ? (
+              {getTaekwondoType() === "poomsae" ? (
+                <PoomsaeScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={() => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                  }}
+                  match={selectedMatch}
+                  phase={selectedPhase}
+                />
+              ) : getTaekwondoType() === "kyorugui" ? (
                 <KyoruguiScoreModal
                   isOpen={isResultModalOpen}
                   onClose={() => {

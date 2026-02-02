@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { KyoruguiMatch } from "../../types/taekwondo.types";
 import { KyoruguiScoreModal } from "./KyoruguiScoreModal";
+import { PoomsaeScoreModal } from "./PoomsaeScoreModal";
 
 interface Props {
   match: KyoruguiMatch;
@@ -11,6 +12,16 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
 
   const participant1 = match.participations?.[0];
   const participant2 = match.participations?.[1];
+
+  const isPoomsae = () => {
+    const categoryName =
+      match.phase?.eventCategory?.category?.name?.toLowerCase() || "";
+    return (
+      categoryName.includes("poomsae") ||
+      categoryName.includes("formas") ||
+      categoryName.includes("forma")
+    );
+  };
 
   const getParticipantName = (participation: typeof participant1) => {
     if (!participation) return "TBD";
@@ -26,6 +37,13 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
   const isWinner = (participationId: number) =>
     match.participations?.find((p) => p.participationId === participationId)
       ?.registrationId === match.winnerRegistrationId;
+
+  const getTotal = (participation: typeof participant1) => {
+    if (!participation) return 0;
+    const accuracy = participation.accuracy || 0;
+    const presentation = participation.presentation || 0;
+    return accuracy + presentation;
+  };
 
   return (
     <>
@@ -67,9 +85,25 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
                 {getInstitution(participant1)}
               </p>
             </div>
-            <div className="text-2xl font-bold text-gray-800">
-              {match.participant1Score ?? "-"}
-            </div>
+            {isPoomsae() ? (
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">
+                  {getTotal(participant1) > 0
+                    ? getTotal(participant1).toFixed(1)
+                    : "-"}
+                </div>
+                {match.status !== "programado" && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    A: {participant1?.accuracy?.toFixed(1) || "-"} | P:{" "}
+                    {participant1?.presentation?.toFixed(1) || "-"}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-gray-800">
+                {match.participant1Score ?? "-"}
+              </div>
+            )}
           </div>
 
           {/* VS Divider */}
@@ -93,24 +127,48 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
                 {getInstitution(participant2)}
               </p>
             </div>
-            <div className="text-2xl font-bold text-gray-800">
-              {match.participant2Score ?? "-"}
-            </div>
+            {isPoomsae() ? (
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">
+                  {getTotal(participant2) > 0
+                    ? getTotal(participant2).toFixed(1)
+                    : "-"}
+                </div>
+                {match.status !== "programado" && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    A: {participant2?.accuracy?.toFixed(1) || "-"} | P:{" "}
+                    {participant2?.presentation?.toFixed(1) || "-"}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-gray-800">
+                {match.participant2Score ?? "-"}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Action hint */}
         <div className="mt-3 text-center text-xs text-gray-400">
-          Click para editar puntaje
+          Click para editar {isPoomsae() ? "puntajes" : "puntaje"}
         </div>
       </div>
 
       {/* Modal for editing */}
-      <KyoruguiScoreModal
-        match={match}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      {isPoomsae() ? (
+        <PoomsaeScoreModal
+          match={match}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      ) : (
+        <KyoruguiScoreModal
+          match={match}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
     </>
   );
 };

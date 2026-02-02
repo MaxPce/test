@@ -1,4 +1,4 @@
-// src/features/competitions/types/taekwondo.types.ts
+// ==================== KYORUGUI ====================
 
 export interface KyoruguiMatch {
   matchId: number;
@@ -42,6 +42,8 @@ export interface KyoruguiScore {
   winnerRegistrationId?: number;
 }
 
+// ==================== POOMSAE - MODO GRUPOS ====================
+
 export interface PoomsaeScore {
   accuracy: number;
   presentation: number;
@@ -69,4 +71,60 @@ export interface PoomsaeScoreResponse {
   rank: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// ==================== POOMSAE - MODO BRACKET (NUEVOS) ====================
+
+export interface PoomsaeBracketScoreResponse {
+  score: {
+    scoreId: number;
+    participationId: number;
+    accuracy: number;
+    presentation: number;
+    total: number;
+    rank?: number | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  matchFinalized: boolean;
+  winner?: {
+    participationId: number;
+    registrationId: number;
+    total: number;
+  };
+  advancedToNextRound: boolean;
+  message: string;
+}
+
+export interface PoomsaeBracketMatchScores {
+  matchId: number;
+  matchNumber: number;
+  round: string;
+  status: "programado" | "en_curso" | "finalizado" | "cancelado";
+  participants: Array<{
+    participationId: number;
+    registrationId: number;
+    corner: "blue" | "white";
+    athleteName: string;
+    athletePhoto: string | null;
+    institution: string;
+    institutionLogo: string | null;
+    accuracy: number | null;
+    presentation: number | null;
+    total: number | null;
+    isWinner: boolean;
+  }>;
+  winner: {
+    participationId: number;
+    registrationId: number;
+    corner: "blue" | "white";
+    athleteName: string;
+    athletePhoto: string | null;
+    institution: string;
+    institutionLogo: string | null;
+    accuracy: number | null;
+    presentation: number | null;
+    total: number | null;
+    isWinner: boolean;
+  } | null;
 }

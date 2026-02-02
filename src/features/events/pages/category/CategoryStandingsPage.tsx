@@ -242,6 +242,83 @@ export function CategoryStandingsPage() {
   };
 
   if (isTaekwondoPoomsae) {
+    const eliminationPhase = phases.find((p) => p.type === "eliminacion");
+    const groupPhases = phases.filter((p) => p.type === "grupo");
+
+    // Si hay fase de eliminación, mostrar bracket
+    if (eliminationPhase) {
+      const poomsaeBracketConfig = {
+        sportType: "poomsae",
+        scoreLabel: "Puntos",
+        showScores: true,
+      };
+
+      return (
+        <div className="space-y-6">
+          {/* Bracket de Eliminación */}
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <Trophy className="h-8 w-8" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">
+                    {showPodium ? "Podio Final" : "Llave de Eliminación"}
+                  </h3>
+                  <p className="text-purple-100 mt-1">
+                    {showPodium
+                      ? "Top 3 de Poomsae"
+                      : "Diagrama de enfrentamientos"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-sm font-medium ${!showPodium ? "text-white" : "text-white/60"}`}
+                  >
+                    Llaves
+                  </span>
+                  <Switch checked={showPodium} onChange={setShowPodium} />
+                  <span
+                    className={`text-sm font-medium ${showPodium ? "text-white" : "text-white/60"}`}
+                  >
+                    Podio
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {showPodium ? (
+            <PodiumTable phaseId={eliminationPhase.phaseId} />
+          ) : (
+            <SimpleBracket
+              phaseId={eliminationPhase.phaseId}
+              sportConfig={poomsaeBracketConfig}
+            />
+          )}
+
+          {/* Si también hay fase de grupos, mostrar tabla de Poomsae */}
+          {groupPhases.length > 0 && (
+            <>
+              <div className="border-t-2 border-gray-200 pt-6 mt-8">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">
+                  Resultados de Fase de Grupos
+                </h3>
+              </div>
+              <PoomsaeResultsTable
+                eventCategoryId={eventCategory.eventCategoryId}
+              />
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // Si solo hay fase de grupos, mostrar solo tabla de resultados
     return (
       <div className="space-y-6">
         <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />

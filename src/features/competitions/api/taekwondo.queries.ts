@@ -4,36 +4,56 @@ import {
   getKyoruguiBracket,
   getPoomsaeScoreTable,
   getPoomsaeScore,
+  getPoomsaeBracketMatchScores,
 } from "./taekwondo.api";
 
-export const useKyoruguiMatch = (matchId: number | undefined) => {
+// ==================== KYORUGUI ====================
+
+export const useKyoruguiMatch = (matchId: number) => {
   return useQuery({
     queryKey: ["kyorugui-match", matchId],
-    queryFn: () => getKyoruguiMatchDetails(matchId!),
+    queryFn: () => getKyoruguiMatchDetails(matchId),
     enabled: !!matchId,
   });
 };
 
-export const useKyoruguiBracket = (phaseId: number | undefined) => {
+export const useKyoruguiBracket = (phaseId: number) => {
   return useQuery({
     queryKey: ["kyorugui-bracket", phaseId],
-    queryFn: () => getKyoruguiBracket(phaseId!),
+    queryFn: () => getKyoruguiBracket(phaseId),
     enabled: !!phaseId,
   });
 };
+
+// ==================== POOMSAE - MODO GRUPOS ====================
 
 export const usePoomsaeScoreTable = (phaseId: number) => {
   return useQuery({
     queryKey: ["poomsae-scores", phaseId],
     queryFn: () => getPoomsaeScoreTable(phaseId),
     enabled: !!phaseId,
+    refetchInterval: 5000, // Refetch cada 5 segundos para ver actualizaciones
   });
 };
 
-export const usePoomsaeScore = (participationId: number | undefined) => {
+export const usePoomsaeScore = (participationId: number) => {
   return useQuery({
     queryKey: ["poomsae-score", participationId],
-    queryFn: () => getPoomsaeScore(participationId!),
+    queryFn: () => getPoomsaeScore(participationId),
     enabled: !!participationId,
+  });
+};
+
+// ==================== POOMSAE - MODO BRACKET (NUEVO) ====================
+
+/**
+ * Hook para obtener los scores de un match específico en modo bracket
+ */
+export const usePoomsaeBracketMatchScores = (matchId: number) => {
+  return useQuery({
+    queryKey: ["poomsae-bracket-match", matchId],
+    queryFn: () => getPoomsaeBracketMatchScores(matchId),
+    enabled: !!matchId,
+    refetchInterval: 3000,
   });
 };

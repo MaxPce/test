@@ -26,6 +26,7 @@ import { ParticipationsList } from "../components/ParticipationsList";
 import { TableTennisMatchWrapper } from "../components/table-tennis/TableTennisMatchWrapper";
 import { JudoScoreModal } from "../components/judo/JudoScoreModal";
 import { KyoruguiScoreModal } from "../components/taekwondo/KyoruguiScoreModal";
+import { PoomsaeScoreTable } from "../components/taekwondo/PoomsaeScoreTable"; // ⭐ NUEVO
 import type { Match } from "../types";
 
 export function PhaseDetailPage() {
@@ -59,6 +60,17 @@ export function PhaseDetailPage() {
   const deleteParticipationMutation = useDeleteParticipation();
   const initializeBracketMutation = useInitializeBracket();
   const initializeRoundRobinMutation = useInitializeRoundRobin();
+
+  // ⭐ NUEVO: Detectar si es Poomsae
+  const isPoomsaePhase = () => {
+    if (!phase) return false;
+    const sportName =
+      phase.eventCategory?.category?.sport?.name?.toLowerCase() || "";
+    const categoryName =
+      phase.eventCategory?.category?.name?.toLowerCase() || "";
+
+    return sportName.includes("taekwondo") && categoryName.includes("poomsae");
+  };
 
   const handleUpdateMatch = async (data: any) => {
     if (selectedMatch) {
@@ -208,6 +220,22 @@ export function PhaseDetailPage() {
     return labels[format] || format;
   };
 
+  // ⭐ NUEVO: Renderizar vista específica para Poomsae
+  const renderPoomsaeView = () => {
+    // Para Poomsae en modo bracket, mostrar bracket
+    if (phase.format === "eliminacion_directa" && viewMode === "bracket") {
+      return (
+        <BracketView
+          matches={phase.matches || []}
+          participations={phase.participations || []}
+        />
+      );
+    }
+
+    // Para Poomsae en modo grupos o lista, mostrar tabla de scores
+    return <PoomsaeScoreTable phaseId={phaseId} />;
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -293,74 +321,110 @@ export function PhaseDetailPage() {
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Partidos ({phase.matches?.length || 0})
-            </h2>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={viewMode === "list" ? "primary" : "ghost"}
-                onClick={() => setViewMode("list")}
-              >
-                <Grid3x3 className="h-4 w-4" />
-              </Button>
+      {/* ⭐ MODIFICADO: Renderizado condicional para Poomsae */}
+      {isPoomsaePhase() ? (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {phase.format === "eliminacion_directa"
+                  ? "Competencia"
+                  : "Tabla de Puntajes"}
+              </h2>
+              {/* ⭐ Mostrar botón de bracket solo para eliminación directa */}
               {phase.format === "eliminacion_directa" && (
-                <Button
-                  size="sm"
-                  variant={viewMode === "bracket" ? "primary" : "ghost"}
-                  onClick={() => setViewMode("bracket")}
-                >
-                  Bracket
-                </Button>
-              )}
-              {phase.format === "round_robin" && (
-                <Button
-                  size="sm"
-                  variant={viewMode === "standings" ? "primary" : "ghost"}
-                  onClick={() => setViewMode("standings")}
-                >
-                  <BarChart3 className="h-4 w-4 mr-1" />
-                  Tabla
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardBody>
-          {viewMode === "list" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {phase.matches && phase.matches.length > 0 ? (
-                phase.matches.map((match) => (
-                  <MatchCard
-                    key={match.matchId}
-                    match={match}
-                    participations={phase.participations || []}
-                    onEdit={openEditMatchModal}
-                  />
-                ))
-              ) : (
-                <div className="col-span-full text-center py-8 text-gray-500">
-                  No hay partidos. Inicializa la fase para generar los partidos.
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={viewMode === "list" ? "primary" : "ghost"}
+                    onClick={() => setViewMode("list")}
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={viewMode === "bracket" ? "primary" : "ghost"}
+                    onClick={() => setViewMode("bracket")}
+                  >
+                    Bracket
+                  </Button>
                 </div>
               )}
             </div>
-          )}
+          </CardHeader>
+          <CardBody>{renderPoomsaeView()}</CardBody>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Partidos ({phase.matches?.length || 0})
+              </h2>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={viewMode === "list" ? "primary" : "ghost"}
+                  onClick={() => setViewMode("list")}
+                >
+                  <Grid3x3 className="h-4 w-4" />
+                </Button>
+                {phase.format === "eliminacion_directa" && (
+                  <Button
+                    size="sm"
+                    variant={viewMode === "bracket" ? "primary" : "ghost"}
+                    onClick={() => setViewMode("bracket")}
+                  >
+                    Bracket
+                  </Button>
+                )}
+                {phase.format === "round_robin" && (
+                  <Button
+                    size="sm"
+                    variant={viewMode === "standings" ? "primary" : "ghost"}
+                    onClick={() => setViewMode("standings")}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-1" />
+                    Tabla
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardBody>
+            {viewMode === "list" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {phase.matches && phase.matches.length > 0 ? (
+                  phase.matches.map((match) => (
+                    <MatchCard
+                      key={match.matchId}
+                      match={match}
+                      participations={phase.participations || []}
+                      onEdit={openEditMatchModal}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    No hay partidos. Inicializa la fase para generar los
+                    partidos.
+                  </div>
+                )}
+              </div>
+            )}
 
-          {viewMode === "bracket" && (
-            <BracketView
-              matches={phase.matches || []}
-              participations={phase.participations || []}
-            />
-          )}
+            {viewMode === "bracket" && (
+              <BracketView
+                matches={phase.matches || []}
+                participations={phase.participations || []}
+              />
+            )}
 
-          {viewMode === "standings" && (
-            <StandingsTable participations={phase.participations || []} />
-          )}
-        </CardBody>
-      </Card>
+            {viewMode === "standings" && (
+              <StandingsTable participations={phase.participations || []} />
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       <Modal
         isOpen={isEditMatchModalOpen}

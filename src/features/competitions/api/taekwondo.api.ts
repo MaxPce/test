@@ -4,7 +4,11 @@ import type {
   PoomsaeScore,
   KyoruguiMatch,
   PoomsaeParticipant,
+  PoomsaeBracketScoreResponse,
+  PoomsaeBracketMatchScores,
 } from "../types/taekwondo.types";
+
+// ==================== KYORUGUI ====================
 
 export const updateKyoruguiScore = async (
   matchId: number,
@@ -31,24 +35,24 @@ export const getKyoruguiBracket = async (phaseId: number) => {
   return response.data;
 };
 
-// ✅ ACTUALIZAR ESTA FUNCIÓN
+// ==================== POOMSAE - MODO GRUPOS ====================
+
 export const updatePoomsaeScore = async (
   participationId: number,
   data: PoomsaeScore,
 ) => {
-  // ✅ Asegurar que sean números
   const payload = {
     accuracy: Number(data.accuracy),
     presentation: Number(data.presentation),
   };
 
   console.log(
-    "🚀 Enviando al backend:",
+    "🚀 Enviando al backend (modo grupos):",
     payload,
     "Tipos:",
     typeof payload.accuracy,
     typeof payload.presentation,
-  ); // DEBUG
+  );
 
   const response = await apiClient.patch(
     `/competitions/taekwondo/poomsae/participations/${participationId}/score`,
@@ -69,4 +73,67 @@ export const getPoomsaeScore = async (participationId: number) => {
     `/competitions/taekwondo/poomsae/participations/${participationId}/score`,
   );
   return response.data;
+};
+
+// ==================== POOMSAE - MODO BRACKET (NUEVO) ====================
+
+/**
+ * Actualiza el score de un participante en modo bracket
+ * Determina automáticamente el ganador cuando ambos tienen scores
+ */
+export const updatePoomsaeBracketScore = async (
+  participationId: number,
+  data: PoomsaeScore,
+) => {
+  const payload = {
+    accuracy: Number(data.accuracy),
+    presentation: Number(data.presentation),
+  };
+
+  console.log(
+    "🥋 Enviando al backend (modo BRACKET):",
+    payload,
+    "Tipos:",
+    typeof payload.accuracy,
+    typeof payload.presentation,
+  );
+
+  const response = await apiClient.patch<PoomsaeBracketScoreResponse>(
+    `/competitions/taekwondo/poomsae/bracket/participations/${participationId}/score`,
+    payload,
+  );
+  return response.data;
+};
+
+/**
+ * Obtiene los scores de ambos participantes en un match específico (modo bracket)
+ */
+export const getPoomsaeBracketMatchScores = async (matchId: number) => {
+  const response = await apiClient.get<PoomsaeBracketMatchScores>(
+    `/competitions/taekwondo/poomsae/bracket/matches/${matchId}/scores`,
+  );
+  return response.data;
+};
+
+export const updatePoomsaeMatchScores = async (
+  matchId: number,
+  scores: Array<{
+    participationId: number;
+    accuracy: number;
+    presentation: number;
+  }>,
+) => {
+  // Llamar al endpoint correcto de bracket para cada participación
+  const promises = scores.map((score) =>
+    apiClient.patch(
+      `/competitions/taekwondo/poomsae/bracket/participations/${score.participationId}/score`,
+      {
+        accuracy: Number(score.accuracy),
+        presentation: Number(score.presentation),
+      },
+    ),
+  );
+
+  const results = await Promise.all(promises);
+  return results;
 };
