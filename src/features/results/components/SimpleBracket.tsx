@@ -5,6 +5,8 @@ import { Trophy } from "lucide-react";
 import { useMatches } from "@/features/competitions/api/matches.queries";
 import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries";
 import { MatchDetailsModal } from "./MatchDetailsModal";
+import { KyoruguiMatchDetailsModal } from "@/features/competitions/components/taekwondo/KyoruguiMatchDetailsModal";
+import { PoomsaeMatchDetailsModal } from "@/features/competitions/components/taekwondo/PoomsaeMatchDetailsModal";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface SimpleBracketProps {
@@ -87,15 +89,39 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
   const hasBracketLayout =
     quarters.length > 0 || semis.length > 0 || final || third;
 
+    const selectedMatch = realMatches.find((m) => m.matchId === selectedMatchId);
+  const isKyorugui = sportConfig?.sportType === "kyorugi";
+  const isPoomsae = sportConfig?.sportType === "poomsae";
+
   return (
     <>
-      {selectedMatchId && (
+      {/* Modal de detalles - Kyorugui */}
+      {selectedMatchId && isKyorugui && selectedMatch && (
+        <KyoruguiMatchDetailsModal
+          match={selectedMatch}
+          isOpen={true}
+          onClose={() => setSelectedMatchId(null)}
+        />
+      )}
+      
+      {/* Modal de detalles - Poomsae */}
+      {selectedMatchId && isPoomsae && selectedMatch && (
+        <PoomsaeMatchDetailsModal
+          match={selectedMatch}
+          isOpen={true}
+          onClose={() => setSelectedMatchId(null)}
+        />
+      )}
+      
+      {/* Modal genérico para otros deportes */}
+      {selectedMatchId && !isKyorugui && !isPoomsae && (
         <MatchDetailsModal
           matchId={selectedMatchId}
           sportConfig={sportConfig}
           onClose={() => setSelectedMatchId(null)}
         />
       )}
+
 
       <div className="space-y-6">
         {hasBracketLayout ? (

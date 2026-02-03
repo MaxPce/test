@@ -132,3 +132,41 @@ export interface PoomsaeBracketMatchScores {
     isWinner: boolean;
   } | null;
 }
+
+// ==================== KYORUGUI - ROUNDS ====================
+
+export interface KyoruguiRound {
+  gameId: number;
+  matchId: number;
+  gameNumber: number; // 1, 2 o 3 (número del round)
+  player1Id: number; // En este caso es registrationId
+  player2Id: number;
+  score1: number | null; // Puntos del participante 1
+  score2: number | null; // Puntos del participante 2
+  winnerId: number | null; // registrationId del ganador del round
+  status: "pending" | "in_progress" | "completed";
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface KyoruguiMatchWithRounds extends KyoruguiMatch {
+  rounds: KyoruguiRound[];
+}
+
+export interface UpdateSingleRoundDto {
+  roundNumber: number; // 1, 2 o 3
+  participant1Points: number;
+  participant2Points: number;
+}
+
+export interface KyoruguiRoundDto {
+  roundNumber: number;
+  participant1Points: number;
+  participant2Points: number;
+  winnerId?: number;
+}
+
+export interface UpdateKyoruguiRoundsDto {
+  rounds: KyoruguiRoundDto[];
+  winnerRegistrationId?: number;
+}

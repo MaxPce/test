@@ -1,7 +1,10 @@
 import { useState } from "react";
 import type { KyoruguiMatch } from "../../types/taekwondo.types";
-import { KyoruguiScoreModal } from "./KyoruguiScoreModal";
+import { KyoruguiRoundsModal } from "./KyoruguiRoundsModal"; 
+import { KyoruguiMatchDetailsModal } from "./KyoruguiMatchDetailsModal"; // ✅ NUEVO
 import { PoomsaeScoreModal } from "./PoomsaeScoreModal";
+import { useKyoruguiRounds } from "../../api/taekwondo.queries";
+import { Circle, Eye } from "lucide-react"; // ✅ Agregar Eye
 
 interface Props {
   match: KyoruguiMatch;
@@ -9,6 +12,10 @@ interface Props {
 
 export const KyoruguiMatchCard = ({ match }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  // Obtener rounds para calcular ganados
+  const { data: rounds } = useKyoruguiRounds(match.matchId);
 
   const participant1 = match.participations?.[0];
   const participant2 = match.participations?.[1];
@@ -45,12 +52,34 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
     return accuracy + presentation;
   };
 
+  // Calcular rounds ganados por cada participante
+  const calculateRoundsWon = () => {
+    if (!rounds || rounds.length === 0) {
+      return { p1Rounds: 0, p2Rounds: 0 };
+    }
+
+    const participant1RegId = participant1?.registrationId;
+    const participant2RegId = participant2?.registrationId;
+
+    let p1Rounds = 0;
+    let p2Rounds = 0;
+
+    rounds.forEach((round: any) => {
+      if (round.score1 > round.score2) {
+        p1Rounds++;
+      } else if (round.score2 > round.score1) {
+        p2Rounds++;
+      }
+    });
+
+    return { p1Rounds, p2Rounds };
+  };
+
+  const { p1Rounds, p2Rounds } = calculateRoundsWon();
+
   return (
     <>
-      <div
-        className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-        onClick={() => setIsModalOpen(true)}
-      >
+      <div className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
         {/* Header */}
         <div className="flex justify-between items-center mb-3">
           <span className="text-sm font-semibold text-gray-600">
@@ -78,12 +107,19 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
             }`}
           >
             <div className="flex-1">
-              <p className="font-medium text-sm">
-                {getParticipantName(participant1)}
-              </p>
-              <p className="text-xs text-gray-500">
-                {getInstitution(participant1)}
-              </p>
+              <div className="flex items-center gap-2">
+                {!isPoomsae() && (
+                  <Circle className="w-3 h-3 fill-blue-500 text-blue-500 flex-shrink-0" />
+                )}
+                <div>
+                  <p className="font-medium text-sm">
+                    {getParticipantName(participant1)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {getInstitution(participant1)}
+                  </p>
+                </div>
+              </div>
             </div>
             {isPoomsae() ? (
               <div className="text-right">
@@ -100,8 +136,20 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
                 )}
               </div>
             ) : (
-              <div className="text-2xl font-bold text-gray-800">
-                {match.participant1Score ?? "-"}
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-800">
+                    {p1Rounds}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {p1Rounds === 1 ? "round" : "rounds"}
+                  </div>
+                </div>
+                {p1Rounds >= 2 && (
+                  <div className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full font-bold">
+                    GANA
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -120,12 +168,19 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
             }`}
           >
             <div className="flex-1">
-              <p className="font-medium text-sm">
-                {getParticipantName(participant2)}
-              </p>
-              <p className="text-xs text-gray-500">
-                {getInstitution(participant2)}
-              </p>
+              <div className="flex items-center gap-2">
+                {!isPoomsae() && (
+                  <Circle className="w-3 h-3 fill-red-500 text-red-500 flex-shrink-0" />
+                )}
+                <div>
+                  <p className="font-medium text-sm">
+                    {getParticipantName(participant2)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {getInstitution(participant2)}
+                  </p>
+                </div>
+              </div>
             </div>
             {isPoomsae() ? (
               <div className="text-right">
@@ -142,16 +197,51 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
                 )}
               </div>
             ) : (
-              <div className="text-2xl font-bold text-gray-800">
-                {match.participant2Score ?? "-"}
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-800">
+                    {p2Rounds}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {p2Rounds === 1 ? "round" : "rounds"}
+                  </div>
+                </div>
+                {p2Rounds >= 2 && (
+                  <div className="text-xs bg-red-500 text-white px-2 py-1 rounded-full font-bold">
+                    GANA
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Action hint */}
-        <div className="mt-3 text-center text-xs text-gray-400">
-          Click para editar {isPoomsae() ? "puntajes" : "puntaje"}
+        {/* ✅ NUEVA SECCIÓN: Botones de acción */}
+        <div className="mt-3 flex gap-2">
+          {/* Botón Ver Detalles */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDetailsModalOpen(true);
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm font-medium"
+          >
+            <Eye className="w-4 h-4" />
+            Ver Detalles
+          </button>
+
+          {/* Botón Gestionar Rounds */}
+          {!isPoomsae() && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsModalOpen(true);
+              }}
+              className="flex-1 py-2 px-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              Gestionar Rounds
+            </button>
+          )}
         </div>
       </div>
 
@@ -163,12 +253,19 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
           onClose={() => setIsModalOpen(false)}
         />
       ) : (
-        <KyoruguiScoreModal
+        <KyoruguiRoundsModal
           match={match}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
         />
       )}
+
+      {/* ✅ NUEVO: Modal de detalles */}
+      <KyoruguiMatchDetailsModal
+        match={match}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+      />
     </>
   );
 };

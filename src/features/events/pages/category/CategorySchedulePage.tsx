@@ -14,7 +14,7 @@ import { TableTennisMatchWrapper } from "@/features/competitions/components/tabl
 import { KyoruguiBracketView } from "@/features/competitions/components/taekwondo/KyoruguiBracketView";
 import { PoomsaeScoreModal } from "@/features/competitions/components/taekwondo/PoomsaeScoreModal";
 import { PoomsaeScoreTable } from "@/features/competitions/components/taekwondo/PoomsaeScoreTable";
-import { KyoruguiScoreModal } from "@/features/competitions/components/taekwondo/KyoruguiScoreModal";
+import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwondo/KyoruguiRoundsModal";
 import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { usePhases } from "@/features/competitions/api/phases.queries";
@@ -755,15 +755,14 @@ export function CategorySchedulePage() {
                   phase={selectedPhase}
                 />
               ) : getTaekwondoType() === "kyorugui" ? (
-                <KyoruguiScoreModal
-                  isOpen={isResultModalOpen}
-                  onClose={() => {
-                    setIsResultModalOpen(false);
-                    setSelectedMatch(null);
-                  }}
-                  match={selectedMatch}
-                  phase={selectedPhase}
-                />
+              <KyoruguiRoundsModal
+                isOpen={isResultModalOpen}
+                onClose={() => {
+                  setIsResultModalOpen(false);
+                  setSelectedMatch(null);
+                }}
+                match={selectedMatch}
+              />
               ) : isJudo() ? (
                 <JudoScoreModal
                   isOpen={isResultModalOpen}

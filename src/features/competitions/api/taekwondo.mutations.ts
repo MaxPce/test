@@ -4,6 +4,9 @@ import {
   updatePoomsaeScore,
   updatePoomsaeBracketScore,
   updatePoomsaeMatchScores,
+  updateKyoruguiSingleRound,
+  updateKyoruguiRounds,
+  deleteKyoruguiRound,
 } from "./taekwondo.api";
 import type { KyoruguiScore, PoomsaeScore } from "../types/taekwondo.types";
 import { toast } from "sonner";
@@ -31,6 +34,122 @@ export const useUpdateKyoruguiScore = () => {
     },
   });
 };
+
+// ==================== KYORUGUI - ROUNDS (NUEVO) ====================
+
+/**
+ * Actualizar un solo round
+ */
+export const useUpdateKyoruguiSingleRound = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      matchId,
+      data,
+    }: {
+      matchId: number;
+      data: {
+        roundNumber: number;
+        participant1Points: number;
+        participant2Points: number;
+      };
+    }) => updateKyoruguiSingleRound(matchId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-match", variables.matchId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-rounds", variables.matchId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-bracket"],
+      });
+      toast.success(`Round ${variables.data.roundNumber} actualizado`);
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message || "Error al actualizar round",
+      );
+    },
+  });
+};
+
+/**
+ * Actualizar múltiples rounds
+ */
+export const useUpdateKyoruguiRounds = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      matchId,
+      rounds,
+    }: {
+      matchId: number;
+      rounds: Array<{
+        roundNumber: number;
+        participant1Points: number;
+        participant2Points: number;
+      }>;
+    }) => updateKyoruguiRounds(matchId, rounds),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-match", variables.matchId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-rounds", variables.matchId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-bracket"],
+      });
+      toast.success("Rounds actualizados correctamente");
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message || "Error al actualizar rounds",
+      );
+    },
+  });
+};
+
+/**
+ * Eliminar un round
+ */
+export const useDeleteKyoruguiRound = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      matchId,
+      roundNumber,
+    }: {
+      matchId: number;
+      roundNumber: number;
+    }) => deleteKyoruguiRound(matchId, roundNumber),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-match", variables.matchId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-rounds", variables.matchId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["kyorugui-bracket"],
+      });
+      toast.success(`Round ${variables.roundNumber} eliminado`);
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message || "Error al eliminar round",
+      );
+    },
+  });
+};
+
 
 // ==================== POOMSAE - MODO GRUPOS ====================
 

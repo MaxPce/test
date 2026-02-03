@@ -137,3 +137,70 @@ export const updatePoomsaeMatchScores = async (
   const results = await Promise.all(promises);
   return results;
 };
+
+
+// ==================== KYORUGUI - ROUNDS ====================
+
+/**
+ * Actualizar un solo round de Kyorugui
+ */
+export const updateKyoruguiSingleRound = async (
+  matchId: number,
+  data: {
+    roundNumber: number;
+    participant1Points: number;
+    participant2Points: number;
+  },
+) => {
+  console.log("🥋 Actualizando round individual:", { matchId, ...data });
+  
+  const response = await apiClient.post(
+    `/competitions/taekwondo/kyorugui/matches/${matchId}/rounds/single`,
+    data,
+  );
+  return response.data;
+};
+
+/**
+ * Actualizar múltiples rounds de Kyorugui
+ */
+export const updateKyoruguiRounds = async (
+  matchId: number,
+  rounds: Array<{
+    roundNumber: number;
+    participant1Points: number;
+    participant2Points: number;
+  }>,
+) => {
+  console.log("🥋 Actualizando múltiples rounds:", { matchId, rounds });
+  
+  const response = await apiClient.post(
+    `/competitions/taekwondo/kyorugui/matches/${matchId}/rounds`,
+    { rounds },
+  );
+  return response.data;
+};
+
+/**
+ * Obtener todos los rounds de un match
+ */
+export const getKyoruguiRounds = async (matchId: number) => {
+  const response = await apiClient.get(
+    `/competitions/taekwondo/kyorugui/matches/${matchId}/rounds`,
+  );
+  return response.data;
+};
+
+/**
+ * Eliminar un round específico
+ */
+export const deleteKyoruguiRound = async (
+  matchId: number,
+  roundNumber: number,
+) => {
+  const response = await apiClient.delete(
+    `/competitions/taekwondo/kyorugui/matches/${matchId}/rounds/${roundNumber}`,
+  );
+  return response.data;
+};
+

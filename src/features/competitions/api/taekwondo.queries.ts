@@ -5,6 +5,7 @@ import {
   getPoomsaeScoreTable,
   getPoomsaeScore,
   getPoomsaeBracketMatchScores,
+  getKyoruguiRounds,
 } from "./taekwondo.api";
 
 // ==================== KYORUGUI ====================
@@ -24,6 +25,21 @@ export const useKyoruguiBracket = (phaseId: number) => {
     enabled: !!phaseId,
   });
 };
+
+// ==================== KYORUGUI - ROUNDS ====================
+
+/**
+ * Hook para obtener todos los rounds de un match de Kyorugui
+ */
+export const useKyoruguiRounds = (matchId: number) => {
+  return useQuery({
+    queryKey: ["kyorugui-rounds", matchId],
+    queryFn: () => getKyoruguiRounds(matchId),
+    enabled: !!matchId,
+    refetchInterval: 3000,
+  });
+};
+
 
 // ==================== POOMSAE - MODO GRUPOS ====================
 
