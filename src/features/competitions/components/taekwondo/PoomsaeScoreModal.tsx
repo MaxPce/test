@@ -13,47 +13,80 @@ interface Props {
 }
 
 export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
-  // States para participante 1 (Azul)
   const [accuracy1, setAccuracy1] = useState(0);
   const [presentation1, setPresentation1] = useState(0);
-
-  // States para participante 2 (Blanco)
   const [accuracy2, setAccuracy2] = useState(0);
   const [presentation2, setPresentation2] = useState(0);
 
   const advanceWinnerMutation = useAdvanceWinner();
 
-  useEffect(() => {
-    // Inicializar con valores existentes si los hay
-    setAccuracy1(0);
-    setPresentation1(0);
-    setAccuracy2(0);
-    setPresentation2(0);
-  }, [match]);
+  const isEditMode = !!(
+    match.participant1Score ||
+    match.participant2Score ||
+    match.participant1Accuracy ||
+    match.participant2Accuracy
+  );
 
-  // Calcular totales
+  useEffect(() => {
+    if (isEditMode && match) {
+      const p1Accuracy =
+        match.participant1Accuracy != null
+          ? Number(match.participant1Accuracy)
+          : 0;
+      const p1Presentation =
+        match.participant1Presentation != null
+          ? Number(match.participant1Presentation)
+          : 0;
+      const p2Accuracy =
+        match.participant2Accuracy != null
+          ? Number(match.participant2Accuracy)
+          : 0;
+      const p2Presentation =
+        match.participant2Presentation != null
+          ? Number(match.participant2Presentation)
+          : 0;
+
+      setAccuracy1(p1Accuracy);
+      setPresentation1(p1Presentation);
+      setAccuracy2(p2Accuracy);
+      setPresentation2(p2Presentation);
+    } else {
+      setAccuracy1(0);
+      setPresentation1(0);
+      setAccuracy2(0);
+      setPresentation2(0);
+    }
+  }, [match, isEditMode, isOpen]);
+
   const total1 = accuracy1 + presentation1;
   const total2 = accuracy2 + presentation2;
 
+  const currentWinnerId =
+    total1 > total2
+      ? match.participations?.[0]?.registrationId
+      : match.participations?.[1]?.registrationId;
+
+  const winnerChanged =
+    isEditMode && match.winnerRegistrationId !== currentWinnerId;
+
   const handleSubmit = () => {
-    // Validar que ambos tengan puntaje
     if (total1 === 0 && total2 === 0) {
       toast.error("Debe asignar puntajes a ambos participantes");
       return;
     }
 
-    // Determinar ganador por total
-    const winnerId =
-      total1 > total2
-        ? match.participations?.[0]?.registrationId
-        : match.participations?.[1]?.registrationId;
+    if (total1 === total2) {
+      toast.error("No puede haber empate en Poomsae. Ajuste los puntajes.");
+      return;
+    }
+
+    const winnerId = currentWinnerId;
 
     if (!winnerId) {
       toast.error("No se pudo determinar el ganador");
       return;
     }
 
-    // Si es eliminación, usar avance automático
     if (phase.type === "eliminacion") {
       advanceWinnerMutation.mutate(
         {
@@ -68,10 +101,14 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
         },
         {
           onSuccess: () => {
-            toast.success("Puntaje actualizado y ganador avanzado");
+            const message = isEditMode
+              ? "Puntaje actualizado correctamente"
+              : "Puntaje registrado y ganador avanzado";
+            toast.success(message);
             onClose();
           },
-          onError: () => {
+          onError: (error: any) => {
+            console.error("Error al guardar:", error);
             toast.error("Error al actualizar puntaje");
           },
         },
@@ -122,18 +159,30 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-6">
-          Registrar Puntaje Poomsae - Match {match.matchNumber}
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold">
+            {isEditMode ? "Editar" : "Registrar"} Puntaje Poomsae - Match{" "}
+            {match.matchNumber}
+          </h2>
+          {isEditMode && (
+            <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
+              Editando
+            </span>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Participante 1 - Azul */}
           <div className="border-2 border-blue-500 rounded-lg p-4 bg-blue-50">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-2xl">🔵</span>
               <p className="font-semibold text-sm">
                 {getParticipantName(participant1)}
               </p>
+              {match.winnerRegistrationId === participant1?.registrationId && (
+                <span className="ml-auto text-sm bg-blue-600 text-white px-2 py-0.5 rounded">
+                  Ganador
+                </span>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -180,13 +229,17 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
             </div>
           </div>
 
-          {/* Participante 2 - Blanco */}
           <div className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-2xl">⚪</span>
               <p className="font-semibold text-sm">
                 {getParticipantName(participant2)}
               </p>
+              {match.winnerRegistrationId === participant2?.registrationId && (
+                <span className="ml-auto text-sm bg-gray-600 text-white px-2 py-0.5 rounded">
+                  Ganador
+                </span>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -234,7 +287,6 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
@@ -250,7 +302,11 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
               isLoading || total1 === total2 || (total1 === 0 && total2 === 0)
             }
           >
-            {isLoading ? "Guardando..." : "Registrar Ganador"}
+            {isLoading
+              ? "Guardando..."
+              : isEditMode
+                ? "Actualizar Puntaje"
+                : "Registrar Ganador"}
           </button>
         </div>
       </div>

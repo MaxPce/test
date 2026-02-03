@@ -467,12 +467,40 @@ export function CategorySchedulePage() {
                                 </p>
                               )}
 
-                              {(isTaekwondoKyorugui || isJudoMatch) &&
+                              {/* Mostrar puntaje para Poomsae, Kyorugui y Judo */}
+                              {(getTaekwondoType() === "poomsae" ||
+                                getTaekwondoType() === "kyorugui" ||
+                                isJudoMatch) &&
                                 (match.participant1Score !== null ||
                                   match.participant2Score !== null) && (
                                   <p className="text-sm font-semibold text-gray-700 mt-1">
                                     Puntaje: {match.participant1Score ?? "-"} -{" "}
                                     {match.participant2Score ?? "-"}
+                                    {/* Extra: Mostrar detalles de Poomsae si existen */}
+                                    {getTaekwondoType() === "poomsae" &&
+                                      match.participant1Accuracy !== null &&
+                                      match.participant1Accuracy !==
+                                        undefined && (
+                                        <span className="text-xs text-gray-500 block">
+                                          (
+                                          {Number(
+                                            match.participant1Accuracy,
+                                          ).toFixed(2)}
+                                          +
+                                          {Number(
+                                            match.participant1Presentation,
+                                          ).toFixed(2)}
+                                          ) - (
+                                          {Number(
+                                            match.participant2Accuracy,
+                                          ).toFixed(2)}
+                                          +
+                                          {Number(
+                                            match.participant2Presentation,
+                                          ).toFixed(2)}
+                                          )
+                                        </span>
+                                      )}
                                   </p>
                                 )}
                             </div>
@@ -577,16 +605,25 @@ export function CategorySchedulePage() {
 
                             {participants.length === 2 && (
                               <>
-                                {isTaekwondoKyorugui || isJudoMatch ? (
+                                {/* Poomsae, Kyorugui o Judo - Todos usan el mismo patrón */}
+                                {getTaekwondoType() === "poomsae" ||
+                                getTaekwondoType() === "kyorugui" ||
+                                isJudoMatch ? (
                                   <Button
                                     variant="primary"
                                     size="sm"
                                     onClick={() => {
+                                      setSelectedMatchId(match.matchId);
                                       setSelectedMatch(match);
                                       setIsResultModalOpen(true);
                                     }}
                                   >
-                                    {match.status === "finalizado"
+                                    {/* Detectar si ya tiene puntajes guardados */}
+                                    {(match.participant1Score !== null &&
+                                      match.participant1Score !== undefined) ||
+                                    (match.participant2Score !== null &&
+                                      match.participant2Score !== undefined) ||
+                                    match.status === "finalizado"
                                       ? "Editar Puntaje"
                                       : "Registrar Puntaje"}
                                   </Button>
