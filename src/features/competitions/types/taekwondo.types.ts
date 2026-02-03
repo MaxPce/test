@@ -52,8 +52,9 @@ export interface PoomsaeScore {
 export interface PoomsaeParticipant {
   participationId: number;
   rank: number | null;
-  athleteName: string;
-  athletePhoto: string | null;
+  participantName: string;     
+  isTeam: boolean;              
+  participantPhoto: string | null;  
   institution: string;
   institutionLogo: string | null;
   gender: string;
@@ -61,6 +62,7 @@ export interface PoomsaeParticipant {
   presentation: number | null;
   total: number | null;
 }
+
 
 export interface PoomsaeScoreResponse {
   scoreId: number;
@@ -105,8 +107,9 @@ export interface PoomsaeBracketMatchScores {
     participationId: number;
     registrationId: number;
     corner: "blue" | "white";
-    athleteName: string;
-    athletePhoto: string | null;
+    participantName: string;      
+    isTeam: boolean;          
+    participantPhoto: string | null;  
     institution: string;
     institutionLogo: string | null;
     accuracy: number | null;
@@ -118,8 +121,9 @@ export interface PoomsaeBracketMatchScores {
     participationId: number;
     registrationId: number;
     corner: "blue" | "white";
-    athleteName: string;
-    athletePhoto: string | null;
+    participantName: string;     
+    isTeam: boolean;              
+    participantPhoto: string | null; 
     institution: string;
     institutionLogo: string | null;
     accuracy: number | null;

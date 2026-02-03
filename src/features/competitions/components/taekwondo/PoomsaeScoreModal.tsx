@@ -125,6 +125,14 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
     if (!participation) return "Sin asignar";
     const registration = participation.registration;
     if (!registration) return `Participation #${participation.participationId}`;
+    
+    const isTeam = !!registration.team;
+    
+    if (isTeam) {
+      const teamName = registration.team?.name || `Equipo #${registration.registrationId}`;
+      return `${teamName} (Equipo)`;
+    }
+    
     const athlete = registration.athlete;
     if (!athlete) return `Registration #${registration.registrationId}`;
 
@@ -135,6 +143,7 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
 
     return name;
   };
+
 
   if (!match.participations || match.participations.length < 2) {
     return (

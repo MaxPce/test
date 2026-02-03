@@ -64,7 +64,7 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Atleta
+              Participante
             </th>
             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Institución
@@ -93,16 +93,18 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                   key={participant.participationId}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  {/* Atleta */}
+                  {/* Participante */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {participant.athleteName}
+                      {participant.participantName}
+                      {participant.isTeam && (
+                        <span className="ml-1 text-xs text-blue-600">(Equipo)</span>
+                      )}
                     </div>
                     <div className="text-xs text-gray-500">
                       {participant.gender}
                     </div>
                   </td>
-
                   {/* Institución */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -141,16 +143,18 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                 key={participant.participationId}
                 className="hover:bg-gray-50 transition-colors"
               >
-                {/* Atleta */}
+                {/* Participante */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
-                    {participant.athleteName}
+                    {participant.participantName}
+                    {participant.isTeam && (
+                      <span className="ml-1 text-xs text-blue-600">(Equipo)</span>
+                    )}
                   </div>
                   <div className="text-xs text-gray-500">
                     {participant.gender}
                   </div>
                 </td>
-
                 {/* Institución */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center gap-2">

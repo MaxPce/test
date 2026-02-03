@@ -143,7 +143,7 @@ export function PoomsaeResultsTable({
                           Pos
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                          Atleta
+                          Participante
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                           <div className="flex items-center justify-center gap-1">
@@ -194,8 +194,8 @@ export function PoomsaeResultsTable({
                               <div className="flex items-center gap-3">
                                 {score.athletePhoto ? (
                                   <img
-                                    src={getImageUrl(score.athletePhoto)}
-                                    alt={score.athleteName}
+                                    src={getImageUrl(score.participantPhoto)}
+                                    alt={score.participantName}
                                     className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
                                     onError={(e) => {
                                       const target = e.currentTarget;
@@ -222,7 +222,10 @@ export function PoomsaeResultsTable({
 
                                 <div className="flex-1">
                                   <p className="font-semibold text-gray-900">
-                                    {score.athleteName}
+                                    {score.participantName}
+                                    {score.isTeam && (
+                                      <span className="ml-2 text-xs text-blue-600 font-normal">(Equipo)</span>
+                                    )}
                                   </p>
                                   {score.institution && (
                                     <div className="flex items-center gap-2 mt-0.5">
