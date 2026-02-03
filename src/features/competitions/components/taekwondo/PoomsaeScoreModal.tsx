@@ -61,6 +61,10 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
           winnerRegistrationId: winnerId,
           participant1Score: total1,
           participant2Score: total2,
+          participant1Accuracy: accuracy1,
+          participant1Presentation: presentation1,
+          participant2Accuracy: accuracy2,
+          participant2Presentation: presentation2,
         },
         {
           onSuccess: () => {

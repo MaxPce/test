@@ -321,6 +321,12 @@ function MatchCard({
 
     const sportType = sportConfig.sportType;
 
+    if (sportType === "poomsae") {
+      const numScore = parseFloat(score);
+      if (isNaN(numScore)) return "-";
+      return numScore.toFixed(2);
+    }
+
     if (sportType === "judo") {
       if (score === 10 || score === "10") return "Ippon";
       return String(score);

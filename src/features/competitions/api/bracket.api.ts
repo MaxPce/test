@@ -18,6 +18,10 @@ export const bracketApi = {
     winnerRegistrationId: number;
     participant1Score?: number;
     participant2Score?: number;
+    participant1Accuracy?: number;
+    participant1Presentation?: number;
+    participant2Accuracy?: number;
+    participant2Presentation?: number;
   }) => {
     const response = await apiClient.post(
       "/competitions/matches/advance-winner",

@@ -42,6 +42,12 @@ export interface Match {
   winnerParticipantId?: number;
   scoreA?: number;
   scoreB?: number;
+  participant1Score?: number;
+  participant2Score?: number;
+  participant1Accuracy?: number;
+  participant1Presentation?: number;
+  participant2Accuracy?: number;
+  participant2Presentation?: number;
   status: MatchStatus;
   round?: number;
   matchNumber?: number;
