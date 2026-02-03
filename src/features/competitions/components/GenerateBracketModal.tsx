@@ -17,25 +17,36 @@ export function GenerateBracketModal({
   phase,
   availableRegistrations,
 }: GenerateBracketModalProps) {
+  const [bracketType, setBracketType] = useState<"with-participants" | "empty">(
+    "with-participants",
+  );
+  const [bracketSize, setBracketSize] = useState<number>(8);
   const [includeThirdPlace, setIncludeThirdPlace] = useState(true);
   const generateBracket = useGenerateBracket();
 
   const handleGenerate = () => {
-    generateBracket.mutate(
-      {
-        phaseId: phase.phaseId,
-        registrationIds: availableRegistrations,
-        includeThirdPlace,
+    const payload =
+      bracketType === "empty"
+        ? {
+            phaseId: phase.phaseId,
+            bracketSize: bracketSize,
+            includeThirdPlace,
+          }
+        : {
+            phaseId: phase.phaseId,
+            registrationIds: availableRegistrations,
+            includeThirdPlace,
+          };
+
+    generateBracket.mutate(payload, {
+      onSuccess: () => {
+        onClose();
       },
-      {
-        onSuccess: () => {
-          onClose();
-        },
-      },
-    );
+    });
   };
 
-  const numParticipants = availableRegistrations.length;
+  const numParticipants =
+    bracketType === "empty" ? bracketSize : availableRegistrations.length;
   const nextPowerOf2 = Math.pow(2, Math.ceil(Math.log2(numParticipants)));
   const totalRounds = Math.log2(nextPowerOf2);
   const byeCount = nextPowerOf2 - numParticipants;
@@ -48,7 +59,72 @@ export function GenerateBracketModal({
       size="md"
     >
       <div className="space-y-6">
-        {/* Opciones */}
+        {/* Toggle: Con participantes o Vacío */}
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-700">Tipo de bracket</p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="radio"
+                value="with-participants"
+                checked={bracketType === "with-participants"}
+                onChange={(e) =>
+                  setBracketType(
+                    e.target.value as "with-participants" | "empty",
+                  )
+                }
+                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <div>
+                <p className="font-medium text-gray-900">Con participantes</p>
+                <p className="text-sm text-gray-500">
+                  {availableRegistrations.length} participantes registrados
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="radio"
+                value="empty"
+                checked={bracketType === "empty"}
+                onChange={(e) =>
+                  setBracketType(
+                    e.target.value as "with-participants" | "empty",
+                  )
+                }
+                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <div>
+                <p className="font-medium text-gray-900">Bracket vacío</p>
+                <p className="text-sm text-gray-500">
+                  Solo estructura, sin participantes
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* Selector de tamaño (solo si es vacío) */}
+        {bracketType === "empty" && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Tamaño del bracket
+            </label>
+            <select
+              value={bracketSize}
+              onChange={(e) => setBracketSize(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={4}>4 participantes</option>
+              <option value={8}>8 participantes</option>
+              <option value={16}>16 participantes</option>
+              <option value={32}>32 participantes</option>
+            </select>
+          </div>
+        )}
+
+        {/* Tercer lugar */}
         <div className="space-y-3">
           <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
             <input
@@ -57,12 +133,10 @@ export function GenerateBracketModal({
               onChange={(e) => setIncludeThirdPlace(e.target.checked)}
               className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <div className="flex items-center gap-2">
-              <div>
-                <p className="font-medium text-gray-900">
-                  Incluir partido de tercer lugar
-                </p>
-              </div>
+            <div>
+              <p className="font-medium text-gray-900">
+                Incluir partido de tercer lugar
+              </p>
             </div>
           </label>
         </div>
