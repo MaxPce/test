@@ -1,4 +1,5 @@
-import { Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Trash2, Check, X, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -10,6 +11,7 @@ import {
   TableCell,
 } from "@/components/ui/Table";
 import { getImageUrl } from "@/lib/utils/imageUrl";
+import { useUpdateRegistrationSeed } from "../api/registrations.mutations";
 import type { Registration } from "../types";
 
 interface RegistrationsListProps {
@@ -23,6 +25,39 @@ export function RegistrationsList({
   onDelete,
   isDeleting,
 }: RegistrationsListProps) {
+  const [editingSeedId, setEditingSeedId] = useState<number | null>(null);
+  const [seedValue, setSeedValue] = useState<string>("");
+  
+  const updateSeedMutation = useUpdateRegistrationSeed();
+
+  const handleEditSeed = (registration: Registration) => {
+    setEditingSeedId(registration.registrationId);
+    setSeedValue(registration.seedNumber?.toString() || "");
+  };
+
+  const handleSaveSeed = (registrationId: number) => {
+    const seedNumber = seedValue.trim() === "" ? null : parseInt(seedValue);
+    
+    if (seedNumber !== null && (isNaN(seedNumber) || seedNumber < 1)) {
+      return;
+    }
+
+    updateSeedMutation.mutate(
+      { registrationId, seedNumber },
+      {
+        onSuccess: () => {
+          setEditingSeedId(null);
+          setSeedValue("");
+        },
+      }
+    );
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSeedId(null);
+    setSeedValue("");
+  };
+
   if (registrations.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -43,15 +78,15 @@ export function RegistrationsList({
       </TableHeader>
       <TableBody>
         {registrations.map((registration) => {
-          // Procesar photoUrl del atleta
           const athletePhotoUrl = registration.athlete?.photoUrl
             ? getImageUrl(registration.athlete.photoUrl)
             : null;
 
-          // ✅ AGREGAR: Procesar logoUrl de la institución del equipo
           const teamLogoUrl = registration.team?.institution?.logoUrl
             ? getImageUrl(registration.team.institution.logoUrl)
             : null;
+
+          const isEditing = editingSeedId === registration.registrationId;
 
           return (
             <TableRow key={registration.registrationId}>
@@ -91,7 +126,6 @@ export function RegistrationsList({
                     </>
                   ) : registration.team ? (
                     <>
-                      {/* ✅ MODIFICAR: Mostrar logo de la institución o fallback */}
                       {teamLogoUrl ? (
                         <img
                           src={teamLogoUrl}
@@ -138,11 +172,65 @@ export function RegistrationsList({
                 </Badge>
               </TableCell>
               <TableCell>
-                {registration.seedNumber ? (
-                  <Badge variant="success">#{registration.seedNumber}</Badge>
-                ) : (
-                  <span className="text-gray-400">-</span>
-                )}
+                <div className="flex items-center justify-center gap-2">
+                  {isEditing ? (
+                    <>
+                      <input
+                        type="number"
+                        min="1"
+                        value={seedValue}
+                        onChange={(e) => setSeedValue(e.target.value)}
+                        placeholder="Seed"
+                        className="w-16 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleSaveSeed(registration.registrationId);
+                          } else if (e.key === "Escape") {
+                            handleCancelEdit();
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => handleSaveSeed(registration.registrationId)}
+                        disabled={updateSeedMutation.isPending}
+                        className="p-1 text-green-600 hover:bg-green-50 rounded"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={updateSeedMutation.isPending}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {registration.seedNumber ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center text-sm font-bold">
+                            {registration.seedNumber}
+                          </div>
+                          <button
+                            onClick={() => handleEditSeed(registration)}
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleEditSeed(registration)}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          Asignar seed
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 <Button

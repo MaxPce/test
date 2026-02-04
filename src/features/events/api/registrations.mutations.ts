@@ -21,10 +21,8 @@ export const useCreateRegistration = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: registrationKeys.lists() });
-      queryClient.invalidateQueries({
-        queryKey: eventCategoryKeys.detail(data.eventCategoryId),
-      });
+      queryClient.invalidateQueries({ queryKey: registrationKeys.all });
+      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
     },
   });
 };
@@ -37,11 +35,9 @@ export const useBulkRegistration = () => {
       const response = await apiClient.post(ENDPOINTS.REGISTRATIONS.BULK, data);
       return response.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: registrationKeys.lists() });
-      queryClient.invalidateQueries({
-        queryKey: eventCategoryKeys.detail(variables.eventCategoryId),
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: registrationKeys.all });
+      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
     },
   });
 };
@@ -54,7 +50,32 @@ export const useDeleteRegistration = () => {
       await apiClient.delete(ENDPOINTS.REGISTRATIONS.DELETE(id));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: registrationKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: registrationKeys.all });
+      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+    },
+  });
+};
+
+export const useUpdateRegistrationSeed = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      registrationId,
+      seedNumber,
+    }: {
+      registrationId: number;
+      seedNumber: number | null;
+    }) => {
+      const response = await apiClient.patch(
+        `/competitions/registrations/${registrationId}/seed`,
+        { seedNumber }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: registrationKeys.all });
+      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
     },
   });
 };

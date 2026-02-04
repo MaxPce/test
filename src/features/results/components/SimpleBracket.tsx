@@ -18,17 +18,18 @@ interface SimpleBracketProps {
   };
 }
 
-type RoundType = "quarters" | "semis" | "final" | "third" | "other";
+type RoundType = "sixteenths" | "eighths" | "quarters" | "semis" | "final" | "third" | "other";
 
 function classifyRound(rawRound?: string | null): RoundType {
   const r = (rawRound || "").toLowerCase().trim();
 
   if (!r) return "other";
 
+  if (r.includes("dieciseisavo") || r.includes("16avos") || r.includes("1/16")) return "sixteenths";
+  if (r.includes("octavo") || r.includes("8vos") || r.includes("1/8")) return "eighths";
   if (r.includes("cuarto")) return "quarters";
   if (r.includes("semi")) return "semis";
-  if (r.includes("tercer") || r.includes("3er") || r.includes("3°"))
-    return "third";
+  if (r.includes("tercer") || r.includes("3er") || r.includes("3°")) return "third";
   if (r.includes("final")) return "final";
 
   return "other";
@@ -52,11 +53,17 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
 
   const realMatches = matches.filter((match) => {
     if (match.phaseId !== phaseId) return false;
-    if (!match.participations || match.participations.length < 2) return false;
-
+    
+    if (!match.participations || match.participations.length === 0) return false;
+    
+    if (match.participations.length === 1) {
+      const p1 = match.participations[0]?.registration;
+      return p1 && (p1.athlete || p1.team);
+    }
+    
     const p1 = match.participations[0]?.registration;
     const p2 = match.participations[1]?.registration;
-
+    
     return p1 && p2 && (p1.athlete || p1.team) && (p2.athlete || p2.team);
   });
 
@@ -73,29 +80,31 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
     );
   }
 
-  const quarters = realMatches.filter(
-    (m) => classifyRound(m.round) === "quarters",
-  );
+  const sixteenths = realMatches.filter((m) => classifyRound(m.round) === "sixteenths");
+  const eighths = realMatches.filter((m) => classifyRound(m.round) === "eighths");
+  const quarters = realMatches.filter((m) => classifyRound(m.round) === "quarters");
   const semis = realMatches.filter((m) => classifyRound(m.round) === "semis");
   const finals = realMatches.filter((m) => classifyRound(m.round) === "final");
-  const thirdMatches = realMatches.filter(
-    (m) => classifyRound(m.round) === "third",
-  );
+  const thirdMatches = realMatches.filter((m) => classifyRound(m.round) === "third");
   const others = realMatches.filter((m) => classifyRound(m.round) === "other");
 
   const final = finals[0] || null;
   const third = thirdMatches[0] || null;
 
   const hasBracketLayout =
-    quarters.length > 0 || semis.length > 0 || final || third;
+    sixteenths.length > 0 ||
+    eighths.length > 0 ||
+    quarters.length > 0 ||
+    semis.length > 0 ||
+    final ||
+    third;
 
-    const selectedMatch = realMatches.find((m) => m.matchId === selectedMatchId);
+  const selectedMatch = realMatches.find((m) => m.matchId === selectedMatchId);
   const isKyorugui = sportConfig?.sportType === "kyorugi";
   const isPoomsae = sportConfig?.sportType === "poomsae";
 
   return (
     <>
-      {/* Modal de detalles - Kyorugui */}
       {selectedMatchId && isKyorugui && selectedMatch && (
         <KyoruguiMatchDetailsModal
           match={selectedMatch}
@@ -104,7 +113,6 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
         />
       )}
       
-      {/* Modal de detalles - Poomsae */}
       {selectedMatchId && isPoomsae && selectedMatch && (
         <PoomsaeMatchDetailsModal
           match={selectedMatch}
@@ -113,7 +121,6 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
         />
       )}
       
-      {/* Modal genérico para otros deportes */}
       {selectedMatchId && !isKyorugui && !isPoomsae && (
         <MatchDetailsModal
           matchId={selectedMatchId}
@@ -122,14 +129,60 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
         />
       )}
 
-
       <div className="space-y-6">
         {hasBracketLayout ? (
           <div className="bg-white rounded-2xl shadow-lg p-6 overflow-x-auto">
             <div className="min-w-max">
-              <div className="flex gap-8 items-center justify-center">
-                {quarters.length > 0 && (
+              <div className="flex gap-6 items-center justify-center">
+                
+                {sixteenths.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-center font-bold text-gray-700 mb-2 text-sm">
+                      Dieciseisavos
+                    </h3>
+                    {sixteenths.map((match) => (
+                      <MatchCard
+                        key={match.matchId}
+                        match={match}
+                        size="sm"
+                        sportConfig={sportConfig}
+                        onClick={() => setSelectedMatchId(match.matchId)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {sixteenths.length > 0 && eighths.length > 0 && (
+                  <div className="flex items-center">
+                    <div className="h-px w-6 bg-gray-300" />
+                  </div>
+                )}
+
+                {eighths.length > 0 && (
                   <div className="space-y-6">
+                    <h3 className="text-center font-bold text-gray-700 mb-2">
+                      Octavos de Final
+                    </h3>
+                    {eighths.map((match) => (
+                      <MatchCard
+                        key={match.matchId}
+                        match={match}
+                        size="sm"
+                        sportConfig={sportConfig}
+                        onClick={() => setSelectedMatchId(match.matchId)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {eighths.length > 0 && quarters.length > 0 && (
+                  <div className="flex items-center">
+                    <div className="h-px w-6 bg-gray-300" />
+                  </div>
+                )}
+
+                {quarters.length > 0 && (
+                  <div className="space-y-12">
                     <h3 className="text-center font-bold text-gray-700 mb-2">
                       Cuartos de Final
                     </h3>
@@ -151,21 +204,19 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
                 )}
 
                 {semis.length > 0 && (
-                  <div className="space-y-6">
+                  <div className="space-y-24">
                     <h3 className="text-center font-bold text-gray-700 mb-2">
                       Semifinales
                     </h3>
-                    <div className={semis.length > 1 ? "space-y-24" : ""}>
-                      {semis.map((match) => (
-                        <MatchCard
-                          key={match.matchId}
-                          match={match}
-                          size="lg"
-                          sportConfig={sportConfig}
-                          onClick={() => setSelectedMatchId(match.matchId)}
-                        />
-                      ))}
-                    </div>
+                    {semis.map((match) => (
+                      <MatchCard
+                        key={match.matchId}
+                        match={match}
+                        size="lg"
+                        sportConfig={sportConfig}
+                        onClick={() => setSelectedMatchId(match.matchId)}
+                      />
+                    ))}
                   </div>
                 )}
 
@@ -255,8 +306,6 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
   );
 }
 
-/* ---------- MatchCard ---------- */
-
 interface MatchCardProps {
   match: any;
   size?: "sm" | "lg" | "xl";
@@ -285,8 +334,10 @@ function MatchCard({
   const p1Data = match.participations?.[0]?.registration;
   const p2Data = match.participations?.[1]?.registration;
 
+  const isBye = !p2Data || match.participations?.length === 1;
+
   const name1 = p1Data?.athlete?.name || p1Data?.team?.name || "Por definir";
-  const name2 = p2Data?.athlete?.name || p2Data?.team?.name || "Por definir";
+  const name2 = p2Data?.athlete?.name || p2Data?.team?.name || "BYE";
 
   const institution1 =
     p1Data?.athlete?.institution || p1Data?.team?.institution;
@@ -408,7 +459,6 @@ function MatchCard({
           : "border-gray-300 bg-white"
       } rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer hover:scale-105`}
     >
-      {/* Participante 1 */}
       <div
         className={`flex items-center justify-between p-3 ${
           isP1Winner
@@ -419,6 +469,12 @@ function MatchCard({
         } rounded-t-xl`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          {p1Data?.seedNumber && (
+            <div className="flex-shrink-0 w-6 h-6 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center text-xs font-bold">
+              {p1Data.seedNumber}
+            </div>
+          )}
+          
           {logo1 && (
             <img
               src={getImageUrl(logo1)}
@@ -446,18 +502,25 @@ function MatchCard({
         <span className={getScoreClass(score1, isP1Winner)}>{score1}</span>
       </div>
 
-      {/* Participante 2 */}
       <div
         className={`flex items-center justify-between p-3 ${
-          isP2Winner
-            ? "bg-green-100"
-            : p2Corner === "white"
-              ? "bg-gray-50"
-              : "bg-white"
+          isBye
+            ? "bg-gray-100"
+            : isP2Winner
+              ? "bg-green-100"
+              : p2Corner === "white"
+                ? "bg-gray-50"
+                : "bg-white"
         } rounded-b-xl`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {logo2 && (
+          {!isBye && p2Data?.seedNumber && (
+            <div className="flex-shrink-0 w-6 h-6 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center text-xs font-bold">
+              {p2Data.seedNumber}
+            </div>
+          )}
+          
+          {!isBye && logo2 && (
             <img
               src={getImageUrl(logo2)}
               alt={institution2?.name || ""}
@@ -470,21 +533,20 @@ function MatchCard({
 
           <div className="min-w-0 flex-1">
             <p
-              className={`font-bold text-gray-900 truncate ${textSizeClasses[size]}`}
+              className={`font-bold ${isBye ? 'text-gray-400 italic' : 'text-gray-900'} truncate ${textSizeClasses[size]}`}
             >
               {name2}
             </p>
-            {institution2 && (
+            {!isBye && institution2 && (
               <p className="text-xs text-gray-600 truncate">
                 {institution2.abrev || institution2.name}
               </p>
             )}
           </div>
         </div>
-        <span className={getScoreClass(score2, isP2Winner)}>{score2}</span>
+        {!isBye && <span className={getScoreClass(score2, isP2Winner)}>{score2}</span>}
       </div>
 
-      {/* Footer del match */}
       <div className="px-3 py-2 bg-gray-50 rounded-b-xl border-t">
         <div className="flex items-center justify-between">
           <Badge

@@ -590,73 +590,97 @@ export function CategorySchedulePage() {
                           )}
 
                           <div className="flex gap-2">
-                            {participants.length < 2 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedMatch(match);
-                                  setIsAssignModalOpen(true);
-                                }}
-                              >
-                                Asignar Participantes
-                              </Button>
-                            )}
+                          {participants.length === 1 && match.status !== "finalizado" && (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              onClick={async () => {
+                                const participant = participants[0];
+                                if (confirm(`¿Avanzar a ${participant.registration?.athlete?.name || participant.registration?.team?.name || 'este participante'} automáticamente?`)) {
+                                  try {
+                                    await advanceWinnerMutation.mutateAsync({
+                                      matchId: match.matchId,
+                                      winnerRegistrationId: participant.registrationId!,
+                                    });
+                                  } catch (error) {
+                                    console.error('Error al avanzar participante:', error);
+                                  }
+                                }
+                              }}
+                              disabled={advanceWinnerMutation.isPending}
+                            >
+                              {advanceWinnerMutation.isPending ? 'Procesando...' : 'Pasar Participante'}
+                            </Button>
+                          )}
 
-                            {participants.length === 2 && (
-                              <>
-                                {/* Poomsae, Kyorugui o Judo - Todos usan el mismo patrón */}
-                                {getTaekwondoType() === "poomsae" ||
-                                getTaekwondoType() === "kyorugui" ||
-                                isJudoMatch ? (
+                          {participants.length < 2 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedMatch(match);
+                                setIsAssignModalOpen(true);
+                              }}
+                            >
+                              Asignar Participantes
+                            </Button>
+                          )}
+
+                          {participants.length === 2 && (
+                            <>
+                              {/* Poomsae, Kyorugui o Judo - Todos usan el mismo patrón */}
+                              {getTaekwondoType() === "poomsae" ||
+                              getTaekwondoType() === "kyorugui" ||
+                              isJudoMatch ? (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedMatchId(match.matchId);
+                                    setSelectedMatch(match);
+                                    setIsResultModalOpen(true);
+                                  }}
+                                >
+                                  {/* Detectar si ya tiene puntajes guardados */}
+                                  {(match.participant1Score !== null &&
+                                    match.participant1Score !== undefined) ||
+                                  (match.participant2Score !== null &&
+                                    match.participant2Score !== undefined) ||
+                                  match.status === "finalizado"
+                                    ? "Editar Puntaje"
+                                    : "Registrar Puntaje"}
+                                </Button>
+                              ) : isTableTennis() ? (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedMatch(match);
+                                    setIsResultModalOpen(true);
+                                  }}
+                                >
+                                  {match.status === "finalizado"
+                                    ? "Ver/Editar Match"
+                                    : "Gestionar Match"}
+                                </Button>
+                              ) : (
+                                match.status !== "finalizado" && (
                                   <Button
                                     variant="primary"
                                     size="sm"
                                     onClick={() => {
-                                      setSelectedMatchId(match.matchId);
                                       setSelectedMatch(match);
                                       setIsResultModalOpen(true);
                                     }}
                                   >
-                                    {/* Detectar si ya tiene puntajes guardados */}
-                                    {(match.participant1Score !== null &&
-                                      match.participant1Score !== undefined) ||
-                                    (match.participant2Score !== null &&
-                                      match.participant2Score !== undefined) ||
-                                    match.status === "finalizado"
-                                      ? "Editar Puntaje"
-                                      : "Registrar Puntaje"}
+                                    Registrar Resultado
                                   </Button>
-                                ) : isTableTennis() ? (
-                                  <Button
-                                    variant="primary"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedMatch(match);
-                                      setIsResultModalOpen(true);
-                                    }}
-                                  >
-                                    {match.status === "finalizado"
-                                      ? "Ver/Editar Match"
-                                      : "Gestionar Match"}
-                                  </Button>
-                                ) : (
-                                  match.status !== "finalizado" && (
-                                    <Button
-                                      variant="primary"
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedMatch(match);
-                                        setIsResultModalOpen(true);
-                                      }}
-                                    >
-                                      Registrar Resultado
-                                    </Button>
-                                  )
-                                )}
-                              </>
-                            )}
-                          </div>
+                                )
+                              )}
+                            </>
+                          )}
+                        </div>
+
                         </div>
                       );
                     })}
