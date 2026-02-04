@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
-import { Award, Star, User, Trophy, Target } from "lucide-react";
+import { Award, Star } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import { usePoomsaeScoreTable } from "@/features/competitions/api/taekwondo.queries";
@@ -147,13 +147,13 @@ export function PoomsaeResultsTable({
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                           <div className="flex items-center justify-center gap-1">
-                            <Target className="h-3 w-3" />
+                            
                             Accuracy
                           </div>
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                           <div className="flex items-center justify-center gap-1">
-                            <Star className="h-3 w-3" />
+                            
                             Presentation
                           </div>
                         </th>
@@ -192,31 +192,25 @@ export function PoomsaeResultsTable({
                             </td>
                             <td className="px-4 py-4">
                               <div className="flex items-center gap-3">
-                                {score.athletePhoto ? (
+                                {score.participantPhoto ? (
                                   <img
                                     src={getImageUrl(score.participantPhoto)}
                                     alt={score.participantName}
                                     className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
                                     onError={(e) => {
-                                      const target = e.currentTarget;
-                                      target.style.display = "none";
-                                      const parent = target.parentElement;
+                                      e.currentTarget.style.display = "none";
+                                      const parent = e.currentTarget.parentElement;
                                       if (parent) {
                                         const placeholder = document.createElement("div");
-                                        placeholder.className = "w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center border-2 border-white shadow";
-                                        const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                                        icon.setAttribute("class", "h-5 w-5 text-white");
-                                        icon.setAttribute("fill", "currentColor");
-                                        icon.setAttribute("viewBox", "0 0 24 24");
-                                        icon.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
-                                        placeholder.appendChild(icon);
+                                        placeholder.className = "w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold border-2 border-white shadow";
+                                        placeholder.textContent = score.participantName.charAt(0);
                                         parent.appendChild(placeholder);
                                       }
                                     }}
                                   />
                                 ) : (
-                                  <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center border-2 border-white shadow">
-                                    <User className="h-5 w-5 text-white" />
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold border-2 border-white shadow">
+                                    {score.participantName.charAt(0)}
                                   </div>
                                 )}
 
