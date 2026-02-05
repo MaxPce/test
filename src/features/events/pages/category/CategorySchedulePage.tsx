@@ -334,15 +334,15 @@ export function CategorySchedulePage() {
                           size="sm"
                           onClick={() => {
                             console.log(
-                              "📊 EventCategory registrations:",
+                              "EventCategory registrations:",
                               eventCategory.registrations,
                             );
                             console.log(
-                              "📊 Total registrations:",
+                              "Total registrations:",
                               eventCategory.registrations?.length || 0,
                             );
                             console.log(
-                              "📊 RegistrationIds:",
+                              "RegistrationIds:",
                               eventCategory.registrations?.map(
                                 (r) => r.registrationId,
                               ),
@@ -381,7 +381,6 @@ export function CategorySchedulePage() {
                       </>
                     )}
 
-                    {/* Nuevo Partido - disponible para todos excepto Poomsae en grupo */}
                     {!(
                       getTaekwondoType() === "poomsae" &&
                       selectedPhase.type === "grupo"
@@ -467,7 +466,7 @@ export function CategorySchedulePage() {
                                 </p>
                               )}
 
-                              {/* Mostrar puntaje para Poomsae, Kyorugui y Judo */}
+                              {/* Mostrar puntaje Poomsae, Kyorugui y Judo */}
                               {(getTaekwondoType() === "poomsae" ||
                                 getTaekwondoType() === "kyorugui" ||
                                 isJudoMatch) &&
@@ -476,7 +475,6 @@ export function CategorySchedulePage() {
                                   <p className="text-sm font-semibold text-gray-700 mt-1">
                                     Puntaje: {match.participant1Score ?? "-"} -{" "}
                                     {match.participant2Score ?? "-"}
-                                    {/* Extra: Mostrar detalles de Poomsae si existen */}
                                     {getTaekwondoType() === "poomsae" &&
                                       match.participant1Accuracy !== null &&
                                       match.participant1Accuracy !==

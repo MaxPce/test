@@ -35,15 +35,12 @@ export function InstitutionsPage() {
   const createMutation = useCreateInstitution();
   const updateMutation = useUpdateInstitution();
   const deleteMutation = useDeleteInstitution();
-  const uploadLogoMutation = useUploadInstitutionLogo(); // ✅ AGREGAR
+  const uploadLogoMutation = useUploadInstitutionLogo(); 
 
-  // ✅ MODIFICAR: Agregar parámetro logoFile
   const handleCreate = async (data: CreateInstitutionData, logoFile?: File) => {
     try {
-      // 1. Crear la institución
       const institution = await createMutation.mutateAsync(data);
 
-      // 2. Si hay archivo de logo, subirlo
       if (logoFile && institution.institutionId) {
         await uploadLogoMutation.mutateAsync({
           id: institution.institutionId,
@@ -57,17 +54,14 @@ export function InstitutionsPage() {
     }
   };
 
-  // ✅ MODIFICAR: Agregar parámetro logoFile
   const handleUpdate = async (data: CreateInstitutionData, logoFile?: File) => {
     if (selectedInstitution) {
       try {
-        // 1. Actualizar los datos de la institución
         await updateMutation.mutateAsync({
           id: selectedInstitution.institutionId,
           data,
         });
 
-        // 2. Si hay nuevo archivo de logo, subirlo
         if (logoFile) {
           await uploadLogoMutation.mutateAsync({
             id: selectedInstitution.institutionId,
@@ -152,7 +146,7 @@ export function InstitutionsPage() {
                       {institution.institutionId}
                     </TableCell>
                     <TableCell>
-                      {/* ✅ MODIFICAR: Usar getImageUrl */}
+                      {/* getImageUrl */}
                       {institution.logoUrl ? (
                         <img
                           src={getImageUrl(institution.logoUrl)}
@@ -219,7 +213,7 @@ export function InstitutionsPage() {
         <InstitutionForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
+          isLoading={createMutation.isPending || uploadLogoMutation.isPending} 
         />
       </Modal>
 
@@ -239,11 +233,10 @@ export function InstitutionsPage() {
             setIsEditModalOpen(false);
             setSelectedInstitution(null);
           }}
-          isLoading={updateMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
+          isLoading={updateMutation.isPending || uploadLogoMutation.isPending}
         />
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => {

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 interface Props {
   match: JudoMatch;
-  phase: Phase; // ✅ NUEVO: recibir la fase
+  phase: Phase;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -18,7 +18,7 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
   const [score2, setScore2] = useState(match.participant2Score || 0);
 
   const updateMutation = useUpdateJudoScore();
-  const advanceWinnerMutation = useAdvanceWinner(); // ✅ NUEVO
+  const advanceWinnerMutation = useAdvanceWinner();
 
   useEffect(() => {
     setScore1(match.participant1Score || 0);
@@ -37,7 +37,7 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
       return;
     }
 
-    // ✅ NUEVO: Si es eliminación, usar avance automático
+    // Si es eliminación, usar avance automático
     if (phase.type === "eliminacion") {
       advanceWinnerMutation.mutate(
         {

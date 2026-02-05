@@ -339,7 +339,7 @@ function MatchCard({
       {match.scheduledTime && (
         <div className="bg-gray-50 px-3 py-2 border-t border-gray-200">
           <p className="text-xs text-gray-600">
-            📅{" "}
+            {" "}
             {new Date(match.scheduledTime).toLocaleString("es-ES", {
               month: "short",
               day: "numeric",

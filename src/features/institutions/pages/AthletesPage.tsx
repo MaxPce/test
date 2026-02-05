@@ -36,15 +36,12 @@ export function AthletesPage() {
   const createMutation = useCreateAthlete();
   const updateMutation = useUpdateAthlete();
   const deleteMutation = useDeleteAthlete();
-  const uploadPhotoMutation = useUploadAthletePhoto(); // ✅ AGREGAR
+  const uploadPhotoMutation = useUploadAthletePhoto();
 
-  // ✅ MODIFICAR: Agregar parámetro photoFile
   const handleCreate = async (data: CreateAthleteData, photoFile?: File) => {
     try {
-      // 1. Crear el atleta
       const athlete = await createMutation.mutateAsync(data);
 
-      // 2. Si hay archivo de foto, subirlo
       if (photoFile && athlete.athleteId) {
         await uploadPhotoMutation.mutateAsync({
           id: athlete.athleteId,
@@ -58,17 +55,14 @@ export function AthletesPage() {
     }
   };
 
-  // ✅ MODIFICAR: Agregar parámetro photoFile
   const handleUpdate = async (data: CreateAthleteData, photoFile?: File) => {
     if (selectedAthlete) {
       try {
-        // 1. Actualizar los datos del atleta
         await updateMutation.mutateAsync({
           id: selectedAthlete.athleteId,
           data,
         });
 
-        // 2. Si hay nueva foto, subirla
         if (photoFile) {
           await uploadPhotoMutation.mutateAsync({
             id: selectedAthlete.athleteId,
@@ -240,7 +234,7 @@ export function AthletesPage() {
             setIsEditModalOpen(false);
             setSelectedAthlete(null);
           }}
-          isLoading={updateMutation.isPending || uploadPhotoMutation.isPending} // ✅ MODIFICAR
+          isLoading={updateMutation.isPending || uploadPhotoMutation.isPending} 
         />
       </Modal>
 

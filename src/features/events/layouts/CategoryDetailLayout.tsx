@@ -63,7 +63,6 @@ export function CategoryDetailLayout() {
     return variants[status] || "default";
   };
 
-  // Detectar si es un deporte cronometrado (natación, atletismo, etc.)
   const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
   const isTimedSport =
     sportName.includes("natación") ||
@@ -76,7 +75,6 @@ export function CategoryDetailLayout() {
       to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}`,
       icon: <UserPlus />,
     },
-    // Tab de Programación (solo para deportes NO cronometrados)
     ...(!isTimedSport
       ? [
           {
@@ -86,7 +84,6 @@ export function CategoryDetailLayout() {
           },
         ]
       : []),
-    // Tab de Resultados (solo para deportes cronometrados)
     ...(isTimedSport
       ? [
           {

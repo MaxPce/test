@@ -10,13 +10,9 @@ import {
   TabsContent,
 } from "@/components/ui/TabsControlled";
 import {
-  Users,
   Zap,
-  Trophy,
   AlertCircle,
   CheckCircle,
-  Settings,
-  BarChart3,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { LineupSelector } from "./LineupSelector";
@@ -435,7 +431,7 @@ export function TableTennisMatchManager({
                   isLoading={
                     finalizeMatchMutation.isPending ||
                     advanceWinnerMutation.isPending
-                  } // ✅ ACTUALIZADO
+                  }
                   variant="default"
                 >
                   Finalizar Match

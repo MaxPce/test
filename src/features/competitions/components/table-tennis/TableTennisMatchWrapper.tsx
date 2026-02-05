@@ -52,7 +52,7 @@ export function TableTennisMatchWrapper({
     );
   }
 
-  // ✅ Validación según tipo de categoría
+  // según tipo de categoría
   if (categoryType === "individual") {
     // Para individual, verificar que ambos tienen registration.athlete
     const individualsWithAthlete = match.participations.filter(
@@ -102,6 +102,5 @@ export function TableTennisMatchWrapper({
     }
   }
 
-  // ✅ Todas las validaciones pasaron
   return <TableTennisMatchManager match={enrichedMatch} />;
 }

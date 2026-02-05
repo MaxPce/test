@@ -2,11 +2,11 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Users, Trophy } from "lucide-react";
 import type { LineupData } from "../../api/table-tennis.api";
-import type { Match } from "../../types"; // ✅ AGREGAR
+import type { Match } from "../../types";
 
 interface TableTennisMatchCardProps {
   lineups: LineupData[];
-  match: Match; // ✅ AGREGAR
+  match: Match;
   result?: {
     team1: { wins: number; teamName: string };
     team2: { wins: number; teamName: string };
@@ -18,7 +18,7 @@ interface TableTennisMatchCardProps {
 
 export function TableTennisMatchCard({
   lineups,
-  match, // ✅ AGREGAR
+  match,
   result,
 }: TableTennisMatchCardProps) {
   if (lineups.length !== 2) {
@@ -52,7 +52,7 @@ export function TableTennisMatchCard({
     result?.winner?.registrationId ===
     team2.participation.registration.registrationId;
 
-  // ✅ NUEVA LÓGICA: Usar match.status en lugar de result.isComplete
+  // match.status
   const getMatchStatusBadge = () => {
     if (match.status === "finalizado") {
       return <Badge variant="success">Finalizado</Badge>;
@@ -100,7 +100,6 @@ export function TableTennisMatchCard({
                 <div className="text-4xl font-bold text-gray-900 mb-1">
                   {result.team1.wins} - {result.team2.wins}
                 </div>
-                {/* ✅ CAMBIAR ESTA LÍNEA: */}
                 {getMatchStatusBadge()}
               </div>
             ) : (
@@ -108,7 +107,6 @@ export function TableTennisMatchCard({
                 <div className="text-2xl font-bold text-gray-400 mb-2">
                   0 - 0
                 </div>
-                {/* ✅ AGREGAR badge incluso sin result */}
                 {getMatchStatusBadge()}
               </div>
             )}

@@ -39,7 +39,6 @@ export function EventLayout() {
     return variants[status] || "default";
   };
 
-  // ✅ AGREGAR: Procesar URL del logo
   const logoUrl = event.logoUrl ? getImageUrl(event.logoUrl) : null;
 
   return (
@@ -56,13 +55,12 @@ export function EventLayout() {
         </Button>
 
         <div className="flex items-start gap-4">
-          {logoUrl ? ( // ✅ CAMBIAR: usar logoUrl procesada
+          {logoUrl ? ( 
             <img
               src={logoUrl}
               alt={event.name}
               className="h-20 w-20 rounded-lg object-cover border border-gray-200"
               onError={(e) => {
-                // ✅ AGREGAR: Manejo de error
                 e.currentTarget.style.display = "none";
                 const parent = e.currentTarget.parentElement;
                 if (parent && !parent.querySelector(".fallback-logo")) {
@@ -93,7 +91,6 @@ export function EventLayout() {
         </div>
       </div>
 
-      {/* Contenido anidado */}
       <Outlet />
     </div>
   );

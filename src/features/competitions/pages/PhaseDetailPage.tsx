@@ -61,7 +61,7 @@ export function PhaseDetailPage() {
   const initializeBracketMutation = useInitializeBracket();
   const initializeRoundRobinMutation = useInitializeRoundRobin();
 
-  // ⭐ NUEVO: Detectar si es Poomsae
+  // Detectar si es Poomsae
   const isPoomsaePhase = () => {
     if (!phase) return false;
     const sportName =
@@ -220,7 +220,7 @@ export function PhaseDetailPage() {
     return labels[format] || format;
   };
 
-  // ⭐ NUEVO: Renderizar vista específica para Poomsae
+  // Renderizar vista específica para Poomsae
   const renderPoomsaeView = () => {
     // Para Poomsae en modo bracket, mostrar bracket
     if (phase.format === "eliminacion_directa" && viewMode === "bracket") {
@@ -321,7 +321,6 @@ export function PhaseDetailPage() {
         </CardBody>
       </Card>
 
-      {/* ⭐ MODIFICADO: Renderizado condicional para Poomsae */}
       {isPoomsaePhase() ? (
         <Card>
           <CardHeader>
@@ -331,7 +330,6 @@ export function PhaseDetailPage() {
                   ? "Competencia"
                   : "Tabla de Puntajes"}
               </h2>
-              {/* ⭐ Mostrar botón de bracket solo para eliminación directa */}
               {phase.format === "eliminacion_directa" && (
                 <div className="flex gap-2">
                   <Button

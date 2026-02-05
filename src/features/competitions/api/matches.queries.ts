@@ -12,7 +12,6 @@ export const useMatch = (matchId: number) => {
   return useQuery({
     queryKey: ["match", matchId],
     queryFn: async () => {
-      // ✅ Ajusta según tu API (puede ser ?populate, ?expand, etc.)
       const response = await fetch(
         `/api/matches/${matchId}?populate=participations.registration.athlete,phase`,
       );

@@ -151,7 +151,7 @@ export function CategoryStandingsPage() {
     };
   };
 
-  // ✅ NUEVA FUNCIÓN: Configuración para brackets
+  // Configuración para brackets
   const getBracketConfig = () => {
     if (isJudo) {
       return {
@@ -189,7 +189,7 @@ export function CategoryStandingsPage() {
   };
 
   const renderBracketWithToggle = (eliminationPhase: any) => {
-    const bracketConfig = getBracketConfig(); // ✅ OBTENER CONFIG
+    const bracketConfig = getBracketConfig(); 
 
     return (
       <div className="space-y-6">
@@ -234,7 +234,7 @@ export function CategoryStandingsPage() {
         ) : (
           <SimpleBracket
             phaseId={eliminationPhase.phaseId}
-            sportConfig={bracketConfig} // ✅ PASAR CONFIG
+            sportConfig={bracketConfig} 
           />
         )}
       </div>

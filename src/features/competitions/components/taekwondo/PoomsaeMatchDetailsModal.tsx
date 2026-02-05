@@ -28,7 +28,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
     return participation?.registration?.athlete?.institution?.logoUrl;
   };
 
-  // ✅ NUEVO: Obtener foto del atleta
   const getAthletePhoto = (participation: typeof participant1) => {
     const photoUrl = participation?.registration?.athlete?.photoUrl;
     return photoUrl ? getImageUrl(photoUrl) : null;
@@ -139,7 +138,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
               }`}
             >
               <div className="flex items-start gap-4">
-                {/* ✅ FOTO DEL ATLETA en lugar de icono */}
                 {getAthletePhoto(participant1) ? (
                   <img
                     src={getAthletePhoto(participant1)!}
@@ -221,7 +219,7 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
 
                   {isWinner(participant1?.participationId || 0) && (
                     <div className="mt-3 inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      <Trophy className="w-4 h-4" />
+                      
                       GANADOR
                     </div>
                   )}
@@ -238,7 +236,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
               }`}
             >
               <div className="flex items-start gap-4">
-                {/* ✅ FOTO DEL ATLETA en lugar de icono */}
                 {getAthletePhoto(participant2) ? (
                   <img
                     src={getAthletePhoto(participant2)!}
@@ -320,7 +317,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
 
                   {isWinner(participant2?.participationId || 0) && (
                     <div className="mt-3 inline-flex items-center gap-2 bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      <Trophy className="w-4 h-4" />
                       GANADOR
                     </div>
                   )}
@@ -328,8 +324,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
               </div>
             </div>
           </div>
-
-          {/* ❌ ELIMINADA: Sección de Comparativa de Puntajes */}
 
           {!hasScores && (
             <div className="bg-gray-50 rounded-lg p-6 text-center">

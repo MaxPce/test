@@ -16,7 +16,6 @@ export const matchesApi = {
     return response.data;
   },
 
-  // ✅ MODIFICAR ESTE MÉTODO
   getOne: async (id: number): Promise<Match> => {
     // Primero intentar obtener con relaciones completas desde table-tennis
     try {

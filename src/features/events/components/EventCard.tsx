@@ -42,23 +42,19 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
 
   const statusConfig = getStatusConfig(event.status);
 
-  // ✅ AGREGAR: Obtener URL completa de la imagen
   const logoUrl = getImageUrl(event.logoUrl);
 
   return (
     <Card hover className="group overflow-hidden">
       <CardBody className="p-0">
-        {/* Header con imagen/logo */}
         <div className="relative h-32 bg-gradient-to-br  overflow-hidden">
-          {logoUrl ? ( // ✅ CAMBIAR: usar logoUrl en lugar de event.logoUrl
+          {logoUrl ? ( 
             <>
               <img
                 src={logoUrl} // ✅ CAMBIAR: usar la URL completa
                 alt={event.name}
                 className="w-full h-full object-cover opacity-50 group-hover:opacity-40 transition-opacity"
                 onError={(e) => {
-                  // ✅ AGREGAR: Manejo de error
-                  // Si la imagen falla al cargar, ocultar el elemento
                   e.currentTarget.style.display = "none";
                 }}
               />

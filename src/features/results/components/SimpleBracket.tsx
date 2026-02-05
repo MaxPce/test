@@ -334,10 +334,24 @@ function MatchCard({
   const p1Data = match.participations?.[0]?.registration;
   const p2Data = match.participations?.[1]?.registration;
 
-  const isBye = !p2Data || match.participations?.length === 1;
+  const roundName = (match.round || "").toLowerCase();
+  const isFirstRound = 
+    roundName.includes("cuarto") || 
+    roundName.includes("octavo") || 
+    roundName.includes("dieciseisavo") ||
+    roundName.includes("16avo") ||
+    roundName.includes("8vo");
+
+  const isRealBye = match.participations?.length === 1 && isFirstRound;
+  const isWaitingForWinner = !p2Data && !isRealBye;
+  const isByeProcessed = isRealBye && match.status === "finalizado";
 
   const name1 = p1Data?.athlete?.name || p1Data?.team?.name || "Por definir";
-  const name2 = p2Data?.athlete?.name || p2Data?.team?.name || "BYE";
+  const name2 = isRealBye 
+    ? "BYE" 
+    : isWaitingForWinner 
+      ? "Por definir" 
+      : p2Data?.athlete?.name || p2Data?.team?.name || "Por definir";
 
   const institution1 =
     p1Data?.athlete?.institution || p1Data?.team?.institution;
@@ -504,47 +518,70 @@ function MatchCard({
 
       <div
         className={`flex items-center justify-between p-3 ${
-          isBye
-            ? "bg-gray-100"
-            : isP2Winner
-              ? "bg-green-100"
-              : p2Corner === "white"
-                ? "bg-gray-50"
-                : "bg-white"
+          isByeProcessed
+            ? "bg-green-50"
+            : isRealBye
+              ? "bg-gray-100"
+              : isWaitingForWinner
+                ? "bg-blue-50"
+                : isP2Winner
+                  ? "bg-green-100"
+                  : p2Corner === "white"
+                    ? "bg-gray-50"
+                    : "bg-white"
         } rounded-b-xl`}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {!isBye && p2Data?.seedNumber && (
-            <div className="flex-shrink-0 w-6 h-6 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center text-xs font-bold">
-              {p2Data.seedNumber}
-            </div>
-          )}
-          
-          {!isBye && logo2 && (
-            <img
-              src={getImageUrl(logo2)}
-              alt={institution2?.name || ""}
-              className="h-6 w-6 object-contain flex-shrink-0"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          )}
-
-          <div className="min-w-0 flex-1">
-            <p
-              className={`font-bold ${isBye ? 'text-gray-400 italic' : 'text-gray-900'} truncate ${textSizeClasses[size]}`}
-            >
-              {name2}
+        {isByeProcessed ? (
+          <div className="flex items-center gap-2 flex-1 min-w-0 justify-center">
+            <Trophy className="h-4 w-4 text-green-600 flex-shrink-0" />
+            <p className="font-medium text-green-700 text-sm italic">
+              Avance Directo
             </p>
-            {!isBye && institution2 && (
-              <p className="text-xs text-gray-600 truncate">
-                {institution2.abrev || institution2.name}
-              </p>
-            )}
           </div>
-        </div>
-        {!isBye && <span className={getScoreClass(score2, isP2Winner)}>{score2}</span>}
+        ) : (
+          <>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {!isRealBye && !isWaitingForWinner && p2Data?.seedNumber && (
+                <div className="flex-shrink-0 w-6 h-6 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center text-xs font-bold">
+                  {p2Data.seedNumber}
+                </div>
+              )}
+              
+              {!isRealBye && !isWaitingForWinner && logo2 && (
+                <img
+                  src={getImageUrl(logo2)}
+                  alt={institution2?.name || ""}
+                  className="h-6 w-6 object-contain flex-shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
+
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`font-bold ${
+                    isRealBye 
+                      ? 'text-gray-400 italic' 
+                      : isWaitingForWinner
+                        ? 'text-blue-500 italic'
+                        : 'text-gray-900'
+                  } truncate ${textSizeClasses[size]}`}
+                >
+                  {name2}
+                </p>
+                {!isRealBye && !isWaitingForWinner && institution2 && (
+                  <p className="text-xs text-gray-600 truncate">
+                    {institution2.abrev || institution2.name}
+                  </p>
+                )}
+              </div>
+            </div>
+            {!isRealBye && !isWaitingForWinner && (
+              <span className={getScoreClass(score2, isP2Winner)}>{score2}</span>
+            )}
+          </>
+        )}
       </div>
 
       <div className="px-3 py-2 bg-gray-50 rounded-b-xl border-t">

@@ -11,12 +11,12 @@ import {
   useCreateEvent,
   useUpdateEvent,
   useDeleteEvent,
-  useUploadEventLogo, // ✅ AGREGAR
+  useUploadEventLogo, 
 } from "../api/events.mutations";
 import { EventForm } from "../components/EventForm";
 import { EventCard } from "../components/EventCard";
 import { DeleteConfirmModal } from "@/features/sports/components/DeleteConfirmModal";
-import type { Event, CreateEventData } from "../types"; // ✅ MODIFICAR
+import type { Event, CreateEventData } from "../types";
 import type { EventStatus } from "@/lib/types/common.types";
 
 export function EventsPage() {
@@ -34,9 +34,8 @@ export function EventsPage() {
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
   const deleteMutation = useDeleteEvent();
-  const uploadLogoMutation = useUploadEventLogo(); // ✅ AGREGAR
+  const uploadLogoMutation = useUploadEventLogo(); 
 
-  // ✅ MODIFICAR: Agregar parámetro logoFile
   const handleCreate = async (data: CreateEventData, logoFile?: File) => {
     try {
       // 1. Crear el evento
@@ -56,7 +55,6 @@ export function EventsPage() {
     }
   };
 
-  // ✅ MODIFICAR: Agregar parámetro logoFile
   const handleUpdate = async (data: CreateEventData, logoFile?: File) => {
     if (selectedEvent) {
       try {
@@ -212,7 +210,7 @@ export function EventsPage() {
         <EventForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
+          isLoading={createMutation.isPending || uploadLogoMutation.isPending} 
         />
       </Modal>
 
@@ -233,7 +231,7 @@ export function EventsPage() {
             setIsEditModalOpen(false);
             setSelectedEvent(null);
           }}
-          isLoading={updateMutation.isPending || uploadLogoMutation.isPending} // ✅ MODIFICAR
+          isLoading={updateMutation.isPending || uploadLogoMutation.isPending} 
         />
       </Modal>
 

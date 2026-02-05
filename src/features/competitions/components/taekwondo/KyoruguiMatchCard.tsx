@@ -216,7 +216,6 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
           </div>
         </div>
 
-        {/* ✅ NUEVA SECCIÓN: Botones de acción */}
         <div className="mt-3 flex gap-2">
           {/* Botón Ver Detalles */}
           <button
@@ -260,7 +259,7 @@ export const KyoruguiMatchCard = ({ match }: Props) => {
         />
       )}
 
-      {/* ✅ NUEVO: Modal de detalles */}
+      {/* Modal de detalles */}
       <KyoruguiMatchDetailsModal
         match={match}
         isOpen={isDetailsModalOpen}

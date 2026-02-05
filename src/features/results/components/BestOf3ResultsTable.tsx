@@ -378,7 +378,7 @@ export function BestOf3ResultsTable({
 
                     {match.scheduledTime && (
                       <p className="text-xs text-gray-500 mt-3 text-center">
-                        📅{" "}
+                        {" "}
                         {new Date(match.scheduledTime).toLocaleString("es-ES")}
                       </p>
                     )}

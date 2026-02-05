@@ -57,7 +57,6 @@ export function TimeInputForm({
     }
   }, [existingResult]);
 
-  // ✅ Soporte para equipos y atletas
   const isTeam = !!registration.team;
   const participantName = isTeam
     ? registration.team?.name || "Equipo Desconocido"
@@ -93,7 +92,7 @@ export function TimeInputForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ✅ Muestra nombre del equipo o atleta */}
+      {/* Muestra nombre del equipo o atleta */}
       <div>
         <p className="text-sm font-medium text-gray-700 mb-1">
           {isTeam ? "Equipo" : "Atleta"}

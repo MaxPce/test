@@ -38,7 +38,6 @@ export function AthleteCard({ athlete, onEdit, onDelete }: AthleteCardProps) {
               alt={athlete.name}
               className="h-20 w-20 rounded-lg object-cover"
               onError={(e) => {
-                // Si falla, mostrar placeholder
                 e.currentTarget.style.display = "none";
                 const parent = e.currentTarget.parentElement;
                 if (parent) {

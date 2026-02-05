@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 interface Props {
   match: KyoruguiMatch;
-  phase: Phase; // ✅ NUEVO: recibir la fase
+  phase: Phase;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -23,7 +23,7 @@ export const KyoruguiScoreModal = ({
   const [score2, setScore2] = useState(match.participant2Score || 0);
 
   const updateMutation = useUpdateKyoruguiScore();
-  const advanceWinnerMutation = useAdvanceWinner(); // ✅ NUEVO
+  const advanceWinnerMutation = useAdvanceWinner();
 
   useEffect(() => {
     setScore1(match.participant1Score || 0);
@@ -42,7 +42,7 @@ export const KyoruguiScoreModal = ({
       return;
     }
 
-    // ✅ NUEVO: Si es eliminación, usar avance automático
+    // Si es eliminación, usar avanza
     if (phase.type === "eliminacion") {
       advanceWinnerMutation.mutate(
         {
@@ -62,7 +62,7 @@ export const KyoruguiScoreModal = ({
         },
       );
     } else {
-      // Para otras fases, usar el método tradicional
+      // Para otras fases, método tradicional
       updateMutation.mutate(
         {
           matchId: match.matchId,

@@ -36,7 +36,6 @@ export function RegistrationForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Limpiar datos según el tipo
     const dataToSubmit: CreateRegistrationData = {
       eventCategoryId: formData.eventCategoryId,
       seedNumber: formData.seedNumber,
