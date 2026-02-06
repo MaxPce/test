@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { Plus, Filter, Calendar } from "lucide-react";
+import { Plus, Calendar, Search, Grid3x3, List } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/PageHeader";
 import { useEvents } from "../api/events.queries";
 import {
   useCreateEvent,
   useUpdateEvent,
   useDeleteEvent,
-  useUploadEventLogo, 
+  useUploadEventLogo,
 } from "../api/events.mutations";
 import { EventForm } from "../components/EventForm";
 import { EventCard } from "../components/EventCard";
@@ -27,6 +29,8 @@ export function EventsPage() {
   const [filterStatus, setFilterStatus] = useState<EventStatus | undefined>(
     undefined,
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { data: events = [], isLoading } = useEvents(
     filterStatus ? { status: filterStatus } : undefined,
@@ -34,14 +38,12 @@ export function EventsPage() {
   const createMutation = useCreateEvent();
   const updateMutation = useUpdateEvent();
   const deleteMutation = useDeleteEvent();
-  const uploadLogoMutation = useUploadEventLogo(); 
+  const uploadLogoMutation = useUploadEventLogo();
 
   const handleCreate = async (data: CreateEventData, logoFile?: File) => {
     try {
-      // 1. Crear el evento
       const event = await createMutation.mutateAsync(data);
 
-      // 2. Si hay archivo de logo, subirlo
       if (logoFile && event.eventId) {
         await uploadLogoMutation.mutateAsync({
           id: event.eventId,
@@ -58,13 +60,11 @@ export function EventsPage() {
   const handleUpdate = async (data: CreateEventData, logoFile?: File) => {
     if (selectedEvent) {
       try {
-        // 1. Actualizar los datos del evento
         await updateMutation.mutateAsync({
           id: selectedEvent.eventId,
           data,
         });
 
-        // 2. Si hay nuevo logo, subirlo
         if (logoFile) {
           await uploadLogoMutation.mutateAsync({
             id: selectedEvent.eventId,
@@ -105,6 +105,11 @@ export function EventsPage() {
     { value: "finalizado", label: "Finalizados" },
   ];
 
+  // Filtrar eventos por búsqueda
+  const filteredEvents = events.filter((event) =>
+    event.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -114,82 +119,135 @@ export function EventsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header mejorado con botón visible */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <Calendar className="h-7 w-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Eventos</h1>
-            </div>
-          </div>
+    <div className="space-y-6 animate-in">
+      {/* Header profesional */}
+      <PageHeader
+        title="Gestión de Eventos"
+        description="Administre eventos deportivos, competencias y torneos"
+        actions={
           <Button
             onClick={() => setIsCreateModalOpen(true)}
-            variant="white"
+            variant="gradient"
             size="lg"
+            icon={<Plus className="h-5 w-5" />}
           >
-            <Plus className="h-5 w-5 mr-2" />
             Nuevo Evento
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Filtros mejorados */}
-      <Card>
+      
+
+      {/* Barra de búsqueda y filtros mejorada */}
+      <Card variant="glass">
         <CardBody>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center gap-2 text-slate-600">
-              <span className="text-sm font-semibold">Filtrar por:</span>
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Búsqueda */}
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar eventos por nombre..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                icon={<Search className="h-5 w-5" />}
+                variant="modern"
+              />
             </div>
-            <div className="flex-1 max-w-xs w-full">
+
+            {/* Filtro de estado */}
+            <div className="w-full lg:w-64">
               <Select
                 value={filterStatus || ""}
                 onChange={(e) =>
                   setFilterStatus(
-                    e.target.value
-                      ? (e.target.value as EventStatus)
-                      : undefined,
+                    e.target.value ? (e.target.value as EventStatus) : undefined,
                   )
                 }
                 options={filterOptions}
               />
             </div>
-            {filterStatus && (
+
+            {/* Vista Grid/List */}
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "grid" ? "primary" : "outline"}
+                size="md"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3x3 className="h-5 w-5" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "primary" : "outline"}
+                size="md"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Filtros activos */}
+          {(filterStatus || searchQuery) && (
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
+              <span className="text-sm font-semibold text-slate-600">
+                Filtros activos:
+              </span>
+              {filterStatus && (
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                  {filterOptions.find((o) => o.value === filterStatus)?.label}
+                </span>
+              )}
+              {searchQuery && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                  "{searchQuery}"
+                </span>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setFilterStatus(undefined)}
+                onClick={() => {
+                  setFilterStatus(undefined);
+                  setSearchQuery("");
+                }}
               >
-                Limpiar filtro
+                Limpiar todo
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CardBody>
       </Card>
 
-      {/* Grid de eventos - 3 columnas en pantallas grandes */}
-      {events.length === 0 ? (
+      {/* Grid/List de eventos */}
+      {filteredEvents.length === 0 ? (
         <EmptyState
           icon={Calendar}
           title={
-            filterStatus
-              ? "No hay eventos con este filtro"
+            searchQuery || filterStatus
+              ? "No se encontraron eventos"
               : "No hay eventos registrados"
           }
           description={
-            filterStatus
-              ? "Intenta cambiar los filtros para ver otros eventos"
+            searchQuery || filterStatus
+              ? "Intenta ajustar los filtros de búsqueda"
               : "Comienza creando tu primer evento deportivo"
           }
-          actionLabel="Crear Primer Evento"
-          onAction={() => setIsCreateModalOpen(true)}
+          action={
+            !searchQuery && !filterStatus
+              ? {
+                  label: "Crear Primer Evento",
+                  onClick: () => setIsCreateModalOpen(true),
+                }
+              : undefined
+          }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {events.map((event) => (
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+              : "space-y-4"
+          }
+        >
+          {filteredEvents.map((event) => (
             <EventCard
               key={event.eventId}
               event={event}
@@ -210,7 +268,7 @@ export function EventsPage() {
         <EventForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending || uploadLogoMutation.isPending} 
+          isLoading={createMutation.isPending || uploadLogoMutation.isPending}
         />
       </Modal>
 
@@ -231,7 +289,7 @@ export function EventsPage() {
             setIsEditModalOpen(false);
             setSelectedEvent(null);
           }}
-          isLoading={updateMutation.isPending || uploadLogoMutation.isPending} 
+          isLoading={updateMutation.isPending || uploadLogoMutation.isPending}
         />
       </Modal>
 

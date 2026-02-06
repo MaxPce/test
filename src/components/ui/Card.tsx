@@ -1,73 +1,143 @@
-import { HTMLAttributes, forwardRef } from "react";
+import { forwardRef, type HTMLAttributes } from "react";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "glass" | "bordered" | "elevated" | "gradient";
   hover?: boolean;
+  padding?: "none" | "sm" | "md" | "lg";
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ children, hover = false, className = "", ...props }, ref) => {
+  (
+    {
+      children,
+      variant = "default",
+      hover = false,
+      padding = "none",
+      className = "",
+      ...props
+    },
+    ref,
+  ) => {
+    const baseStyles = "rounded-2xl transition-all duration-300";
+
+    const variants = {
+      default: "bg-white border border-slate-200 shadow-soft",
+      glass: "glass shadow-medium",
+      bordered: "bg-white border-2 border-slate-200",
+      elevated: "bg-white shadow-medium hover:shadow-strong",
+      gradient:
+        "bg-gradient-to-br from-white via-blue-50/30 to-white border border-slate-200 shadow-soft",
+    };
+
+    const paddings = {
+      none: "",
+      sm: "p-4",
+      md: "p-6",
+      lg: "p-8",
+    };
+
+    const hoverEffect = hover
+      ? "hover:shadow-medium hover:-translate-y-1 cursor-pointer card-glow"
+      : "";
+
     return (
       <div
         ref={ref}
-        className={`bg-white rounded-lg shadow-md border border-gray-200 ${
-          hover ? "hover:shadow-lg transition-shadow" : ""
-        } ${className}`}
+        className={`${baseStyles} ${variants[variant]} ${paddings[padding]} ${hoverEffect} ${className}`}
         {...props}
       >
         {children}
       </div>
     );
-  }
+  },
 );
 
 Card.displayName = "Card";
 
-interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {}
-
-export const CardHeader = forwardRef<HTMLDivElement, CardHeaderProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={`px-6 py-4 border-b border-gray-200 ${className}`}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
+// CardHeader con estilos mejorados
+export const CardHeader = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ children, className = "", ...props }, ref) => (
+  <div
+    ref={ref}
+    className={`px-6 py-4 border-b border-slate-200 ${className}`}
+    {...props}
+  >
+    {children}
+  </div>
+));
 
 CardHeader.displayName = "CardHeader";
 
-interface CardBodyProps extends HTMLAttributes<HTMLDivElement> {}
-
-export const CardBody = forwardRef<HTMLDivElement, CardBodyProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <div ref={ref} className={`px-6 py-4 ${className}`} {...props}>
-        {children}
-      </div>
-    );
-  }
-);
+// CardBody - mantiene compatibilidad
+export const CardBody = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ children, className = "", ...props }, ref) => (
+  <div ref={ref} className={`px-6 py-4 ${className}`} {...props}>
+    {children}
+  </div>
+));
 
 CardBody.displayName = "CardBody";
 
-interface CardFooterProps extends HTMLAttributes<HTMLDivElement> {}
+// CardContent - alternativa moderna
+export const CardContent = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ children, className = "", ...props }, ref) => (
+  <div ref={ref} className={`px-6 py-4 ${className}`} {...props}>
+    {children}
+  </div>
+));
 
-export const CardFooter = forwardRef<HTMLDivElement, CardFooterProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={`px-6 py-4 border-t border-gray-200 bg-gray-50 ${className}`}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
-);
+CardContent.displayName = "CardContent";
+
+// CardTitle
+export const CardTitle = forwardRef<
+  HTMLHeadingElement,
+  HTMLAttributes<HTMLHeadingElement>
+>(({ children, className = "", ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={`text-xl font-bold text-slate-900 ${className}`}
+    {...props}
+  >
+    {children}
+  </h3>
+));
+
+CardTitle.displayName = "CardTitle";
+
+// CardDescription
+export const CardDescription = forwardRef<
+  HTMLParagraphElement,
+  HTMLAttributes<HTMLParagraphElement>
+>(({ children, className = "", ...props }, ref) => (
+  <p
+    ref={ref}
+    className={`text-sm text-slate-600 mt-1 ${className}`}
+    {...props}
+  >
+    {children}
+  </p>
+));
+
+CardDescription.displayName = "CardDescription";
+
+
+export const CardFooter = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ children, className = "", ...props }, ref) => (
+  <div
+    ref={ref}
+    className={`px-6 py-4 border-t border-slate-200 bg-slate-50/50 ${className}`}
+    {...props}
+  >
+    {children}
+  </div>
+));
 
 CardFooter.displayName = "CardFooter";

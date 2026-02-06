@@ -1,108 +1,87 @@
-import { type HTMLAttributes, forwardRef } from "react";
+import { type HTMLAttributes } from "react";
 
-interface TableProps extends HTMLAttributes<HTMLTableElement> {}
-
-export const Table = forwardRef<HTMLTableElement, TableProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <div className="overflow-x-auto rounded-lg">
-        <table
-          ref={ref}
-          className={`min-w-full divide-y divide-slate-200 ${className}`}
-          {...props}
-        >
-          {children}
-        </table>
-      </div>
-    );
-  },
-);
-
-Table.displayName = "Table";
-
-interface TableHeaderProps extends HTMLAttributes<HTMLTableSectionElement> {}
-
-export const TableHeader = forwardRef<
-  HTMLTableSectionElement,
-  TableHeaderProps
->(({ children, className = "", ...props }, ref) => {
+export function Table({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLTableElement>) {
   return (
-    <thead ref={ref} className={`bg-slate-50 ${className}`} {...props}>
+    <div className="w-full overflow-auto">
+      <table
+        className={`w-full caption-bottom text-sm ${className}`}
+        {...props}
+      >
+        {children}
+      </table>
+    </div>
+  );
+}
+
+export function TableHeader({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <thead
+      className={`bg-slate-50 border-b border-slate-200 ${className}`}
+      {...props}
+    >
       {children}
     </thead>
   );
-});
+}
 
-TableHeader.displayName = "TableHeader";
+export function TableBody({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <tbody className={`divide-y divide-slate-200 ${className}`} {...props}>
+      {children}
+    </tbody>
+  );
+}
 
-interface TableBodyProps extends HTMLAttributes<HTMLTableSectionElement> {}
+export function TableRow({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <tr
+      className={`transition-colors hover:bg-slate-50 ${className}`}
+      {...props}
+    >
+      {children}
+    </tr>
+  );
+}
 
-export const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <tbody
-        ref={ref}
-        className={`bg-white divide-y divide-slate-100 ${className}`}
-        {...props}
-      >
-        {children}
-      </tbody>
-    );
-  },
-);
+export function TableHead({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <th
+      className={`h-12 px-4 text-left align-middle font-bold text-slate-700 text-xs uppercase tracking-wider ${className}`}
+      {...props}
+    >
+      {children}
+    </th>
+  );
+}
 
-TableBody.displayName = "TableBody";
-
-interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {}
-
-export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <tr
-        ref={ref}
-        className={`hover:bg-slate-50 transition-colors ${className}`}
-        {...props}
-      >
-        {children}
-      </tr>
-    );
-  },
-);
-
-TableRow.displayName = "TableRow";
-
-interface TableHeadProps extends HTMLAttributes<HTMLTableCellElement> {}
-
-export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <th
-        ref={ref}
-        className={`px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider ${className}`}
-        {...props}
-      >
-        {children}
-      </th>
-    );
-  },
-);
-
-TableHead.displayName = "TableHead";
-
-interface TableCellProps extends HTMLAttributes<HTMLTableCellElement> {}
-
-export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
-  ({ children, className = "", ...props }, ref) => {
-    return (
-      <td
-        ref={ref}
-        className={`px-6 py-4 whitespace-nowrap text-sm text-slate-700 ${className}`}
-        {...props}
-      >
-        {children}
-      </td>
-    );
-  },
-);
-
-TableCell.displayName = "TableCell";
+export function TableCell({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <td className={`p-4 align-middle ${className}`} {...props}>
+      {children}
+    </td>
+  );
+}

@@ -1,39 +1,65 @@
-import { type InputHTMLAttributes, forwardRef } from "react";
+import { forwardRef, type InputHTMLAttributes } from "react";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   helperText?: string;
+  icon?: React.ReactNode;
+  variant?: "default" | "modern" | "glass";
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, className = "", ...props }, ref) => {
+  (
+    {
+      label,
+      error,
+      helperText,
+      icon,
+      variant = "default",
+      className = "",
+      ...props
+    },
+    ref,
+  ) => {
+    const baseStyles =
+      "w-full rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-slate-400";
+
+    const variants = {
+      default:
+        "bg-white border-2 border-slate-200 text-slate-900 focus:border-blue-500 focus:ring-blue-500/20 hover:border-slate-300",
+      modern:
+        "bg-slate-50 border-2 border-transparent text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-blue-500/20 hover:bg-slate-100/50",
+      glass:
+        "bg-white/50 backdrop-blur-sm border-2 border-white/20 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-blue-500/20",
+    };
+
+    const errorStyles = error
+      ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+      : "";
+
+    const iconPadding = icon ? "pl-11" : "";
+
     return (
       <div className="w-full">
         {label && (
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             {label}
-            {props.required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
-        <input
-          ref={ref}
-          className={`block w-full px-4 py-2.5 border rounded-lg shadow-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-offset-0 transition-all ${
-            error
-              ? "border-red-300 focus:border-red-500 focus:ring-red-500 bg-red-50"
-              : "border-slate-300 focus:border-blue-500 focus:ring-blue-500 bg-white hover:border-slate-400"
-          } ${className}`}
-          {...props}
-        />
+        <div className="relative">
+          {icon && (
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+              {icon}
+            </div>
+          )}
+          <input
+            ref={ref}
+            className={`${baseStyles} ${variants[variant]} ${errorStyles} ${iconPadding} ${className}`}
+            {...props}
+          />
+        </div>
         {error && (
-          <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
+          <p className="mt-1.5 text-sm text-red-600 font-medium animate-in">
             {error}
           </p>
         )}

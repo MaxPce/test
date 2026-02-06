@@ -1,10 +1,22 @@
 import { useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
-import { Plus, Calendar, Trophy, Eye, Zap } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  Trophy,
+  Clock,
+  MapPin,
+  Zap,
+  Grid3x3,
+  TrendingUp,
+  Award,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 import { PhaseForm } from "@/features/competitions/components/PhaseForm";
 import { MatchForm } from "@/features/competitions/components/MatchForm";
 import { AssignParticipantsModal } from "@/features/competitions/components/AssignParticipantsModal";
@@ -18,14 +30,8 @@ import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwond
 import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { usePhases } from "@/features/competitions/api/phases.queries";
-import {
-  useMatches,
-  useMatch,
-} from "@/features/competitions/api/matches.queries";
-import {
-  useCreatePhase,
-  useDeletePhase,
-} from "@/features/competitions/api/phases.mutations";
+import { useMatches, useMatch } from "@/features/competitions/api/matches.queries";
+import { useCreatePhase, useDeletePhase } from "@/features/competitions/api/phases.mutations";
 import {
   useCreateMatch,
   useUpdateMatch,
@@ -58,10 +64,8 @@ export function CategorySchedulePage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] =
-    useState(false);
-  const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
-    useState(false);
+  const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] = useState(false);
+  const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] = useState(false);
 
   const initializeRoundRobinMutation = useInitializeRoundRobin();
   const updateStandingsMutation = useUpdateStandings();
@@ -75,7 +79,6 @@ export function CategorySchedulePage() {
   const { data: matches = [], isLoading: matchesLoading } = useMatches(
     selectedPhase?.phaseId,
   );
-
   const { data: fullMatch, isLoading: fullMatchLoading } = useMatch(
     selectedMatchId || 0,
   );
@@ -104,11 +107,9 @@ export function CategorySchedulePage() {
 
   const getTaekwondoType = () => {
     const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
-
     if (!sportName.includes("taekwondo")) return null;
 
     const categoryName = eventCategory.category?.name?.toLowerCase() || "";
-
     if (
       categoryName.includes("poomsae") ||
       categoryName.includes("formas") ||
@@ -204,27 +205,24 @@ export function CategorySchedulePage() {
     setIsGenerateBracketModalOpen(false);
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    const variants: Record<
-      string,
-      "success" | "primary" | "default" | "warning"
-    > = {
-      programado: "primary",
-      en_curso: "success",
-      finalizado: "default",
-      cancelado: "warning",
+  const getStatusConfig = (status: string) => {
+    const configs = {
+      programado: { variant: "primary" as const, label: "Programado", dot: true },
+      en_curso: { variant: "success" as const, label: "En Curso", dot: true },
+      finalizado: { variant: "default" as const, label: "Finalizado", dot: false },
+      cancelado: { variant: "warning" as const, label: "Cancelado", dot: false },
     };
-    return variants[status] || "default";
+    return configs[status as keyof typeof configs] || configs.programado;
   };
 
-  const getPhaseTypeBadge = (type: string) => {
-    const types: Record<string, string> = {
-      grupo: "Grupos",
-      eliminacion: "Eliminación",
-      repechaje: "Repechaje",
-      mejor_de_3: "Mejor de 3",
+  const getPhaseTypeConfig = (type: string) => {
+    const configs = {
+      grupo: { label: "Grupos", icon: Grid3x3, color: "blue" },
+      eliminacion: { label: "Eliminación", icon: Trophy, color: "purple" },
+      repechaje: { label: "Repechaje", icon: TrendingUp, color: "amber" },
+      mejor_de_3: { label: "Mejor de 3", icon: Award, color: "emerald" },
     };
-    return types[type] || type;
+    return configs[type as keyof typeof configs] || { label: type, icon: Trophy, color: "blue" };
   };
 
   const handleGenerateRoundRobin = async (data: {
@@ -235,122 +233,176 @@ export function CategorySchedulePage() {
     setIsGenerateModalOpen(false);
   };
 
+  // Calcular estadísticas
+  const totalMatches = phases.reduce(
+    (sum, phase) => sum + (phase.matches?.length || 0),
+    0
+  );
+  const finishedMatches = phases.reduce(
+    (sum, phase) =>
+      sum +
+      (phase.matches?.filter((m) => m.status === "finalizado").length || 0),
+    0
+  );
+
   if (phasesLoading) {
-    return <div>Cargando...</div>;
+    return <div className="flex justify-center items-center h-96">Cargando...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900">Programación</h3>
-        </div>
-        <Button onClick={() => setIsPhaseModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Fase
-        </Button>
-      </div>
+    <div className="space-y-6 animate-in">
+      {/* Header profesional */}
+      <PageHeader
+        title="Programación & Competencia"
+        description="Gestione fases, partidos y resultados de la categoría"
+        actions={
+          <Button
+            onClick={() => setIsPhaseModalOpen(true)}
+            variant="gradient"
+            size="lg"
+            icon={<Plus className="h-5 w-5" />}
+          >
+            Nueva Fase
+          </Button>
+        }
+      />
+
+      
 
       {phases.length === 0 ? (
-        <Card>
-          <CardBody>
-            <div className="text-center py-12">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-2">No hay fases creadas</p>
-              <p className="text-sm text-gray-400 mb-4">
-                Crea la primera fase para comenzar a organizar la competencia
-              </p>
-              <Button variant="ghost" onClick={() => setIsPhaseModalOpen(true)}>
-                Crear Primera Fase
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
+        <EmptyState
+          icon={Calendar}
+          title="No hay fases creadas"
+          description="Crea la primera fase para comenzar a organizar la competencia"
+          action={{
+            label: "Crear Primera Fase",
+            onClick: () => setIsPhaseModalOpen(true),
+          }}
+        />
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {phases.map((phase) => (
-              <Card
-                key={phase.phaseId}
-                className={`cursor-pointer transition-all ${
-                  selectedPhase?.phaseId === phase.phaseId
-                    ? "ring-2 ring-blue-500"
-                    : "hover:shadow-md"
-                }`}
-                onClick={() => setSelectedPhase(phase)}
-              >
-                <CardBody>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">
-                        {phase.name}
-                      </h4>
-                      <Badge variant="default" size="sm" className="mt-1">
-                        {getPhaseTypeBadge(phase.type)}
-                      </Badge>
+          {/* Grid de Fases */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => {
+              const phaseTypeConfig = getPhaseTypeConfig(phase.type);
+              const Icon = phaseTypeConfig.icon;
+              const matchesCount = phase.matches?.length || 0;
+              const finishedCount =
+                phase.matches?.filter((m) => m.status === "finalizado")
+                  .length || 0;
+
+              return (
+                <Card
+                  key={phase.phaseId}
+                  hover
+                  variant="elevated"
+                  padding="none"
+                  onClick={() => setSelectedPhase(phase)}
+                  className={`group cursor-pointer overflow-hidden transition-all ${
+                    selectedPhase?.phaseId === phase.phaseId
+                      ? "ring-2 ring-blue-500 shadow-strong"
+                      : ""
+                  }`}
+                >
+                  {/* Header con gradiente */}
+                  <div className={`relative h-24 bg-gradient-to-br from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 overflow-hidden`}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    
+                    {/* Icono */}
+                    <div className="absolute top-4 left-4">
+                      <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Icon className="h-6 w-6 text-white" />
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+
+                    {/* Botón eliminar */}
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeletePhase(phase.phaseId);
                       }}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
                     >
-                      <span className="text-red-600">×</span>
-                    </Button>
+                      ×
+                    </button>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    {phase.matches?.length || 0} partido
-                    {phase.matches?.length !== 1 ? "s" : ""}
-                  </p>
-                </CardBody>
-              </Card>
-            ))}
+
+                  {/* Contenido */}
+                  <CardBody>
+                    <h4 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                      {phase.name}
+                    </h4>
+
+                    <Badge variant="primary" size="sm" className="mb-4">
+                      {phaseTypeConfig.label}
+                    </Badge>
+
+                    {/* Stats de la fase */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-blue-50 rounded-lg p-2 text-center">
+                        <p className="text-xl font-bold text-blue-900">
+                          {matchesCount}
+                        </p>
+                        <p className="text-xs text-blue-700 font-medium">
+                          Partidos
+                        </p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-lg p-2 text-center">
+                        <p className="text-xl font-bold text-emerald-900">
+                          {finishedCount}
+                        </p>
+                        <p className="text-xs text-emerald-700 font-medium">
+                          Finalizados
+                        </p>
+                      </div>
+                    </div>
+                  </CardBody>
+
+                  {/* Bottom accent */}
+                  <div className={`h-1 bg-gradient-to-r from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 opacity-0 group-hover:opacity-100 transition-opacity`} />
+                </Card>
+              );
+            })}
           </div>
 
+          {/* Detalle de Fase Seleccionada */}
           {selectedPhase && (
-            <Card>
+            <Card variant="elevated">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      {selectedPhase.name}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {getTaekwondoType() === "poomsae"
-                        ? `${eventCategory.registrations?.length || 0} participante${
-                            eventCategory.registrations?.length !== 1 ? "s" : ""
-                          }`
-                        : `${matches.length} partido${matches.length !== 1 ? "s" : ""}`}
-                    </p>
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  {/* Info de la fase */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-strong">
+                      {(() => {
+                        const Icon = getPhaseTypeConfig(selectedPhase.type).icon;
+                        return <Icon className="h-7 w-7 text-white" />;
+                      })()}
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-slate-900">
+                        {selectedPhase.name}
+                      </h4>
+                      <p className="text-sm text-slate-600">
+                        {getTaekwondoType() === "poomsae"
+                          ? `${eventCategory.registrations?.length || 0} participante${
+                              eventCategory.registrations?.length !== 1 ? "s" : ""
+                            }`
+                          : `${matches.length} partido${matches.length !== 1 ? "s" : ""}`}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    {/* Generar Bracket - para Kyorugui y Poomsae en eliminación */}
+
+                  {/* Acciones */}
+                  <div className="flex flex-wrap gap-2">
                     {selectedPhase.type === "eliminacion" &&
                       matches.length === 0 && (
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => {
-                            console.log(
-                              "EventCategory registrations:",
-                              eventCategory.registrations,
-                            );
-                            console.log(
-                              "Total registrations:",
-                              eventCategory.registrations?.length || 0,
-                            );
-                            console.log(
-                              "RegistrationIds:",
-                              eventCategory.registrations?.map(
-                                (r) => r.registrationId,
-                              ),
-                            );
-                            setIsGenerateBracketModalOpen(true);
-                          }}
+                          onClick={() => setIsGenerateBracketModalOpen(true)}
+                          icon={<Zap className="h-4 w-4" />}
                         >
-                          Generar Bracket Completo
+                          Generar Bracket
                         </Button>
                       )}
 
@@ -359,9 +411,10 @@ export function CategorySchedulePage() {
                         {selectedPhase.type === "grupo" &&
                           matches.length === 0 && (
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
                               onClick={() => setIsGenerateModalOpen(true)}
+                              icon={<Zap className="h-4 w-4" />}
                             >
                               Generar Partidos
                             </Button>
@@ -369,11 +422,10 @@ export function CategorySchedulePage() {
                         {selectedPhase.type === "mejor_de_3" &&
                           matches.length === 0 && (
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() =>
-                                setIsGenerateBestOf3ModalOpen(true)
-                              }
+                              onClick={() => setIsGenerateBestOf3ModalOpen(true)}
+                              icon={<Zap className="h-4 w-4" />}
                             >
                               Generar Serie
                             </Button>
@@ -387,9 +439,10 @@ export function CategorySchedulePage() {
                     ) && (
                       <Button
                         size="sm"
+                        variant="gradient"
                         onClick={() => setIsMatchModalOpen(true)}
+                        icon={<Plus className="h-4 w-4" />}
                       >
-                        <Plus className="h-4 w-4 mr-2" />
                         Nuevo Partido
                       </Button>
                     )}
@@ -398,15 +451,23 @@ export function CategorySchedulePage() {
               </CardHeader>
               <CardBody>
                 {matchesLoading ? (
-                  <div className="text-center py-8">Cargando partidos...</div>
+                  <div className="text-center py-12">
+                    <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-slate-600">Cargando partidos...</p>
+                  </div>
                 ) : getTaekwondoType() === "poomsae" &&
                   selectedPhase.type !== "eliminacion" ? (
                   <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
                 ) : matches.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Calendar className="h-10 w-10 mx-auto mb-2 text-gray-400" />
-                    <p>No hay partidos en esta fase</p>
-                  </div>
+                  <EmptyState
+                    icon={Trophy}
+                    title="No hay partidos en esta fase"
+                    description="Agrega partidos manualmente o genera automáticamente"
+                    action={{
+                      label: "Crear Primer Partido",
+                      onClick: () => setIsMatchModalOpen(true),
+                    }}
+                  />
                 ) : selectedPhase.type === "mejor_de_3" ? (
                   <BestOf3View
                     matches={matches}
@@ -414,24 +475,28 @@ export function CategorySchedulePage() {
                     eventCategory={eventCategory}
                   />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {matches.map((match) => {
                       const participants = match.participations || [];
                       const hasParticipants = participants.length > 0;
-                      const isTaekwondoKyorugui =
-                        getTaekwondoType() === "kyorugui";
+                      const isTaekwondoKyorugui = getTaekwondoType() === "kyorugui";
                       const isJudoMatch = isJudo();
+                      const statusConfig = getStatusConfig(match.status);
 
                       return (
-                        <div
+                        <Card
                           key={match.matchId}
-                          className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                          variant="elevated"
+                          padding="md"
+                          hover
+                          className="group"
                         >
-                          <div className="flex items-start justify-between mb-3">
+                          {/* Header del partido */}
+                          <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-2">
                                 {match.matchNumber && (
-                                  <span className="text-sm font-semibold text-gray-700">
+                                  <span className="text-sm font-bold text-slate-900">
                                     Partido #{match.matchNumber}
                                   </span>
                                 )}
@@ -441,89 +506,97 @@ export function CategorySchedulePage() {
                                   </Badge>
                                 )}
                                 <Badge
-                                  variant={getStatusBadgeVariant(match.status)}
+                                  variant={statusConfig.variant}
+                                  dot={statusConfig.dot}
                                   size="sm"
                                 >
-                                  {match.status === "programado" &&
-                                    "Programado"}
-                                  {match.status === "en_curso" && "En Curso"}
-                                  {match.status === "finalizado" &&
-                                    "Finalizado"}
-                                  {match.status === "cancelado" && "Cancelado"}
+                                  {statusConfig.label}
                                 </Badge>
                               </div>
-                              {match.scheduledTime && (
-                                <p className="text-sm text-gray-600">
-                                  Fecha:{" "}
-                                  {new Date(match.scheduledTime).toLocaleString(
-                                    "es-ES",
-                                  )}
-                                </p>
-                              )}
-                              {match.platformNumber && (
-                                <p className="text-sm text-gray-600">
-                                  Plataforma {match.platformNumber}
-                                </p>
-                              )}
 
-                              {/* Mostrar puntaje Poomsae, Kyorugui y Judo */}
+                              {/* Info adicional */}
+                              <div className="flex flex-wrap gap-3 text-sm text-slate-600">
+                                {match.scheduledTime && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-4 w-4" />
+                                    <span>
+                                      {new Date(
+                                        match.scheduledTime
+                                      ).toLocaleString("es-ES")}
+                                    </span>
+                                  </div>
+                                )}
+                                {match.platformNumber && (
+                                  <div className="flex items-center gap-1.5">
+                                    <MapPin className="h-4 w-4" />
+                                    <span>Plataforma {match.platformNumber}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Puntajes */}
                               {(getTaekwondoType() === "poomsae" ||
                                 getTaekwondoType() === "kyorugui" ||
                                 isJudoMatch) &&
                                 (match.participant1Score !== null ||
                                   match.participant2Score !== null) && (
-                                  <p className="text-sm font-semibold text-gray-700 mt-1">
-                                    Puntaje: {match.participant1Score ?? "-"} -{" "}
-                                    {match.participant2Score ?? "-"}
+                                  <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                                    <p className="text-sm font-semibold text-slate-700 mb-1">
+                                      Puntaje Final
+                                    </p>
+                                    <p className="text-2xl font-bold text-slate-900">
+                                      {match.participant1Score ?? "-"} -{" "}
+                                      {match.participant2Score ?? "-"}
+                                    </p>
                                     {getTaekwondoType() === "poomsae" &&
-                                      match.participant1Accuracy !== null &&
-                                      match.participant1Accuracy !==
-                                        undefined && (
-                                        <span className="text-xs text-gray-500 block">
+                                      match.participant1Accuracy !== null && (
+                                        <p className="text-xs text-slate-600 mt-1">
                                           (
                                           {Number(
-                                            match.participant1Accuracy,
+                                            match.participant1Accuracy
                                           ).toFixed(2)}
                                           +
                                           {Number(
-                                            match.participant1Presentation,
+                                            match.participant1Presentation
                                           ).toFixed(2)}
                                           ) - (
                                           {Number(
-                                            match.participant2Accuracy,
+                                            match.participant2Accuracy
                                           ).toFixed(2)}
                                           +
                                           {Number(
-                                            match.participant2Presentation,
+                                            match.participant2Presentation
                                           ).toFixed(2)}
                                           )
-                                        </span>
+                                        </p>
                                       )}
-                                  </p>
+                                  </div>
                                 )}
                             </div>
+
+                            {/* Botón eliminar */}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteMatch(match.matchId)}
+                              className="hover:bg-red-50 hover:text-red-600"
                             >
-                              <span className="text-red-600">×</span>
+                              <span className="text-xl">×</span>
                             </Button>
                           </div>
 
+                          {/* Participantes */}
                           {hasParticipants ? (
-                            <div className="space-y-2 mb-3">
+                            <div className="space-y-2 mb-4">
                               {participants.map((participation) => {
                                 const reg = participation.registration;
                                 const name = reg?.athlete
                                   ? reg.athlete.name
                                   : reg?.team?.name || "Sin nombre";
-
                                 const institution =
                                   reg?.athlete?.institution ||
                                   reg?.team?.institution;
                                 const logoUrl = institution?.logoUrl;
-
                                 const isWinner =
                                   match.winnerRegistrationId ===
                                   participation.registrationId;
@@ -531,34 +604,44 @@ export function CategorySchedulePage() {
                                 return (
                                   <div
                                     key={participation.participationId}
-                                    className={`flex items-center justify-between p-2 rounded ${
-                                      isWinner ? "bg-green-100" : "bg-white"
+                                    className={`flex items-center justify-between p-3 rounded-xl transition-all ${
+                                      isWinner
+                                        ? "bg-gradient-to-r from-emerald-100 to-emerald-50 border-2 border-emerald-300"
+                                        : "bg-slate-50 hover:bg-slate-100"
                                     }`}
                                   >
-                                    <div className="flex items-center gap-2">
-                                      {logoUrl && (
+                                    <div className="flex items-center gap-3">
+                                      {logoUrl ? (
                                         <img
                                           src={getImageUrl(logoUrl)}
                                           alt={institution?.name || ""}
-                                          className="h-6 w-6 object-contain"
+                                          className="h-10 w-10 rounded-lg object-contain bg-white p-1"
                                           onError={(e) => {
-                                            e.currentTarget.style.display =
-                                              "none";
+                                            e.currentTarget.style.display = "none";
                                           }}
                                         />
+                                      ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
+                                          <Trophy className="h-5 w-5 text-slate-400" />
+                                        </div>
                                       )}
 
                                       <div>
-                                        <p className="font-medium text-sm text-gray-900">
+                                        <p className="font-bold text-sm text-slate-900">
                                           {name}
                                         </p>
                                         {institution && (
-                                          <p className="text-xs text-gray-600">
+                                          <p className="text-xs text-slate-600">
                                             {institution.name}
                                           </p>
                                         )}
                                       </div>
+
+                                      {isWinner && (
+                                        <Award className="h-5 w-5 text-emerald-600 ml-2" />
+                                      )}
                                     </div>
+
                                     <Badge
                                       variant={
                                         participation.corner === "blue" ||
@@ -568,118 +651,131 @@ export function CategorySchedulePage() {
                                       }
                                       size="sm"
                                     >
-                                      {participation.corner === "blue" &&
-                                        "Azul"}
-                                      {participation.corner === "white" &&
-                                        "Blanco"}
-                                      {participation.corner === "A" &&
-                                        "Equipo A"}
-                                      {participation.corner === "B" &&
-                                        "Equipo B"}
+                                      {participation.corner === "blue" && "Azul"}
+                                      {participation.corner === "white" && "Blanco"}
+                                      {participation.corner === "A" && "Equipo A"}
+                                      {participation.corner === "B" && "Equipo B"}
                                     </Badge>
                                   </div>
                                 );
                               })}
                             </div>
                           ) : (
-                            <div className="text-center py-3 text-gray-500 text-sm">
-                              Sin participantes asignados
+                            <div className="text-center py-6 bg-slate-50 rounded-xl mb-4">
+                              <Trophy className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                              <p className="text-slate-500 text-sm">
+                                Sin participantes asignados
+                              </p>
                             </div>
                           )}
 
-                          <div className="flex gap-2">
-                          {participants.length === 1 && match.status !== "finalizado" && (
-                            <Button
-                              variant="success"
-                              size="sm"
-                              onClick={async () => {
-                                const participant = participants[0];
-                                if (confirm(`¿Avanzar a ${participant.registration?.athlete?.name || participant.registration?.team?.name || 'este participante'} automáticamente?`)) {
-                                  try {
-                                    await advanceWinnerMutation.mutateAsync({
-                                      matchId: match.matchId,
-                                      winnerRegistrationId: participant.registrationId!,
-                                    });
-                                  } catch (error) {
-                                    console.error('Error al avanzar participante:', error);
-                                  }
-                                }
-                              }}
-                              disabled={advanceWinnerMutation.isPending}
-                            >
-                              {advanceWinnerMutation.isPending ? 'Procesando...' : 'Pasar Participante'}
-                            </Button>
-                          )}
-
-                          {participants.length < 2 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedMatch(match);
-                                setIsAssignModalOpen(true);
-                              }}
-                            >
-                              Asignar Participantes
-                            </Button>
-                          )}
-
-                          {participants.length === 2 && (
-                            <>
-                              {/* Poomsae, Kyorugui o Judo - Todos usan el mismo patrón */}
-                              {getTaekwondoType() === "poomsae" ||
-                              getTaekwondoType() === "kyorugui" ||
-                              isJudoMatch ? (
+                          {/* Acciones del partido */}
+                          <div className="flex flex-wrap gap-2">
+                            {participants.length === 1 &&
+                              match.status !== "finalizado" && (
                                 <Button
-                                  variant="primary"
+                                  variant="success"
                                   size="sm"
-                                  onClick={() => {
-                                    setSelectedMatchId(match.matchId);
-                                    setSelectedMatch(match);
-                                    setIsResultModalOpen(true);
+                                  onClick={async () => {
+                                    const participant = participants[0];
+                                    if (
+                                      confirm(
+                                        `¿Avanzar a ${
+                                          participant.registration?.athlete
+                                            ?.name ||
+                                          participant.registration?.team?.name ||
+                                          "este participante"
+                                        } automáticamente?`
+                                      )
+                                    ) {
+                                      try {
+                                        await advanceWinnerMutation.mutateAsync({
+                                          matchId: match.matchId,
+                                          winnerRegistrationId:
+                                            participant.registrationId!,
+                                        });
+                                      } catch (error) {
+                                        console.error(
+                                          "Error al avanzar participante:",
+                                          error
+                                        );
+                                      }
+                                    }
                                   }}
+                                  disabled={advanceWinnerMutation.isPending}
                                 >
-                                  {/* Detectar si ya tiene puntajes guardados */}
-                                  {(match.participant1Score !== null &&
-                                    match.participant1Score !== undefined) ||
-                                  (match.participant2Score !== null &&
-                                    match.participant2Score !== undefined) ||
-                                  match.status === "finalizado"
-                                    ? "Editar Puntaje"
-                                    : "Registrar Puntaje"}
+                                  {advanceWinnerMutation.isPending
+                                    ? "Procesando..."
+                                    : "Pasar Participante"}
                                 </Button>
-                              ) : isTableTennis() ? (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedMatch(match);
-                                    setIsResultModalOpen(true);
-                                  }}
-                                >
-                                  {match.status === "finalizado"
-                                    ? "Ver/Editar Match"
-                                    : "Gestionar Match"}
-                                </Button>
-                              ) : (
-                                match.status !== "finalizado" && (
+                              )}
+
+                            {participants.length < 2 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedMatch(match);
+                                  setIsAssignModalOpen(true);
+                                }}
+                              >
+                                Asignar Participantes
+                              </Button>
+                            )}
+
+                            {participants.length === 2 && (
+                              <>
+                                {getTaekwondoType() === "poomsae" ||
+                                getTaekwondoType() === "kyorugui" ||
+                                isJudoMatch ? (
                                   <Button
-                                    variant="primary"
+                                    variant="gradient"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMatchId(match.matchId);
+                                      setSelectedMatch(match);
+                                      setIsResultModalOpen(true);
+                                    }}
+                                  >
+                                    {(match.participant1Score !== null &&
+                                      match.participant1Score !== undefined) ||
+                                    (match.participant2Score !== null &&
+                                      match.participant2Score !== undefined) ||
+                                    match.status === "finalizado"
+                                      ? "Editar Puntaje"
+                                      : "Registrar Puntaje"}
+                                  </Button>
+                                ) : isTableTennis() ? (
+                                  <Button
+                                    variant="gradient"
                                     size="sm"
                                     onClick={() => {
                                       setSelectedMatch(match);
                                       setIsResultModalOpen(true);
                                     }}
                                   >
-                                    Registrar Resultado
+                                    {match.status === "finalizado"
+                                      ? "Ver/Editar Match"
+                                      : "Gestionar Match"}
                                   </Button>
-                                )
-                              )}
-                            </>
-                          )}
-                        </div>
-
-                        </div>
+                                ) : (
+                                  match.status !== "finalizado" && (
+                                    <Button
+                                      variant="gradient"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedMatch(match);
+                                        setIsResultModalOpen(true);
+                                      }}
+                                    >
+                                      Registrar Resultado
+                                    </Button>
+                                  )
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </Card>
                       );
                     })}
                   </div>
@@ -690,10 +786,12 @@ export function CategorySchedulePage() {
         </>
       )}
 
+      {/* MODALES - Mantener todos sin cambios */}
       <Modal
         isOpen={isPhaseModalOpen}
         onClose={() => setIsPhaseModalOpen(false)}
         title="Crear Nueva Fase"
+        size="md"
       >
         <PhaseForm
           eventCategoryId={eventCategory.eventCategoryId}
@@ -710,6 +808,7 @@ export function CategorySchedulePage() {
             isOpen={isMatchModalOpen}
             onClose={() => setIsMatchModalOpen(false)}
             title="Crear Nuevo Partido"
+            size="md"
           >
             <MatchForm
               phase={selectedPhase}
@@ -777,14 +876,14 @@ export function CategorySchedulePage() {
                   phase={selectedPhase}
                 />
               ) : getTaekwondoType() === "kyorugui" ? (
-              <KyoruguiRoundsModal
-                isOpen={isResultModalOpen}
-                onClose={() => {
-                  setIsResultModalOpen(false);
-                  setSelectedMatch(null);
-                }}
-                match={selectedMatch}
-              />
+                <KyoruguiRoundsModal
+                  isOpen={isResultModalOpen}
+                  onClose={() => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                  }}
+                  match={selectedMatch}
+                />
               ) : isJudo() ? (
                 <JudoScoreModal
                   isOpen={isResultModalOpen}

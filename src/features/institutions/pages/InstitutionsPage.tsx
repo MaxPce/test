@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Building2, Search, Users, Grid3x3, List } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Table,
   TableHeader,
@@ -30,12 +35,14 @@ export function InstitutionsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedInstitution, setSelectedInstitution] =
     useState<Institution | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
 
   const { data: institutions = [], isLoading } = useInstitutions();
   const createMutation = useCreateInstitution();
   const updateMutation = useUpdateInstitution();
   const deleteMutation = useDeleteInstitution();
-  const uploadLogoMutation = useUploadInstitutionLogo(); 
+  const uploadLogoMutation = useUploadInstitutionLogo();
 
   const handleCreate = async (data: CreateInstitutionData, logoFile?: File) => {
     try {
@@ -95,129 +102,217 @@ export function InstitutionsPage() {
     setIsDeleteModalOpen(true);
   };
 
+  // Filtrar instituciones por búsqueda
+  const filteredInstitutions = institutions.filter(
+    (institution) =>
+      institution.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      institution.abrev.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
+      <div className="flex justify-center items-center h-96">
+        <Spinner size="lg" label="Cargando instituciones..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Instituciones</h1>
-        </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Institución
-        </Button>
-      </div>
+    <div className="space-y-6 animate-in">
+      {/* Header profesional */}
+      <PageHeader
+        title="Gestión de Instituciones"
+        description="Administre instituciones, colegios y organizaciones deportivas"
+        actions={
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            variant="gradient"
+            size="lg"
+            icon={<Plus className="h-5 w-5" />}
+          >
+            Nueva Institución
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardBody className="p-0">
-          {institutions.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No hay instituciones registradas</p>
+      
+
+      {/* Barra de búsqueda y filtros */}
+      <Card variant="glass">
+        <CardBody>
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Búsqueda */}
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar instituciones por nombre o abreviatura..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                icon={<Search className="h-5 w-5" />}
+                variant="modern"
+              />
+            </div>
+
+            {/* Vista Table/Grid */}
+            <div className="flex gap-2">
               <Button
-                variant="ghost"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="mt-4"
+                variant={viewMode === "table" ? "primary" : "outline"}
+                size="md"
+                onClick={() => setViewMode("table")}
               >
-                Crear la primera
+                <List className="h-5 w-5" />
+              </Button>
+              <Button
+                variant={viewMode === "grid" ? "primary" : "outline"}
+                size="md"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3x3 className="h-5 w-5" />
               </Button>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">ID</TableHead>
-                  <TableHead className="text-center">Logo</TableHead>
-                  <TableHead className="text-center">Nombre</TableHead>
-                  <TableHead className="text-center">Abreviatura</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {institutions.map((institution) => (
-                  <TableRow key={institution.institutionId}>
-                    <TableCell className="font-medium">
-                      {institution.institutionId}
-                    </TableCell>
-                    <TableCell>
-                      {/* getImageUrl */}
-                      {institution.logoUrl ? (
-                        <img
-                          src={getImageUrl(institution.logoUrl)}
-                          alt={institution.name}
-                          className="h-10 w-10 object-contain rounded"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                            const parent = e.currentTarget.parentElement;
-                            if (parent) {
-                              const placeholder = document.createElement("div");
-                              placeholder.className =
-                                "h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs";
-                              placeholder.textContent = "Sin logo";
-                              parent.appendChild(placeholder);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                          Sin logo
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {institution.name}
-                    </TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium">
-                        {institution.abrev}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditModal(institution)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openDeleteModal(institution)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          </div>
+
+          {/* Filtros activos */}
+          {searchQuery && (
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
+              <span className="text-sm font-semibold text-slate-600">
+                Buscando:
+              </span>
+              <Badge variant="primary">"{searchQuery}"</Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery("")}
+              >
+                Limpiar
+              </Button>
+            </div>
           )}
         </CardBody>
       </Card>
 
-      {/* Create Modal */}
+      {/* Contenido */}
+      {filteredInstitutions.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title={
+            searchQuery
+              ? "No se encontraron instituciones"
+              : "No hay instituciones registradas"
+          }
+          description={
+            searchQuery
+              ? "Intenta ajustar la búsqueda"
+              : "Comienza agregando tu primera institución"
+          }
+          action={
+            !searchQuery
+              ? {
+                  label: "Crear Primera Institución",
+                  onClick: () => setIsCreateModalOpen(true),
+                }
+              : undefined
+          }
+        />
+      ) : viewMode === "grid" ? (
+        // Vista Grid
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredInstitutions.map((institution) => (
+            <InstitutionCard
+              key={institution.institutionId}
+              institution={institution}
+              onEdit={openEditModal}
+              onDelete={openDeleteModal}
+            />
+          ))}
+        </div>
+      ) : (
+        // Vista Table
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-20">Logo</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead className="w-32">Abreviatura</TableHead>
+                <TableHead className="text-center w-24">Atletas</TableHead>
+                <TableHead className="text-right w-32">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredInstitutions.map((institution) => (
+                <TableRow key={institution.institutionId}>
+                  <TableCell>
+                    {institution.logoUrl ? (
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-2 flex items-center justify-center">
+                        <img
+                          src={getImageUrl(institution.logoUrl)}
+                          alt={institution.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                        <Building2 className="h-6 w-6 text-slate-400" />
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Link
+                      to={`/admin/institutions/${institution.institutionId}`}
+                      className="font-bold text-slate-900 hover:text-blue-600 transition-colors"
+                    >
+                      {institution.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="primary">{institution.abrev}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="text-sm font-bold text-slate-700">
+                      {institution.athletes?.length || 0}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditModal(institution)}
+                        className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openDeleteModal(institution)}
+                        className="hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* Modales */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Crear Institución"
+        title="Crear Nueva Institución"
+        size="md"
       >
         <InstitutionForm
           onSubmit={handleCreate}
           onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending || uploadLogoMutation.isPending} 
+          isLoading={createMutation.isPending || uploadLogoMutation.isPending}
         />
       </Modal>
 
-      {/* Edit Modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => {
@@ -225,6 +320,7 @@ export function InstitutionsPage() {
           setSelectedInstitution(null);
         }}
         title="Editar Institución"
+        size="md"
       >
         <InstitutionForm
           institution={selectedInstitution || undefined}
@@ -249,5 +345,118 @@ export function InstitutionsPage() {
         isLoading={deleteMutation.isPending}
       />
     </div>
+  );
+}
+
+// Componente auxiliar para la tarjeta de institución
+function InstitutionCard({
+  institution,
+  onEdit,
+  onDelete,
+}: {
+  institution: Institution;
+  onEdit: (institution: Institution) => void;
+  onDelete: (institution: Institution) => void;
+}) {
+  return (
+    <Card hover variant="elevated" padding="none" className="group overflow-hidden">
+      {/* Header con gradiente */}
+      <div className="relative h-28 bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600 overflow-hidden">
+        {institution.logoUrl ? (
+          <>
+            <img
+              src={getImageUrl(institution.logoUrl)}
+              alt={institution.name}
+              className="w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Building2 className="h-12 w-12 text-white/40" />
+          </div>
+        )}
+
+        {/* Badge de abreviatura */}
+        <div className="absolute top-4 right-4">
+          <Badge variant="default" size="sm">
+            {institution.abrev}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Contenido */}
+      <CardBody>
+        {/* Logo central */}
+        {institution.logoUrl && (
+          <div className="flex justify-center -mt-12 mb-4">
+            <div className="w-20 h-20 rounded-2xl bg-white shadow-lg p-3 border-4 border-white group-hover:scale-110 transition-transform">
+              <img
+                src={getImageUrl(institution.logoUrl)}
+                alt={institution.name}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Nombre */}
+        <Link
+          to={`/admin/institutions/${institution.institutionId}`}
+          className="block"
+        >
+          <h3 className="text-lg font-bold text-slate-900 text-center mb-4 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            {institution.name}
+          </h3>
+        </Link>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-blue-50 rounded-xl p-3 text-center">
+            <Users className="h-4 w-4 text-blue-600 mx-auto mb-1" />
+            <p className="text-xl font-bold text-blue-900">
+              {institution.athletes?.length || 0}
+            </p>
+            <p className="text-xs text-blue-700 font-medium">Atletas</p>
+          </div>
+          <div className="bg-emerald-50 rounded-xl p-3 text-center">
+            <Users className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
+            <p className="text-xl font-bold text-emerald-900">
+              {institution.teams?.length || 0}
+            </p>
+            <p className="text-xs text-emerald-700 font-medium">Equipos</p>
+          </div>
+        </div>
+
+        {/* Acciones */}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              onEdit(institution);
+            }}
+            className="flex-1"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              onDelete(institution);
+            }}
+            className="flex-1 hover:bg-red-50 hover:border-red-300"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+          </Button>
+        </div>
+      </CardBody>
+
+      {/* Bottom accent */}
+      <div className="h-1 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </Card>
   );
 }

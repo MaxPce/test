@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { Plus, Filter, Search } from "lucide-react";
+import { Plus, Users, Search, Filter, Grid3x3, List } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 import { useAthletes } from "../api/athletes.queries";
 import { useInstitutions } from "../api/institutions.queries";
 import {
@@ -28,6 +31,7 @@ export function AthletesPage() {
     number | undefined
   >(undefined);
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { data: athletes = [], isLoading } = useAthletes(
     filterInstitutionId ? { institutionId: filterInstitutionId } : undefined,
@@ -109,41 +113,55 @@ export function AthletesPage() {
     })),
   ];
 
+  // Calcular estadísticas por género
+  const maleCount = athletes.filter((a) => a.gender === "M").length;
+  const femaleCount = athletes.filter((a) => a.gender === "F").length;
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
+      <div className="flex justify-center items-center h-96">
+        <Spinner size="lg" label="Cargando atletas..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mt-1">Atletas</h1>
-        </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Atleta
-        </Button>
-      </div>
+    <div className="space-y-6 animate-in">
+      {/* Header profesional */}
+      <PageHeader
+        title="Gestión de Atletas"
+        description="Administre el registro de deportistas y participantes"
+        actions={
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            variant="gradient"
+            size="lg"
+            icon={<Plus className="h-5 w-5" />}
+          >
+            Nuevo Atleta
+          </Button>
+        }
+      />
 
-      {/* Filtros y búsqueda */}
-      <Card>
+      
+
+      {/* Barra de búsqueda y filtros */}
+      <Card variant="glass">
         <CardBody>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex items-center gap-2 flex-1">
-              <Search className="h-5 w-5 text-gray-400" />
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Búsqueda */}
+            <div className="flex-1">
               <Input
-                placeholder="Buscar atleta por nombre..."
+                placeholder="Buscar atletas por nombre..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
+                icon={<Search className="h-5 w-5" />}
+                variant="modern"
               />
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-64">
-              <Filter className="h-5 w-5 text-gray-400" />
+
+            {/* Filtro de institución */}
+            <div className="w-full lg:w-64">
               <Select
                 value={filterInstitutionId || ""}
                 onChange={(e) =>
@@ -152,46 +170,82 @@ export function AthletesPage() {
                   )
                 }
                 options={filterOptions}
-                className="flex-1"
               />
             </div>
-            {(filterInstitutionId || searchTerm) && (
+
+            {/* Vista Grid/List */}
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "grid" ? "primary" : "outline"}
+                size="md"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3x3 className="h-5 w-5" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "primary" : "outline"}
+                size="md"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Filtros activos */}
+          {(filterInstitutionId || searchTerm) && (
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
+              <span className="text-sm font-semibold text-slate-600">
+                Filtros activos:
+              </span>
+              {filterInstitutionId && (
+                <Badge variant="primary">
+                  {institutions.find((i) => i.institutionId === filterInstitutionId)?.name}
+                </Badge>
+              )}
+              {searchTerm && (
+                <Badge variant="primary">"{searchTerm}"</Badge>
+              )}
               <Button
                 variant="ghost"
+                size="sm"
                 onClick={() => {
                   setFilterInstitutionId(undefined);
                   setSearchTerm("");
                 }}
               >
-                Limpiar
+                Limpiar todo
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CardBody>
       </Card>
 
       {/* Grid de atletas */}
       {filteredAthletes.length === 0 ? (
-        <Card>
-          <CardBody>
-            <div className="text-center py-12">
-              <p className="text-gray-500">
-                {searchTerm || filterInstitutionId
-                  ? "No se encontraron atletas con los filtros aplicados"
-                  : "No hay atletas registrados"}
-              </p>
-              <Button
-                variant="ghost"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="mt-4"
-              >
-                Crear el primero
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
+        <EmptyState
+          icon={Users}
+          title={
+            searchTerm || filterInstitutionId
+              ? "No se encontraron atletas"
+              : "No hay atletas registrados"
+          }
+          description={
+            searchTerm || filterInstitutionId
+              ? "Intenta ajustar los filtros de búsqueda"
+              : "Comienza agregando tu primer atleta"
+          }
+          action={
+            !searchTerm && !filterInstitutionId
+              ? {
+                  label: "Crear Primer Atleta",
+                  onClick: () => setIsCreateModalOpen(true),
+                }
+              : undefined
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredAthletes.map((athlete) => (
             <AthleteCard
               key={athlete.athleteId}
@@ -203,11 +257,11 @@ export function AthletesPage() {
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* Modales */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Crear Atleta"
+        title="Crear Nuevo Atleta"
         size="lg"
       >
         <AthleteForm
@@ -217,7 +271,6 @@ export function AthletesPage() {
         />
       </Modal>
 
-      {/* Edit Modal */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => {
@@ -234,11 +287,10 @@ export function AthletesPage() {
             setIsEditModalOpen(false);
             setSelectedAthlete(null);
           }}
-          isLoading={updateMutation.isPending || uploadPhotoMutation.isPending} 
+          isLoading={updateMutation.isPending || uploadPhotoMutation.isPending}
         />
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => {

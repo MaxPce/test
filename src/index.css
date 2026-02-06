@@ -1,43 +1,259 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Lexend:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Colores corporativos */
-    --color-primary: 15 23 42; /* slate-900 */
-    --color-primary-light: 30 41 59; /* slate-800 */
-    --color-secondary: 71 85 105; /* slate-600 */
-    --color-accent: 37 99 235; /* blue-600 */
-    --color-accent-hover: 29 78 216; /* blue-700 */
+    /* Colores profesionales */
+    --color-primary: 37 99 235; /* blue-600 */
+    --color-primary-light: 59 130 246; /* blue-500 */
+    --color-primary-dark: 29 78 216; /* blue-700 */
+    
+    --color-secondary: 100 116 139; /* slate-500 */
+    --color-accent: 16 185 129; /* emerald-500 */
+    
+    /* Backgrounds con glassmorphism */
+    --bg-glass: rgba(255, 255, 255, 0.7);
+    --bg-glass-dark: rgba(15, 23, 42, 0.7);
+    
+    /* Gradientes */
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-sport: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-success: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
 
-    /* Backgrounds */
-    --bg-main: 248 250 252; /* slate-50 */
-    --bg-card: 255 255 255; /* white */
-    --bg-hover: 241 245 249; /* slate-100 */
-
-    /* Borders */
-    --border-color: 226 232 240; /* slate-200 */
-    --border-color-dark: 203 213 225; /* slate-300 */
+  * {
+    @apply border-slate-200;
   }
 
   body {
     @apply font-sans antialiased;
-    background-color: rgb(var(--bg-main));
-    color: rgb(var(--color-primary));
+    @apply bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100;
+    @apply text-slate-900;
+    @apply selection:bg-blue-500/20;
+  }
+
+  /* Scrollbar personalizado */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
   }
 }
 
 @layer components {
-  .card-shadow {
-    box-shadow:
-      0 1px 3px 0 rgb(0 0 0 / 0.1),
-      0 1px 2px -1px rgb(0 0 0 / 0.1);
+  /* Glassmorphism */
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20;
   }
 
-  .card-shadow-lg {
-    box-shadow:
-      0 10px 15px -3px rgb(0 0 0 / 0.1),
-      0 4px 6px -4px rgb(0 0 0 / 0.1);
+  .glass-dark {
+    @apply bg-slate-900/70 backdrop-blur-md border border-slate-700/20;
+  }
+
+  /* Tarjetas con efecto hover */
+  .card-interactive {
+    @apply transition-all duration-300 hover:shadow-medium hover:-translate-y-1;
+  }
+
+  .card-glow {
+    @apply relative overflow-hidden;
+  }
+
+  .card-glow::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-500;
+    background: linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.1) 50%, transparent 70%);
+    background-size: 200% 200%;
+  }
+
+  .card-glow:hover::before {
+    @apply opacity-100;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Botones mejorados */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700;
+    @apply hover:from-blue-700 hover:to-blue-800;
+    @apply shadow-lg shadow-blue-500/30;
+    @apply hover:shadow-xl hover:shadow-blue-500/40;
+  }
+
+  /* Inputs modernos */
+  .input-modern {
+    @apply bg-white/50 backdrop-blur-sm;
+    @apply border-2 border-slate-200;
+    @apply focus:border-blue-500 focus:bg-white;
+    @apply transition-all duration-200;
+  }
+
+  /* Badges con gradiente */
+  .badge-gradient {
+    @apply bg-gradient-to-r from-blue-500 to-blue-600;
+    @apply text-white shadow-md;
+  }
+
+  /* Texto con gradiente */
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600;
+    @apply bg-clip-text text-transparent;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse bg-slate-200 rounded;
+  }
+
+  /* Divider elegante */
+  .divider {
+    @apply relative my-8;
+  }
+
+  .divider::before {
+    content: '';
+    @apply absolute left-0 top-1/2 w-full h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent;
+  }
+}
+
+@layer utilities {
+  /* Animaciones de entrada */
+  .animate-in {
+    @apply animate-fade-in;
+  }
+
+  .animate-in-up {
+    @apply animate-slide-up;
+  }
+
+  /* Efectos de brillo */
+  .shine {
+    @apply relative overflow-hidden;
+  }
+
+  .shine::after {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-full;
+    @apply bg-gradient-shine;
+    @apply translate-x-[-100%];
+    animation: shine 3s infinite;
+  }
+
+  @keyframes shine {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Utilities adicionales */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Animaciones adicionales para transiciones suaves */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Utilidades para animaciones */
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+/* Efectos de hover personalizados */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Gradientes de fondo animados */
+.bg-animated-gradient {
+  background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Efecto de pulso suave */
+.pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
   }
 }

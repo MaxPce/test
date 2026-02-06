@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, UserPlus, Upload, Award, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { RegistrationForm } from "../../components/RegistrationForm";
 import { TeamCreationForm } from "../../components/TeamCreationForm";
 import { BulkRegistrationModal } from "../../components/BulkRegistrationModal";
@@ -32,6 +34,17 @@ export function CategoryInscriptionsPage() {
   const addTeamMemberMutation = useAddTeamMember();
 
   const isTeamCategory = eventCategory.category?.type === "equipo";
+  const registrations = eventCategory.registrations || [];
+
+  // Calcular estadísticas
+  const stats = {
+    total: registrations.length,
+    male: registrations.filter((r) => r.athlete?.gender === "M" || r.team?.members?.some((m) => m.athlete?.gender === "M")).length,
+    female: registrations.filter((r) => r.athlete?.gender === "F" || r.team?.members?.some((m) => m.athlete?.gender === "F")).length,
+    institutions: new Set(
+      registrations.map((r) => r.athlete?.institutionId || r.team?.institutionId)
+    ).size,
+  };
 
   const handleIndividualRegistration = async (data: any) => {
     await createRegistrationMutation.mutateAsync(data);
@@ -81,57 +94,116 @@ export function CategoryInscriptionsPage() {
     await deleteRegistrationMutation.mutateAsync(registrationId);
   };
 
+  const isLoading =
+    createTeamMutation.isPending ||
+    addTeamMemberMutation.isPending ||
+    createRegistrationMutation.isPending;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900">
-            Participantes Inscritos
-          </h3>
-          <p className="text-gray-600 mt-1">
-            {eventCategory.registrations?.length || 0} participante
-            {eventCategory.registrations?.length !== 1 ? "s" : ""} inscrito
-            {eventCategory.registrations?.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {isTeamCategory ? (
-            <Button onClick={() => setIsTeamModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Crear e Inscribir Equipo
-            </Button>
-          ) : (
-            <>
-              <Button variant="ghost" onClick={() => setIsBulkModalOpen(true)}>
-                <Users className="h-4 w-4 mr-2" />
-                Inscripción Masiva
+    <div className="space-y-6 animate-in">
+      {/* Header mejorado */}
+      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-2xl p-6 shadow-strong text-white">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          {/* Info */}
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                {isTeamCategory ? (
+                  <Users className="h-6 w-6" />
+                ) : (
+                  <UserPlus className="h-6 w-6" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold">Participantes Inscritos</h3>
+                <p className="text-white/80 text-sm">
+                  Gestiona las inscripciones de{" "}
+                  <Badge variant="default" size="sm" className="ml-1">
+                    {isTeamCategory ? "Equipos" : "Atletas"}
+                  </Badge>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2">
+            {isTeamCategory ? (
+              <Button
+                onClick={() => setIsTeamModalOpen(true)}
+                variant="default"
+                size="lg"
+                icon={<Plus className="h-5 w-5" />}
+                className="bg-white text-blue-600 hover:bg-white/90"
+              >
+                Crear e Inscribir Equipo
               </Button>
-              <Button onClick={() => setIsIndividualModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Inscribir Atleta
-              </Button>
-            </>
-          )}
+            ) : (
+              <>
+                <Button
+                  onClick={() => setIsBulkModalOpen(true)}
+                  variant="outline"
+                  size="lg"
+                  icon={<Upload className="h-5 w-5" />}
+                  className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                >
+                  Inscripción Masiva
+                </Button>
+                <Button
+                  onClick={() => setIsIndividualModalOpen(true)}
+                  variant="default"
+                  size="lg"
+                  icon={<Plus className="h-5 w-5" />}
+                  className="bg-white text-blue-600 hover:bg-white/90"
+                >
+                  Inscribir Atleta
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
+      
+
       {/* Lista de Inscripciones */}
-      <Card>
-        <CardBody className="p-0">
-          <RegistrationsList
-            registrations={eventCategory.registrations || []}
-            onDelete={handleDeleteRegistration}
-            isDeleting={deleteRegistrationMutation.isPending}
-          />
-        </CardBody>
-      </Card>
+      {registrations.length === 0 ? (
+        <EmptyState
+          icon={isTeamCategory ? Users : UserPlus}
+          title={`No hay ${isTeamCategory ? "equipos" : "atletas"} inscritos`}
+          description={`Comienza agregando ${
+            isTeamCategory
+              ? "el primer equipo a"
+              : "atletas a"
+          } esta categoría`}
+          action={{
+            label: isTeamCategory
+              ? "Crear Primer Equipo"
+              : "Inscribir Primer Atleta",
+            onClick: () =>
+              isTeamCategory
+                ? setIsTeamModalOpen(true)
+                : setIsIndividualModalOpen(true),
+          }}
+        />
+      ) : (
+        <Card variant="elevated">
+          <CardBody padding="none">
+            <RegistrationsList
+              registrations={registrations}
+              onDelete={handleDeleteRegistration}
+              isDeleting={deleteRegistrationMutation.isPending}
+            />
+          </CardBody>
+        </Card>
+      )}
 
       {/* Modal para Inscripción Individual */}
       <Modal
         isOpen={isIndividualModalOpen}
         onClose={() => setIsIndividualModalOpen(false)}
         title="Inscribir Atleta"
+        size="md"
       >
         <RegistrationForm
           eventCategory={eventCategory}
@@ -152,11 +224,7 @@ export function CategoryInscriptionsPage() {
           categoryId={eventCategory.categoryId}
           onSubmit={handleTeamCreation}
           onCancel={() => setIsTeamModalOpen(false)}
-          isLoading={
-            createTeamMutation.isPending ||
-            addTeamMemberMutation.isPending ||
-            createRegistrationMutation.isPending
-          }
+          isLoading={isLoading}
         />
       </Modal>
 

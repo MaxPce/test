@@ -1,44 +1,73 @@
-import { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface PageHeaderProps {
-  icon: React.ComponentType<{ className?: string }>;
   title: string;
-  description: string;
-  action?: ReactNode;
-  gradient?: "blue" | "green" | "purple" | "red";
+  description?: string;
+  showBack?: boolean;
+  actions?: React.ReactNode;
+  breadcrumbs?: Array<{ label: string; href?: string }>;
 }
 
 export function PageHeader({
-  icon: Icon,
   title,
   description,
-  action,
-  gradient = "blue",
+  showBack = false,
+  actions,
+  breadcrumbs,
 }: PageHeaderProps) {
-  const gradients = {
-    blue: "from-blue-600 to-blue-700",
-    green: "from-green-600 to-green-700",
-    purple: "from-purple-600 to-purple-700",
-    red: "from-red-600 to-red-700",
-  };
+  const navigate = useNavigate();
 
   return (
-    <div
-      className={`bg-gradient-to-r ${gradients[gradient]} rounded-2xl shadow-lg p-6 text-white`}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-            <Icon className="h-7 w-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{title}</h1>
-            <p className="text-blue-100 text-sm sm:text-base mt-1">
-              {description}
-            </p>
+    <div className="mb-8 animate-in">
+      {/* Breadcrumbs */}
+      {breadcrumbs && breadcrumbs.length > 0 && (
+        <nav className="flex items-center gap-2 text-sm mb-4">
+          {breadcrumbs.map((crumb, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              {crumb.href ? (
+                <button
+                  onClick={() => navigate(crumb.href!)}
+                  className="text-slate-600 hover:text-blue-600 font-medium transition-colors"
+                >
+                  {crumb.label}
+                </button>
+              ) : (
+                <span className="text-slate-400 font-medium">{crumb.label}</span>
+              )}
+              {idx < breadcrumbs.length - 1 && (
+                <span className="text-slate-300">/</span>
+              )}
+            </div>
+          ))}
+        </nav>
+      )}
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4 flex-1 min-w-0">
+          {showBack && (
+            <button
+              onClick={() => navigate(-1)}
+              className="flex-shrink-0 p-2.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white border border-slate-200 transition-all hover:shadow-soft"
+              aria-label="Volver"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text">
+              {title}
+            </h1>
+            {description && (
+              <p className="text-slate-600 leading-relaxed max-w-3xl">
+                {description}
+              </p>
+            )}
           </div>
         </div>
-        {action && <div className="flex-shrink-0">{action}</div>}
+
+        {actions && <div className="flex-shrink-0">{actions}</div>}
       </div>
     </div>
   );

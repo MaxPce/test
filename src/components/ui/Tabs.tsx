@@ -19,7 +19,7 @@ export function Tabs({ tabs }: TabsProps) {
           <NavLink
             key={tab.to}
             to={tab.to}
-            end={tab.to === ""}
+            end
             className={({ isActive }) =>
               `${
                 isActive
