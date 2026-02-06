@@ -188,7 +188,6 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
                   </div>
                   {isWinner(participant1?.participationId || 0) && (
                     <div className="mt-3 inline-flex items-center gap-2 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      <Trophy className="w-4 h-4" />
                       GANADOR
                     </div>
                   )}
@@ -311,11 +310,7 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
                           <span className="font-bold text-gray-700">
                             Round {round.gameNumber}
                           </span>
-                          {roundWinner && (
-                            <span className="text-xs bg-white px-2 py-1 rounded-full font-medium">
-                              {roundWinner === "p1" ? "🔵 Azul" : "🔴 Rojo"} gana
-                            </span>
-                          )}
+                          
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">

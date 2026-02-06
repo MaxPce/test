@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { KyoruguiMatch } from "../../types/taekwondo.types";
 import { KyoruguiRoundsModal } from "./KyoruguiRoundsModal"; 
-import { KyoruguiMatchDetailsModal } from "./KyoruguiMatchDetailsModal"; // ✅ NUEVO
+import { KyoruguiMatchDetailsModal } from "./KyoruguiMatchDetailsModal"; 
 import { PoomsaeScoreModal } from "./PoomsaeScoreModal";
 import { useKyoruguiRounds } from "../../api/taekwondo.queries";
-import { Circle, Eye } from "lucide-react"; // ✅ Agregar Eye
+import { Circle, Eye } from "lucide-react"; 
 
 interface Props {
   match: KyoruguiMatch;

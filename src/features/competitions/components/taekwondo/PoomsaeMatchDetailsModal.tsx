@@ -198,7 +198,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
                     <div className="mt-4 space-y-2">
                       <div className="flex items-center justify-between p-2 bg-white rounded">
                         <div className="flex items-center gap-2">
-                          <Target className="w-4 h-4 text-blue-600" />
                           <span className="text-sm text-gray-700">Accuracy</span>
                         </div>
                         <span className="font-bold text-blue-600">
@@ -207,7 +206,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white rounded">
                         <div className="flex items-center gap-2">
-                          <Award className="w-4 h-4 text-purple-600" />
                           <span className="text-sm text-gray-700">Presentación</span>
                         </div>
                         <span className="font-bold text-purple-600">
@@ -296,7 +294,6 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
                     <div className="mt-4 space-y-2">
                       <div className="flex items-center justify-between p-2 bg-white rounded">
                         <div className="flex items-center gap-2">
-                          <Target className="w-4 h-4 text-blue-600" />
                           <span className="text-sm text-gray-700">Accuracy</span>
                         </div>
                         <span className="font-bold text-blue-600">
@@ -305,8 +302,7 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white rounded">
                         <div className="flex items-center gap-2">
-                          <Award className="w-4 h-4 text-purple-600" />
-                          <span className="text-sm text-gray-700">Presentación</span>
+                            <span className="text-sm text-gray-700">Presentación</span>
                         </div>
                         <span className="font-bold text-purple-600">
                           {p2Presentation.toFixed(2)}

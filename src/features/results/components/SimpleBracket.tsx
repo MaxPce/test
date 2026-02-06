@@ -533,7 +533,6 @@ function MatchCard({
       >
         {isByeProcessed ? (
           <div className="flex items-center gap-2 flex-1 min-w-0 justify-center">
-            <Trophy className="h-4 w-4 text-green-600 flex-shrink-0" />
             <p className="font-medium text-green-700 text-sm italic">
               Avance Directo
             </p>
