@@ -7,7 +7,6 @@ import {
   Edit2,
   Trash2,
   ArrowRight,
-  Users,
   Trophy,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -65,50 +64,50 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
       padding="none"
       className="group overflow-hidden"
     >
-      {/* Header con imagen y gradiente */}
-      <div className="relative h-40 bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600 overflow-hidden">
+      {/* Header con imagen */}
+      <div className="relative h-48 bg-slate-200 overflow-hidden">
         {logoUrl ? (
           <>
             <img
               src={logoUrl}
               alt={event.name}
-              className="w-full h-full object-cover opacity-30 group-hover:opacity-40 group-hover:scale-105 transition-all duration-500"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            {/* Overlay oscuro sutil solo en la parte inferior para el texto */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-              <Trophy className="h-10 w-10 text-white/60" />
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+            <div className="w-20 h-20 rounded-2xl bg-slate-300/50 flex items-center justify-center">
+              <Trophy className="h-10 w-10 text-slate-400" />
             </div>
           </div>
         )}
 
-        {/* Badge de estado flotante mejorado */}
+        {/* Badge de estado flotante */}
         <div className="absolute top-4 right-4">
           <Badge variant={statusConfig.variant} dot={statusConfig.dot}>
             {statusConfig.label}
           </Badge>
         </div>
 
-        {/* Overlay gradient al hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* Nombre del evento sobre la imagen */}
+        <div className="absolute bottom-4 left-4 right-4">
+          <h3 className="text-xl font-bold text-white drop-shadow-lg line-clamp-2 leading-tight">
+            {event.name}
+          </h3>
+        </div>
       </div>
 
       {/* Contenido */}
       <div className="p-6">
-        {/* Título mejorado */}
-        <h3 className="text-xl font-bold text-slate-900 mb-4 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
-          {event.name}
-        </h3>
-
         {/* Info con iconos mejorados */}
         <div className="space-y-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
               <Calendar className="h-4 w-4 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
@@ -122,7 +121,7 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
               <MapPin className="h-4 w-4 text-purple-600" />
             </div>
             <div className="flex-1 min-w-0">

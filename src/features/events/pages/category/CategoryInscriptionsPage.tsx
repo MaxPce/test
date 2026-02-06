@@ -164,7 +164,66 @@ export function CategoryInscriptionsPage() {
         </div>
       </div>
 
-      
+      {/* Stats rápidas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card variant="gradient" padding="md">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              {isTeamCategory ? (
+                <Users className="h-5 w-5 text-blue-600" />
+              ) : (
+                <UserPlus className="h-5 w-5 text-blue-600" />
+              )}
+            </div>
+            <p className="text-3xl font-bold text-slate-900 mb-1">
+              {stats.total}
+            </p>
+            <p className="text-xs text-slate-600 font-medium">
+              Total {isTeamCategory ? "Equipos" : "Atletas"}
+            </p>
+          </div>
+        </Card>
+
+        {!isTeamCategory && (
+          <>
+            <Card variant="gradient" padding="md">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Award className="h-5 w-5 text-blue-600" />
+                </div>
+                <p className="text-3xl font-bold text-blue-600 mb-1">
+                  {stats.male}
+                </p>
+                <p className="text-xs text-slate-600 font-medium">Masculino</p>
+              </div>
+            </Card>
+
+            <Card variant="gradient" padding="md">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <Award className="h-5 w-5 text-pink-600" />
+                </div>
+                <p className="text-3xl font-bold text-pink-600 mb-1">
+                  {stats.female}
+                </p>
+                <p className="text-xs text-slate-600 font-medium">Femenino</p>
+              </div>
+            </Card>
+          </>
+        )}
+
+        <Card variant="gradient" padding="md">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
+            </div>
+            <p className="text-3xl font-bold text-emerald-600 mb-1">
+              {stats.institutions}
+            </p>
+            <p className="text-xs text-slate-600 font-medium">Instituciones</p>
+          </div>
+        </Card>
+      </div>
 
       {/* Lista de Inscripciones */}
       {registrations.length === 0 ? (

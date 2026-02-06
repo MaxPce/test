@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Plus, Edit2, Trash2, Filter } from "lucide-react";
+import { Plus, Edit2, Trash2, Filter, Trophy, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Table,
   TableHeader,
@@ -23,6 +25,7 @@ import {
 } from "../api/sports.mutations";
 import { SportForm } from "../components/SportForm";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Sport } from "../types";
 
 export function SportsPage() {
@@ -43,15 +46,20 @@ export function SportsPage() {
   const deleteMutation = useDeleteSport();
 
   const handleCreate = async (data: any) => {
-    await createMutation.mutateAsync(data);
+    const result = await createMutation.mutateAsync(data);
     setIsCreateModalOpen(false);
+    return result;
   };
 
   const handleUpdate = async (data: any) => {
     if (selectedSport) {
-      await updateMutation.mutateAsync({ id: selectedSport.sportId, data });
+      const result = await updateMutation.mutateAsync({
+        id: selectedSport.sportId,
+        data,
+      });
       setIsEditModalOpen(false);
       setSelectedSport(null);
+      return result;
     }
   };
 
@@ -83,29 +91,37 @@ export function SportsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
+      <div className="flex justify-center items-center h-96">
+        <Spinner size="lg" label="Cargando deportes..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Deportes</h1>
-        </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Deporte
-        </Button>
-      </div>
+    <div className="space-y-6 animate-in">
+      {/* Header profesional */}
+      <PageHeader
+        title="Deportes"
+        description="Gestiona los deportes disponibles en el sistema"
+        actions={
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            variant="gradient"
+            size="lg"
+            icon={<Plus className="h-5 w-5" />}
+          >
+            Nuevo Deporte
+          </Button>
+        }
+      />
 
       {/* Filtros */}
-      <Card>
+      <Card variant="elevated">
         <CardBody>
           <div className="flex items-center gap-4">
-            <Filter className="h-5 w-5 text-gray-400" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+              <Filter className="h-5 w-5 text-blue-600" />
+            </div>
             <div className="flex-1 max-w-xs">
               <Select
                 value={filterSportTypeId || ""}
@@ -130,29 +146,28 @@ export function SportsPage() {
         </CardBody>
       </Card>
 
-      <Card>
-        <CardBody className="p-0">
+      <Card variant="elevated">
+        <CardBody padding="none">
           {sports.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">
-                {filterSportTypeId
+            <EmptyState
+              icon={Trophy}
+              title={
+                filterSportTypeId
                   ? "No hay deportes con este filtro"
-                  : "No hay deportes registrados"}
-              </p>
-              <Button
-                variant="ghost"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="mt-4"
-              >
-                Crear el primero
-              </Button>
-            </div>
+                  : "No hay deportes registrados"
+              }
+              description="Crea el primer deporte para comenzar"
+              action={{
+                label: "Crear Primer Deporte",
+                onClick: () => setIsCreateModalOpen(true),
+              }}
+            />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
-                  <TableHead>Icono</TableHead>
+                  <TableHead>Imagen</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Tipo de Deporte</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -161,23 +176,35 @@ export function SportsPage() {
               <TableBody>
                 {sports.map((sport) => (
                   <TableRow key={sport.sportId}>
-                    <TableCell className="font-medium">
-                      {sport.sportId}
+                    <TableCell className="font-semibold text-slate-900">
+                      #{sport.sportId}
                     </TableCell>
                     <TableCell>
-                      {sport.iconUrl ? (
-                        <img
-                          src={sport.iconUrl}
-                          alt={sport.name}
-                          className="h-8 w-8 object-contain rounded"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
-                          Sin icono
-                        </div>
-                      )}
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-50 flex items-center justify-center">
+                        {sport.iconUrl ? (
+                          <img
+                            src={getImageUrl(sport.iconUrl)}
+                            alt={sport.name}
+                            className="w-full h-full object-contain p-2"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              e.currentTarget.parentElement!.innerHTML = `
+                                <div class="flex items-center justify-center w-full h-full">
+                                  <svg class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              `;
+                            }}
+                          />
+                        ) : (
+                          <ImageIcon className="h-6 w-6 text-slate-400" />
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell className="font-medium">{sport.name}</TableCell>
+                    <TableCell className="font-semibold text-slate-900">
+                      {sport.name}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="primary">
                         {sport.sportType?.name || "N/A"}
@@ -189,6 +216,7 @@ export function SportsPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => openEditModal(sport)}
+                          className="hover:bg-blue-50 hover:text-blue-600"
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -196,8 +224,9 @@ export function SportsPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => openDeleteModal(sport)}
+                          className="hover:bg-red-50 hover:text-red-600"
                         >
-                          <Trash2 className="h-4 w-4 text-red-600" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -214,6 +243,7 @@ export function SportsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Crear Deporte"
+        size="md"
       >
         <SportForm
           onSubmit={handleCreate}
@@ -230,6 +260,7 @@ export function SportsPage() {
           setSelectedSport(null);
         }}
         title="Editar Deporte"
+        size="md"
       >
         <SportForm
           sport={selectedSport || undefined}

@@ -53,3 +53,28 @@ export const useDeleteSport = () => {
     },
   });
 };
+
+export function useUploadSportIcon() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await apiClient.post(
+        `/sports/${id}/upload-icon`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sports"] });
+    },
+  });
+}

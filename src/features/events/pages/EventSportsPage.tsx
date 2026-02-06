@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, Trophy, ChevronRight, Grid3x3 } from "lucide-react";
+import { Plus, Trophy, ChevronRight, Grid3x3, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { useEventCategories } from "../api/eventCategories.queries";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function EventSportsPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -63,8 +64,6 @@ export function EventSportsPage() {
         }
       />
 
-      
-
       {/* Grid de Deportes */}
       {sports.length === 0 ? (
         <EmptyState
@@ -110,6 +109,8 @@ function SportEventCard({
   athletesCount: number;
   onClick: () => void;
 }) {
+  const sportImageUrl = sport.iconUrl ? getImageUrl(sport.iconUrl) : null;
+
   return (
     <Card
       hover
@@ -118,87 +119,46 @@ function SportEventCard({
       onClick={onClick}
       className="group cursor-pointer overflow-hidden"
     >
-      {/* Header con gradiente */}
-      <div className="relative h-24 bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600 overflow-hidden">
-        {sport.iconUrl ? (
+      {/* Header con imagen */}
+      <div className="relative h-48 bg-slate-200 overflow-hidden">
+        {sportImageUrl ? (
           <>
             <img
-              src={sport.iconUrl}
+              src={sportImageUrl}
               alt={sport.name}
-              className="w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            {/* Overlay oscuro sutil solo en la parte inferior */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Trophy className="h-12 w-12 text-white/40" />
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+            <Trophy className="h-16 w-16 text-slate-400 group-hover:text-slate-500 transition-colors" />
           </div>
         )}
 
-        {/* Icono flotante */}
-        <div className="absolute top-4 left-4">
-          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-lg group-hover:scale-110 transition-transform">
-            {sport.iconUrl ? (
-              <img
-                src={sport.iconUrl}
-                alt={sport.name}
-                className="w-8 h-8 object-contain"
-              />
-            ) : (
-              sport.name.charAt(0)
-            )}
-          </div>
+        {/* Nombre del deporte sobre la imagen */}
+        <div className="absolute bottom-4 left-4 right-4">
+          <h3 className="text-2xl font-bold text-white drop-shadow-lg line-clamp-2">
+            {sport.name}
+          </h3>
         </div>
 
         {/* Indicador de hover */}
-        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-            <ChevronRight className="h-5 w-5 text-white" />
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
+            <ChevronRight className="h-5 w-5 text-slate-900" />
           </div>
         </div>
       </div>
 
-      {/* Contenido */}
-      <CardBody>
-        <h3 className="text-lg font-bold text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">
-          {sport.name}
-        </h3>
+      
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-blue-50 rounded-xl p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Grid3x3 className="h-4 w-4 text-blue-600" />
-              <span className="text-xs text-blue-700 font-semibold">
-                Categorías
-              </span>
-            </div>
-            <p className="text-xl font-bold text-blue-900">{categoriesCount}</p>
-          </div>
-
-          <div className="bg-emerald-50 rounded-xl p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Trophy className="h-4 w-4 text-emerald-600" />
-              <span className="text-xs text-emerald-700 font-semibold">
-                Atletas
-              </span>
-            </div>
-            <p className="text-xl font-bold text-emerald-900">{athletesCount}</p>
-          </div>
-        </div>
-
-        {/* Tipo de deporte */}
-        {sport.sportType && (
-          <div className="mt-4">
-            <Badge variant="primary" size="sm">
-              {sport.sportType.name}
-            </Badge>
-          </div>
-        )}
-      </CardBody>
-
-      {/* Bottom accent */}
-      <div className="h-1 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Bottom accent con animación */}
+      <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </Card>
   );
 }

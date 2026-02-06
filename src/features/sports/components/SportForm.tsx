@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 import { useSportTypes } from "../api/sportTypes.queries";
+import { useUploadSportIcon } from "../api/sports.mutations";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Sport, CreateSportData } from "../types";
 
 interface SportFormProps {
   sport?: Sport;
-  onSubmit: (data: CreateSportData) => void;
+  onSubmit: (data: CreateSportData) => Promise<Sport>;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -19,12 +22,15 @@ export function SportForm({
   isLoading,
 }: SportFormProps) {
   const { data: sportTypes = [] } = useSportTypes();
+  const uploadIconMutation = useUploadSportIcon();
 
   const [formData, setFormData] = useState<CreateSportData>({
     sportTypeId: 0,
     name: "",
     iconUrl: "",
   });
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (sport) {
@@ -41,9 +47,32 @@ export function SportForm({
     }
   }, [sport, sportTypes]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageSelect = (file: File) => {
+    setImageFile(file);
+  };
+
+  const handleImageRemove = () => {
+    setImageFile(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    try {
+      // Primero crear o actualizar el deporte
+      const savedSport = await onSubmit(formData);
+
+      // Si hay un archivo, subir la imagen
+      if (imageFile) {
+        const sportId = sport?.sportId || savedSport.sportId;
+        await uploadIconMutation.mutateAsync({
+          id: sportId,
+          file: imageFile,
+        });
+      }
+    } catch (error) {
+      console.error("Error al guardar deporte:", error);
+    }
   };
 
   const sportTypeOptions = [
@@ -55,7 +84,17 @@ export function SportForm({
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Upload de imagen */}
+      <ImageUpload
+        currentImage={sport?.iconUrl ? getImageUrl(sport.iconUrl) : undefined}
+        onImageSelect={handleImageSelect}
+        onImageRemove={handleImageRemove}
+        label="Imagen del Deporte"
+        shape="square"
+        size="lg"
+      />
+
       <Select
         label="Tipo de Deporte *"
         value={formData.sportTypeId}
@@ -74,23 +113,15 @@ export function SportForm({
         required
       />
 
-      <Input
-        label="URL del Icono"
-        type="url"
-        value={formData.iconUrl}
-        onChange={(e) => setFormData({ ...formData, iconUrl: e.target.value })}
-        placeholder="https://ejemplo.com/icono.png"
-        helperText="URL opcional de la imagen del deporte"
-      />
-
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancelar
         </Button>
         <Button
           type="submit"
-          isLoading={isLoading}
+          isLoading={isLoading || uploadIconMutation.isPending}
           disabled={formData.sportTypeId === 0}
+          variant="gradient"
         >
           {sport ? "Actualizar" : "Crear"}
         </Button>
