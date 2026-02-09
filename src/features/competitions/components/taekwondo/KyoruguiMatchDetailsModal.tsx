@@ -132,7 +132,7 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
               }`}
             >
               <div className="flex items-start gap-4">
-                {/* ✅ FOTO DEL ATLETA - Azul */}
+                
                 {getAthletePhoto(participant1) ? (
                   <img
                     src={getAthletePhoto(participant1)!}
@@ -260,7 +260,7 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
                   </div>
                   {isWinner(participant2?.participationId || 0) && (
                     <div className="mt-3 inline-flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      <Trophy className="w-4 h-4" />
+                      
                       GANADOR
                     </div>
                   )}

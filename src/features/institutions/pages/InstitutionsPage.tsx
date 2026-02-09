@@ -122,7 +122,6 @@ export function InstitutionsPage() {
       {/* Header profesional */}
       <PageHeader
         title="Gestión de Instituciones"
-        description="Administre instituciones, colegios y organizaciones deportivas"
         actions={
           <Button
             onClick={() => setIsCreateModalOpen(true)}
@@ -134,8 +133,6 @@ export function InstitutionsPage() {
           </Button>
         }
       />
-
-      
 
       {/* Barra de búsqueda y filtros */}
       <Card variant="glass">
@@ -243,7 +240,7 @@ export function InstitutionsPage() {
                 <TableRow key={institution.institutionId}>
                   <TableCell>
                     {institution.logoUrl ? (
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-2 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-xl bg-slate-50 p-2 flex items-center justify-center border border-slate-200">
                         <img
                           src={getImageUrl(institution.logoUrl)}
                           alt={institution.name}
@@ -360,66 +357,59 @@ function InstitutionCard({
 }) {
   return (
     <Card hover variant="elevated" padding="none" className="group overflow-hidden">
-      {/* Header con gradiente */}
-      <div className="relative h-28 bg-gradient-to-br from-blue-600 via-blue-500 to-purple-600 overflow-hidden">
-        {institution.logoUrl ? (
-          <>
-            <img
-              src={getImageUrl(institution.logoUrl)}
-              alt={institution.name}
-              className="w-full h-full object-cover opacity-20 group-hover:opacity-30 transition-opacity"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          </>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Building2 className="h-12 w-12 text-white/40" />
-          </div>
-        )}
-
-        {/* Badge de abreviatura */}
-        <div className="absolute top-4 right-4">
-          <Badge variant="default" size="sm">
-            {institution.abrev}
-          </Badge>
-        </div>
-      </div>
-
       {/* Contenido */}
-      <CardBody>
-        {/* Logo central */}
-        {institution.logoUrl && (
-          <div className="flex justify-center -mt-12 mb-4">
-            <div className="w-20 h-20 rounded-2xl bg-white shadow-lg p-3 border-4 border-white group-hover:scale-110 transition-transform">
+      <CardBody className="p-6">
+        {/* Header con logo y badge */}
+        <div className="flex items-start justify-between mb-4">
+          {/* Logo */}
+          <div className="w-16 h-16 rounded-2xl bg-slate-50 p-3 flex items-center justify-center border-2 border-slate-200 group-hover:scale-110 transition-transform flex-shrink-0">
+            {institution.logoUrl ? (
               <img
                 src={getImageUrl(institution.logoUrl)}
                 alt={institution.name}
                 className="w-full h-full object-contain"
+                onError={(e) => {
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    e.currentTarget.style.display = "none";
+                    const placeholder = document.createElement("div");
+                    placeholder.className = "flex items-center justify-center w-full h-full";
+                    placeholder.innerHTML = `<svg class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`;
+                    parent.appendChild(placeholder);
+                  }
+                }}
               />
-            </div>
+            ) : (
+              <Building2 className="h-8 w-8 text-slate-400" />
+            )}
           </div>
-        )}
+
+          {/* Badge de abreviatura */}
+          <Badge variant="primary" size="sm">
+            {institution.abrev}
+          </Badge>
+        </div>
 
         {/* Nombre */}
         <Link
           to={`/admin/institutions/${institution.institutionId}`}
-          className="block"
+          className="block mb-4"
         >
-          <h3 className="text-lg font-bold text-slate-900 text-center mb-4 line-clamp-2 group-hover:text-blue-600 transition-colors">
+          <h3 className="text-lg font-bold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
             {institution.name}
           </h3>
         </Link>
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-blue-50 rounded-xl p-3 text-center">
+          <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
             <Users className="h-4 w-4 text-blue-600 mx-auto mb-1" />
             <p className="text-xl font-bold text-blue-900">
               {institution.athletes?.length || 0}
             </p>
             <p className="text-xs text-blue-700 font-medium">Atletas</p>
           </div>
-          <div className="bg-emerald-50 rounded-xl p-3 text-center">
+          <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
             <Users className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
             <p className="text-xl font-bold text-emerald-900">
               {institution.teams?.length || 0}
@@ -437,7 +427,7 @@ function InstitutionCard({
               e.preventDefault();
               onEdit(institution);
             }}
-            className="flex-1"
+            className="flex-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600"
           >
             <Edit2 className="h-3.5 w-3.5" />
           </Button>
@@ -448,9 +438,9 @@ function InstitutionCard({
               e.preventDefault();
               onDelete(institution);
             }}
-            className="flex-1 hover:bg-red-50 hover:border-red-300"
+            className="flex-1 hover:bg-red-50 hover:border-red-300 hover:text-red-600"
           >
-            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+            <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       </CardBody>

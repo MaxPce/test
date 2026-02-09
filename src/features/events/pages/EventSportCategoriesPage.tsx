@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, Trophy, Users, Clock, Award, Grid3x3 } from "lucide-react";
+import { Plus, Trophy, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { useEventCategories } from "../api/eventCategories.queries";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function EventSportCategoriesPage() {
   const { eventId, sportId } = useParams<{
@@ -32,22 +33,8 @@ export function EventSportCategoriesPage() {
   );
 
   const sportName = sportCategories[0]?.category?.sport?.name || "Deporte";
-  const sportIcon = sportCategories[0]?.category?.sport?.iconUrl;
-
-  // Calcular estadísticas
-  const stats = {
-    total: sportCategories.length,
-    individual: sportCategories.filter((ec) => ec.category?.type === "individual")
-      .length,
-    team: sportCategories.filter((ec) => ec.category?.type === "equipo").length,
-    participants: sportCategories.reduce(
-      (sum, ec) => sum + (ec.registrations?.length || 0),
-      0
-    ),
-    pending: sportCategories.filter((ec) => ec.status === "pendiente").length,
-    inProgress: sportCategories.filter((ec) => ec.status === "en_curso").length,
-    finished: sportCategories.filter((ec) => ec.status === "finalizado").length,
-  };
+  const sportIconUrl = sportCategories[0]?.category?.sport?.iconUrl;
+  const sportImage = sportIconUrl ? getImageUrl(sportIconUrl) : null;
 
   const getStatusConfig = (status: string) => {
     const configs = {
@@ -75,60 +62,61 @@ export function EventSportCategoriesPage() {
     return configs[status as keyof typeof configs] || configs.pendiente;
   };
 
+  const totalParticipants = sportCategories.reduce(
+    (sum, ec) => sum + (ec.registrations?.length || 0),
+    0
+  );
+
   return (
     <div className="space-y-6 animate-in">
       {/* Header profesional */}
       <PageHeader
         title={`Categorías de ${sportName}`}
-        description={`Gestione las categorías y competencias de ${sportName}`}
         showBack
         onBack={() => navigate(`/admin/events/${eventId}/sports`)}
-        actions={
-          sportCategories.length > 0 ? (
-            <Button
-              onClick={() =>
-                navigate(
-                  `/admin/events/${eventId}/sports/${sportId}/categories/add`
-                )
-              }
-              variant="gradient"
-              size="lg"
-              icon={<Plus className="h-5 w-5" />}
-            >
-              Agregar Categoría
-            </Button>
-          ) : undefined
-        }
+        
       />
 
-      {/* Icono y nombre del deporte */}
-      <Card variant="gradient" padding="lg">
+      {/* Header del deporte */}
+      <Card className="p-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-strong">
-            {sportIcon ? (
+          {/* Imagen del deporte */}
+          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md bg-slate-50 flex items-center justify-center flex-shrink-0">
+            {sportImage ? (
               <img
-                src={sportIcon}
+                src={sportImage}
                 alt={sportName}
-                className="w-10 h-10 object-contain"
+                className="w-full h-full object-contain p-3"
+                onError={(e) => {
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    e.currentTarget.style.display = "none";
+                    const placeholder = document.createElement("div");
+                    placeholder.className =
+                      "w-10 h-10 flex items-center justify-center";
+                    placeholder.innerHTML = `<svg class="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>`;
+                    parent.appendChild(placeholder);
+                  }
+                }}
               />
             ) : (
-              <Trophy className="h-8 w-8 text-white" />
+              <Trophy className="h-10 w-10 text-slate-400" />
             )}
           </div>
+
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-slate-900 mb-1">
               {sportName}
             </h2>
             <p className="text-slate-600">
-              {stats.total} {stats.total === 1 ? "categoría" : "categorías"} •{" "}
-              {stats.participants}{" "}
-              {stats.participants === 1 ? "participante" : "participantes"}
+              {sportCategories.length}{" "}
+              {sportCategories.length === 1 ? "categoría" : "categorías"} •{" "}
+              {totalParticipants}{" "}
+              {totalParticipants === 1 ? "participante" : "participantes"}
             </p>
           </div>
         </div>
       </Card>
-
-      
 
       {/* Lista de Categorías */}
       {sportCategories.length === 0 ? (
@@ -145,7 +133,7 @@ export function EventSportCategoriesPage() {
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {sportCategories.map((eventCategory) => {
             const statusConfig = getStatusConfig(eventCategory.status);
             const isTeam = eventCategory.category?.type === "equipo";
@@ -164,12 +152,12 @@ export function EventSportCategoriesPage() {
                 }
                 className="group cursor-pointer overflow-hidden"
               >
-                {/* Header con gradiente */}
-                <div className="relative h-24 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  
-                  {/* Badge de estado */}
-                  <div className="absolute top-4 right-4">
+                {/* Header limpio */}
+                <div className="p-5 pb-3 border-b border-slate-100">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-lg font-bold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors flex-1">
+                      {eventCategory.category?.name || "Sin nombre"}
+                    </h3>
                     <Badge
                       variant={statusConfig.variant}
                       dot={statusConfig.dot}
@@ -179,66 +167,62 @@ export function EventSportCategoriesPage() {
                     </Badge>
                   </div>
 
-                  {/* Icono de tipo */}
-                  <div className="absolute top-4 left-4">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      {isTeam ? (
-                        <Users className="h-5 w-5 text-white" />
-                      ) : (
-                        <Trophy className="h-5 w-5 text-white" />
-                      )}
-                    </div>
-                  </div>
+                  {/* Descripción si existe */}
+                  {eventCategory.category?.description && (
+                    <p className="text-sm text-slate-600 line-clamp-2 mt-2">
+                      {eventCategory.category.description}
+                    </p>
+                  )}
                 </div>
 
                 {/* Contenido */}
-                <CardBody>
-                  {/* Nombre de la categoría */}
-                  <h3 className="text-lg font-bold text-slate-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                    {eventCategory.category?.name || "Sin nombre"}
-                  </h3>
-
-                  {/* Info */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <div className="p-5">
+                  {/* Info en grid compacto */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
                         {isTeam ? (
                           <Users className="h-4 w-4 text-blue-600" />
                         ) : (
                           <Trophy className="h-4 w-4 text-blue-600" />
                         )}
                       </div>
-                      <span className="text-slate-700 font-semibold">
-                        {isTeam ? "Equipo" : "Individual"}
-                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs text-slate-500 font-medium">
+                          Formato
+                        </p>
+                        <p className="text-sm text-slate-900 font-semibold">
+                          {isTeam ? "Equipo" : "Individual"}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
                         <Users className="h-4 w-4 text-emerald-600" />
                       </div>
-                      <span className="text-slate-700 font-semibold">
-                        {participantsCount}{" "}
-                        {participantsCount === 1 ? "inscrito" : "inscritos"}
-                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs text-slate-500 font-medium">
+                          Participantes
+                        </p>
+                        <p className="text-sm text-slate-900 font-semibold">
+                          {participantsCount}{" "}
+                          {participantsCount === 1 ? "inscrito" : "inscritos"}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Descripción si existe */}
-                  {eventCategory.category?.description && (
-                    <p className="text-sm text-slate-600 line-clamp-2 mb-4">
-                      {eventCategory.category.description}
-                    </p>
-                  )}
-
-                  {/* Footer con hora/fecha si existe */}
+                  {/* Hora si existe */}
                   {eventCategory.startTime && (
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-auto pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-4 pt-4 border-t border-slate-100">
                       <Clock className="h-3.5 w-3.5" />
-                      <span>{eventCategory.startTime}</span>
+                      <span className="font-medium">
+                        Hora: {eventCategory.startTime}
+                      </span>
                     </div>
                   )}
-                </CardBody>
+                </div>
 
                 {/* Bottom accent */}
                 <div className="h-1 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />

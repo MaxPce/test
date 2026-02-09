@@ -389,13 +389,14 @@ function MatchCard({
   };
 
   const formatScore = (score: any, isParticipant1: boolean): string => {
+    // Tenis de mesa - Sets ganados
     if (sportConfig?.sportType === "table-tennis") {
       if (
         match.status === "finalizado" &&
         score !== null &&
         score !== undefined
       ) {
-        return String(score);
+        return String(Math.floor(Number(score)));
       }
 
       if (ttDetails?.games && ttDetails.games.length > 0) {
@@ -406,28 +407,37 @@ function MatchCard({
       return "-";
     }
 
+    // Sin puntaje
     if (score === null || score === undefined) return "-";
 
-    if (!sportConfig) return String(score);
+    // Sin configuración - entero por defecto
+    if (!sportConfig) {
+      const numScore = parseFloat(score);
+      if (isNaN(numScore)) return "-";
+      return String(Math.floor(numScore));
+    }
 
     const sportType = sportConfig.sportType;
 
+    // Poomsae - CON DECIMALES
     if (sportType === "poomsae") {
       const numScore = parseFloat(score);
       if (isNaN(numScore)) return "-";
       return numScore.toFixed(2);
     }
 
+    // Judo - Texto especial o entero
     if (sportType === "judo") {
       if (score === 10 || score === "10") return "Ippon";
-      return String(score);
+      const numScore = parseFloat(score);
+      if (isNaN(numScore)) return String(score);
+      return String(Math.floor(numScore));
     }
 
-    if (sportType === "kyorugi") {
-      return String(score);
-    }
-
-    return String(score);
+    // Kyorugi y otros deportes - SOLO ENTEROS
+    const numScore = parseFloat(score);
+    if (isNaN(numScore)) return String(score);
+    return String(Math.floor(numScore));
   };
 
   const score1 = formatScore(match.participant1Score, true);

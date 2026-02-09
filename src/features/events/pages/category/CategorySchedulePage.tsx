@@ -254,7 +254,7 @@ export function CategorySchedulePage() {
       {/* Header profesional */}
       <PageHeader
         title="Programación & Competencia"
-        description="Gestione fases, partidos y resultados de la categoría"
+        
         actions={
           <Button
             onClick={() => setIsPhaseModalOpen(true)}

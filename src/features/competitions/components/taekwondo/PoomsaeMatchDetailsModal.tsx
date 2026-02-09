@@ -1,4 +1,4 @@
-import { X, Trophy, Calendar, Clock, MapPin, Award, Target } from "lucide-react";
+import { X, Trophy, Calendar, Clock, MapPin, Users, User } from "lucide-react";
 import type { KyoruguiMatch } from "../../types/taekwondo.types";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
@@ -14,23 +14,48 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
   const participant1 = match.participations?.[0];
   const participant2 = match.participations?.[1];
 
+  // Detectar si es equipo o individual
+  const isTeam = participant1?.registration?.team !== undefined && participant1?.registration?.team !== null;
+
   const getParticipantName = (participation: typeof participant1) => {
     if (!participation) return "TBD";
-    const athlete = participation.registration?.athlete;
-    return athlete?.name || "TBD";
+    
+    if (isTeam) {
+      return participation.registration?.team?.name || "TBD";
+    } else {
+      return participation.registration?.athlete?.name || "TBD";
+    }
   };
 
   const getInstitution = (participation: typeof participant1) => {
+    if (isTeam) {
+      return participation?.registration?.team?.institution;
+    }
     return participation?.registration?.athlete?.institution;
   };
 
   const getLogoUrl = (participation: typeof participant1) => {
+    if (isTeam) {
+      return participation?.registration?.team?.institution?.logoUrl;
+    }
     return participation?.registration?.athlete?.institution?.logoUrl;
   };
 
-  const getAthletePhoto = (participation: typeof participant1) => {
-    const photoUrl = participation?.registration?.athlete?.photoUrl;
-    return photoUrl ? getImageUrl(photoUrl) : null;
+  const getParticipantPhoto = (participation: typeof participant1) => {
+    if (isTeam) {
+      // Para equipos, usar el logo de la institución
+      const logoUrl = participation?.registration?.team?.institution?.logoUrl;
+      return logoUrl ? getImageUrl(logoUrl) : null;
+    } else {
+      // Para individuales, usar la foto del atleta
+      const photoUrl = participation?.registration?.athlete?.photoUrl;
+      return photoUrl ? getImageUrl(photoUrl) : null;
+    }
+  };
+
+  const getInitial = (participation: typeof participant1) => {
+    const name = getParticipantName(participation);
+    return name.charAt(0);
   };
 
   const isWinner = (participationId: number) =>
@@ -69,6 +94,153 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
     );
   }
 
+  // Componente de tarjeta de participante
+  const ParticipantCard = ({
+    participant,
+    color,
+  }: {
+    participant: typeof participant1;
+    color: "indigo" | "purple";
+  }) => {
+    const isWinnerCard = isWinner(participant?.participationId || 0);
+    const isParticipant1 = participant === participant1;
+    const accuracy = isParticipant1 ? p1Accuracy : p2Accuracy;
+    const presentation = isParticipant1 ? p1Presentation : p2Presentation;
+    const total = isParticipant1 ? p1Total : p2Total;
+
+    const colorClasses = {
+      indigo: {
+        border: "border-indigo-500",
+        bg: "bg-indigo-50",
+        photoBorder: "border-indigo-300",
+        gradient: "from-indigo-400 to-indigo-600",
+        scoreBg: "bg-indigo-100",
+        scoreText: "text-indigo-600",
+        badgeBg: "bg-indigo-600",
+      },
+      purple: {
+        border: "border-purple-500",
+        bg: "bg-purple-50",
+        photoBorder: "border-purple-300",
+        gradient: "from-purple-400 to-purple-600",
+        scoreBg: "bg-purple-100",
+        scoreText: "text-purple-600",
+        badgeBg: "bg-purple-600",
+      },
+    };
+
+    const classes = colorClasses[color];
+
+    return (
+      <div
+        className={`border-2 rounded-lg p-6 transition-all ${
+          isWinnerCard
+            ? `${classes.border} ${classes.bg} shadow-lg`
+            : "border-gray-200 bg-white"
+        }`}
+      >
+        <div className="flex items-start gap-4">
+          {/* Avatar / Logo */}
+          {getParticipantPhoto(participant) ? (
+            <img
+              src={getParticipantPhoto(participant)!}
+              alt={getParticipantName(participant)}
+              className={`w-16 h-16 rounded-full ${
+                isTeam ? "object-contain p-2 bg-white" : "object-cover"
+              } flex-shrink-0 border-4 ${classes.photoBorder}`}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const placeholder = document.createElement("div");
+                  placeholder.className = `w-16 h-16 bg-gradient-to-br ${classes.gradient} rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0`;
+                  placeholder.textContent = getInitial(participant);
+                  parent.appendChild(placeholder);
+                }
+              }}
+            />
+          ) : (
+            <div
+              className={`w-16 h-16 bg-gradient-to-br ${classes.gradient} rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0`}
+            >
+              {getInitial(participant)}
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  {isTeam ? (
+                    <Users className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                  ) : (
+                    <User className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                  )}
+                  <span className="text-xs text-slate-500 font-semibold uppercase">
+                    {isTeam ? "Equipo" : "Individual"}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 truncate">
+                  {getParticipantName(participant)}
+                </h3>
+                <p className="text-sm text-gray-600 truncate">
+                  {getInstitution(participant)?.name || "Sin institución"}
+                </p>
+              </div>
+              {getLogoUrl(participant) && !isTeam && (
+                <img
+                  src={getImageUrl(getLogoUrl(participant)!)}
+                  alt={getInstitution(participant)?.name || ""}
+                  className="w-12 h-12 object-contain ml-2 flex-shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Score total */}
+            <div className={`text-center ${classes.scoreBg} rounded-lg py-3`}>
+              <span className="text-sm text-gray-600 block mb-1">
+                Puntaje Total
+              </span>
+              <span className={`text-4xl font-bold ${classes.scoreText}`}>
+                {hasScores ? total.toFixed(2) : "-"}
+              </span>
+            </div>
+
+            {/* Desglose */}
+            {hasScores && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between p-2 bg-white rounded">
+                  <span className="text-sm text-gray-700">Accuracy</span>
+                  <span className="font-bold text-blue-600">
+                    {accuracy.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-white rounded">
+                  <span className="text-sm text-gray-700">Presentación</span>
+                  <span className="font-bold text-purple-600">
+                    {presentation.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Badge ganador */}
+            {isWinnerCard && (
+              <div className={`mt-3 inline-flex items-center gap-2 ${classes.badgeBg} text-white px-3 py-1 rounded-full text-sm font-bold`}>
+                <Trophy className="h-4 w-4" />
+                GANADOR
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -81,8 +253,19 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
                 <h2 className="text-2xl font-bold">
                   Match #{match.matchNumber}
                 </h2>
-                <p className="text-sm text-indigo-100">
-                  {match.round} • Poomsae
+                <p className="text-sm text-indigo-100 flex items-center gap-2">
+                  {match.round} • Poomsae •{" "}
+                  {isTeam ? (
+                    <>
+                      <Users className="h-3.5 w-3.5" />
+                      Equipo
+                    </>
+                  ) : (
+                    <>
+                      <User className="h-3.5 w-3.5" />
+                      Individual
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -129,203 +312,13 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
         {/* Participants */}
         <div className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Participant 1 */}
-            <div
-              className={`border-2 rounded-lg p-6 transition-all ${
-                isWinner(participant1?.participationId || 0)
-                  ? "border-indigo-500 bg-indigo-50 shadow-lg"
-                  : "border-gray-200 bg-white"
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                {getAthletePhoto(participant1) ? (
-                  <img
-                    src={getAthletePhoto(participant1)!}
-                    alt={getParticipantName(participant1)}
-                    className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-4 border-indigo-300"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        const placeholder = document.createElement("div");
-                        placeholder.className =
-                          "w-16 h-16 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0";
-                        placeholder.textContent = getParticipantName(participant1).charAt(0);
-                        parent.appendChild(placeholder);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                    {getParticipantName(participant1).charAt(0)}
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-bold text-gray-900 truncate">
-                        {getParticipantName(participant1)}
-                      </h3>
-                      <p className="text-sm text-gray-600 truncate">
-                        {getInstitution(participant1)?.name || "Sin institución"}
-                      </p>
-                    </div>
-                    {getLogoUrl(participant1) && (
-                      <img
-                        src={getImageUrl(getLogoUrl(participant1)!)}
-                        alt={getInstitution(participant1)?.name || ""}
-                        className="w-12 h-12 object-contain ml-2 flex-shrink-0"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Score total */}
-                  <div className="mt-4 text-center bg-indigo-100 rounded-lg py-3">
-                    <span className="text-sm text-gray-600 block mb-1">
-                      Puntaje Total
-                    </span>
-                    <span className="text-4xl font-bold text-indigo-600">
-                      {hasScores ? p1Total.toFixed(2) : "-"}
-                    </span>
-                  </div>
-
-                  {/* Desglose */}
-                  {hasScores && (
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-white rounded">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-700">Accuracy</span>
-                        </div>
-                        <span className="font-bold text-blue-600">
-                          {p1Accuracy.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-white rounded">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-700">Presentación</span>
-                        </div>
-                        <span className="font-bold text-purple-600">
-                          {p1Presentation.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {isWinner(participant1?.participationId || 0) && (
-                    <div className="mt-3 inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      
-                      GANADOR
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Participant 2 */}
-            <div
-              className={`border-2 rounded-lg p-6 transition-all ${
-                isWinner(participant2?.participationId || 0)
-                  ? "border-purple-500 bg-purple-50 shadow-lg"
-                  : "border-gray-200 bg-white"
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                {getAthletePhoto(participant2) ? (
-                  <img
-                    src={getAthletePhoto(participant2)!}
-                    alt={getParticipantName(participant2)}
-                    className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-4 border-purple-300"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        const placeholder = document.createElement("div");
-                        placeholder.className =
-                          "w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0";
-                        placeholder.textContent = getParticipantName(participant2).charAt(0);
-                        parent.appendChild(placeholder);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                    {getParticipantName(participant2).charAt(0)}
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-bold text-gray-900 truncate">
-                        {getParticipantName(participant2)}
-                      </h3>
-                      <p className="text-sm text-gray-600 truncate">
-                        {getInstitution(participant2)?.name || "Sin institución"}
-                      </p>
-                    </div>
-                    {getLogoUrl(participant2) && (
-                      <img
-                        src={getImageUrl(getLogoUrl(participant2)!)}
-                        alt={getInstitution(participant2)?.name || ""}
-                        className="w-12 h-12 object-contain ml-2 flex-shrink-0"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Score total */}
-                  <div className="mt-4 text-center bg-purple-100 rounded-lg py-3">
-                    <span className="text-sm text-gray-600 block mb-1">
-                      Puntaje Total
-                    </span>
-                    <span className="text-4xl font-bold text-purple-600">
-                      {hasScores ? p2Total.toFixed(2) : "-"}
-                    </span>
-                  </div>
-
-                  {/* Desglose */}
-                  {hasScores && (
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-white rounded">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-700">Accuracy</span>
-                        </div>
-                        <span className="font-bold text-blue-600">
-                          {p2Accuracy.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-white rounded">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-700">Presentación</span>
-                        </div>
-                        <span className="font-bold text-purple-600">
-                          {p2Presentation.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {isWinner(participant2?.participationId || 0) && (
-                    <div className="mt-3 inline-flex items-center gap-2 bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                      GANADOR
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ParticipantCard participant={participant1} color="indigo" />
+            <ParticipantCard participant={participant2} color="purple" />
           </div>
 
           {!hasScores && (
             <div className="bg-gray-50 rounded-lg p-6 text-center">
-              <p className="text-gray-500">
-                No hay puntajes registrados aún
-              </p>
+              <p className="text-gray-500">No hay puntajes registrados aún</p>
             </div>
           )}
 

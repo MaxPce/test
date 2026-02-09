@@ -133,10 +133,7 @@ export function HomePage() {
                     <span>Iniciar Sesión</span>
                     <ChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
-                  <button className="inline-flex items-center gap-2 rounded-xl bg-white border-2 border-slate-200 px-8 py-4 text-base font-bold text-slate-700 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 transition-all">
-                    <span>Ver Demo</span>
-                    <Zap className="h-5 w-5" />
-                  </button>
+                  
                 </>
               )}
             </div>

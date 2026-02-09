@@ -41,7 +41,6 @@ export function PhaseForm({
   const typeOptions = [
     { value: "grupo", label: "Fase de Grupos" },
     { value: "eliminacion", label: "Eliminación Directa" },
-    { value: "repechaje", label: "Repechaje" },
     { value: "mejor_de_3", label: "Mejor de 3" },
   ];
 

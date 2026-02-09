@@ -50,7 +50,7 @@ export function EventSportsPage() {
       {/* Header profesional */}
       <PageHeader
         title="Deportes del Evento"
-        description="Gestione los deportes y categorías asociadas al evento"
+        
         showBack
         actions={
           <Button

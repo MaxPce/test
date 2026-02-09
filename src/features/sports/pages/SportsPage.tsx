@@ -102,7 +102,7 @@ export function SportsPage() {
       {/* Header profesional */}
       <PageHeader
         title="Deportes"
-        description="Gestiona los deportes disponibles en el sistema"
+        
         actions={
           <Button
             onClick={() => setIsCreateModalOpen(true)}

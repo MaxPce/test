@@ -57,7 +57,7 @@ const navItems: NavItem[] = [
     to: "/admin/events",
     icon: <Calendar className="h-5 w-5" />,
     label: "Eventos",
-    badge: "3",
+    
   },
   {
     to: "/admin/settings",

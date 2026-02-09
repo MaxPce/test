@@ -1,17 +1,21 @@
 import { Outlet, useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   UserPlus,
   Calendar,
   BarChart3,
   Building2,
   Timer,
+  Trophy,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
 import { Tabs } from "@/components/ui/Tabs";
+import { PageHeader } from "@/components/PageHeader";
 import { useEventCategories } from "../api/eventCategories.queries";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function CategoryDetailLayout() {
   const { eventId, sportId, categoryId } = useParams<{
@@ -30,8 +34,8 @@ export function CategoryDetailLayout() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
+      <div className="flex justify-center items-center h-96">
+        <Spinner size="lg" label="Cargando categoría..." />
       </div>
     );
   }
@@ -39,10 +43,18 @@ export function CategoryDetailLayout() {
   if (!eventCategory) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Categoría no encontrada</p>
+        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <Trophy className="h-10 w-10 text-red-600" />
+        </div>
+        <p className="text-lg font-semibold text-slate-900 mb-2">
+          Categoría no encontrada
+        </p>
+        <p className="text-slate-500 mb-6">
+          La categoría que buscas no existe o ha sido eliminada
+        </p>
         <Button
           onClick={() => navigate(`/admin/events/${eventId}/sports/${sportId}`)}
-          className="mt-4"
+          variant="gradient"
         >
           Volver a Categorías
         </Button>
@@ -50,18 +62,33 @@ export function CategoryDetailLayout() {
     );
   }
 
-  const getStatusBadgeVariant = (status: string) => {
-    const variants: Record<
-      string,
-      "success" | "primary" | "default" | "warning"
-    > = {
-      programado: "primary",
-      en_curso: "success",
-      finalizado: "default",
-      pendiente: "warning",
+  const getStatusConfig = (status: string) => {
+    const configs = {
+      programado: {
+        variant: "primary" as const,
+        label: "Programado",
+        dot: true,
+      },
+      en_curso: {
+        variant: "success" as const,
+        label: "En Curso",
+        dot: true,
+      },
+      finalizado: {
+        variant: "default" as const,
+        label: "Finalizado",
+        dot: false,
+      },
+      pendiente: {
+        variant: "warning" as const,
+        label: "Pendiente",
+        dot: true,
+      },
     };
-    return variants[status] || "default";
+    return configs[status as keyof typeof configs] || configs.pendiente;
   };
+
+  const statusConfig = getStatusConfig(eventCategory.status);
 
   const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
   const isTimedSport =
@@ -69,18 +96,23 @@ export function CategoryDetailLayout() {
     sportName.includes("atletismo") ||
     sportName.includes("ciclismo");
 
+  const isTeam = eventCategory.category?.type === "equipo";
+  const participantsCount = eventCategory.registrations?.length || 0;
+  const sportIconUrl = eventCategory.category?.sport?.iconUrl;
+  const sportImage = sportIconUrl ? getImageUrl(sportIconUrl) : null;
+
   const tabs = [
     {
       label: "Inscripciones",
       to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}`,
-      icon: <UserPlus />,
+      icon: <UserPlus className="h-4 w-4" />,
     },
     ...(!isTimedSport
       ? [
           {
             label: "Programación",
             to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/schedule`,
-            icon: <Calendar />,
+            icon: <Calendar className="h-4 w-4" />,
           },
         ]
       : []),
@@ -89,64 +121,114 @@ export function CategoryDetailLayout() {
           {
             label: "Registrar Tiempos",
             to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/results`,
-            icon: <Timer />,
+            icon: <Timer className="h-4 w-4" />,
           },
         ]
       : []),
     {
       label: "Posiciones",
       to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/standings`,
-      icon: <BarChart3 />,
+      icon: <BarChart3 className="h-4 w-4" />,
     },
     {
       label: "Instituciones",
       to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/institutions`,
-      icon: <Building2 />,
+      icon: <Building2 className="h-4 w-4" />,
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <Button
-          variant="ghost"
-          onClick={() => navigate(`/admin/events/${eventId}/sports/${sportId}`)}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver a Categorías
-        </Button>
+    <div className="space-y-6 animate-in">
+      {/* PageHeader con botón de volver */}
+      <PageHeader
+        title={eventCategory.category?.name || "Categoría"}
+        showBack
+        onBack={() => navigate(`/admin/events/${eventId}/sports/${sportId}`)}
+      />
 
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {eventCategory.category?.name}
-              </h2>
-              <Badge variant={getStatusBadgeVariant(eventCategory.status)}>
-                {eventCategory.status === "pendiente" && "Pendiente"}
-                {eventCategory.status === "en_curso" && "En Curso"}
-                {eventCategory.status === "finalizado" && "Finalizado"}
+      {/* Header de la Categoría */}
+      <Card className="p-6">
+        <div className="flex items-center gap-6">
+          {/* Icono del deporte */}
+          <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md bg-slate-50 flex items-center justify-center flex-shrink-0">
+            {sportImage ? (
+              <img
+                src={sportImage}
+                alt={eventCategory.category?.sport?.name}
+                className="w-full h-full object-contain p-3"
+                onError={(e) => {
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    e.currentTarget.style.display = "none";
+                    const placeholder = document.createElement("div");
+                    placeholder.className =
+                      "flex items-center justify-center w-full h-full";
+                    placeholder.innerHTML = `<svg class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>`;
+                    parent.appendChild(placeholder);
+                  }
+                }}
+              />
+            ) : (
+              <Trophy className="h-8 w-8 text-slate-400" />
+            )}
+          </div>
+
+          {/* Información */}
+          <div className="flex-1">
+            {/* Badge de estado */}
+            <div className="flex items-center gap-3 mb-2">
+              <Badge variant={statusConfig.variant} dot={statusConfig.dot}>
+                {statusConfig.label}
               </Badge>
             </div>
-            <p className="text-gray-600 mt-1">
-              {eventCategory.category?.sport?.name} •{" "}
-              {eventCategory.category?.type === "equipo"
-                ? "Equipo"
-                : "Individual"}
-            </p>
+
+            {/* Metadata */}
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <div className="flex items-center gap-2 text-slate-600">
+                <Trophy className="h-4 w-4 text-blue-600" />
+                <span className="font-medium">
+                  {eventCategory.category?.sport?.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                {isTeam ? (
+                  <>
+                    <Users className="h-4 w-4 text-purple-600" />
+                    <span className="font-medium">Equipo</span>
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4 text-purple-600" />
+                    <span className="font-medium">Individual</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <UserPlus className="h-4 w-4 text-emerald-600" />
+                <span className="font-medium">
+                  {participantsCount}{" "}
+                  {participantsCount === 1 ? "inscrito" : "inscritos"}
+                </span>
+              </div>
+            </div>
+
+            {/* Descripción si existe */}
+            {eventCategory.category?.description && (
+              <p className="text-sm text-slate-600 mt-3 max-w-2xl">
+                {eventCategory.category.description}
+              </p>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <Tabs tabs={tabs} />
+        {/* Tabs de navegación */}
+        <div className="mt-6 pt-6 border-t border-slate-200">
+          <Tabs tabs={tabs} />
+        </div>
+      </Card>
 
-      {/* Contenido */}
-      <div className="py-4">
-        <Outlet context={{ eventCategory }} />
-      </div>
+      {/* Contenido (Outlet) */}
+      <Outlet context={{ eventCategory }} />
     </div>
   );
 }

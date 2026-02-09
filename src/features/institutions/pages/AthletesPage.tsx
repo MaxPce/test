@@ -130,7 +130,7 @@ export function AthletesPage() {
       {/* Header profesional */}
       <PageHeader
         title="Gestión de Atletas"
-        description="Administre el registro de deportistas y participantes"
+        
         actions={
           <Button
             onClick={() => setIsCreateModalOpen(true)}

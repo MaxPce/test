@@ -37,10 +37,7 @@ export function CategoryInstitutionsPage() {
         <h3 className="text-xl font-semibold text-gray-900">
           Instituciones Participantes
         </h3>
-        <p className="text-gray-600 mt-1">
-          {institutions.length} institución
-          {institutions.length !== 1 ? "es" : ""} participando en esta categoría
-        </p>
+        
       </div>
 
       {institutions.length === 0 ? (
