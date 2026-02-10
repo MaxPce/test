@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Trophy } from "lucide-react";
+import { Trophy, Users } from "lucide-react";
 import { useMatches } from "@/features/competitions/api/matches.queries";
 import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries";
 import { MatchDetailsModal } from "./MatchDetailsModal";
@@ -52,28 +52,17 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
   }
 
   const realMatches = matches.filter((match) => {
-    if (match.phaseId !== phaseId) return false;
-    
-    if (!match.participations || match.participations.length === 0) return false;
-    
-    if (match.participations.length === 1) {
-      const p1 = match.participations[0]?.registration;
-      return p1 && (p1.athlete || p1.team);
-    }
-    
-    const p1 = match.participations[0]?.registration;
-    const p2 = match.participations[1]?.registration;
-    
-    return p1 && p2 && (p1.athlete || p1.team) && (p2.athlete || p2.team);
+    return match.phaseId === phaseId;
   });
 
   if (realMatches.length === 0) {
     return (
       <Card>
         <CardBody className="text-center py-12 text-gray-500">
-          <p className="font-medium">No hay combates definidos aún</p>
+          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <p className="font-medium text-lg">No hay combates definidos aún</p>
           <p className="text-sm mt-1">
-            Los combates aparecerán cuando se asignen los participantes
+            Genera el bracket o crea combates manualmente para comenzar
           </p>
         </CardBody>
       </Card>
@@ -229,6 +218,7 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
                 {final && (
                   <div>
                     <h3 className="text-center font-bold text-yellow-600 mb-2 flex items-center justify-center gap-2">
+                      <Trophy className="w-5 h-5" />
                       FINAL
                     </h3>
                     <MatchCard
@@ -331,8 +321,12 @@ function MatchCard({
     shouldFetchTT ? match.matchId : 0,
   );
 
-  const p1Data = match.participations?.[0]?.registration;
-  const p2Data = match.participations?.[1]?.registration;
+  const participations = match.participations || [];
+  const p1Data = participations[0]?.registration;
+  const p2Data = participations[1]?.registration;
+
+  const isEmpty = participations.length === 0;
+  const hasOnlyOne = participations.length === 1 && p1Data;
 
   const roundName = (match.round || "").toLowerCase();
   const isFirstRound = 
@@ -342,21 +336,24 @@ function MatchCard({
     roundName.includes("16avo") ||
     roundName.includes("8vo");
 
-  const isRealBye = match.participations?.length === 1 && isFirstRound;
-  const isWaitingForWinner = !p2Data && !isRealBye;
+  const isRealBye = hasOnlyOne && isFirstRound;
+  const isWaitingForWinner = hasOnlyOne && !isFirstRound;
   const isByeProcessed = isRealBye && match.status === "finalizado";
 
-  const name1 = p1Data?.athlete?.name || p1Data?.team?.name || "Por definir";
-  const name2 = isRealBye 
-    ? "BYE" 
-    : isWaitingForWinner 
-      ? "Por definir" 
-      : p2Data?.athlete?.name || p2Data?.team?.name || "Por definir";
+  const name1 = isEmpty 
+    ? "Por definir" 
+    : p1Data?.athlete?.name || p1Data?.team?.name || "Por definir";
+  
+  const name2 = isEmpty
+    ? "Por definir"
+    : isRealBye 
+      ? "BYE" 
+      : isWaitingForWinner 
+        ? "Por definir" 
+        : p2Data?.athlete?.name || p2Data?.team?.name || "Por definir";
 
-  const institution1 =
-    p1Data?.athlete?.institution || p1Data?.team?.institution;
-  const institution2 =
-    p2Data?.athlete?.institution || p2Data?.team?.institution;
+  const institution1 = p1Data?.athlete?.institution || p1Data?.team?.institution;
+  const institution2 = p2Data?.athlete?.institution || p2Data?.team?.institution;
 
   const logo1 = institution1?.logoUrl;
   const logo2 = institution2?.logoUrl;
@@ -447,8 +444,8 @@ function MatchCard({
   const isP1Winner = winnerId === p1Data?.registrationId;
   const isP2Winner = winnerId === p2Data?.registrationId;
 
-  const p1Corner = match.participations?.[0]?.corner;
-  const p2Corner = match.participations?.[1]?.corner;
+  const p1Corner = participations[0]?.corner;
+  const p2Corner = participations[1]?.corner;
 
   const sizeClasses = {
     sm: "w-64",
@@ -480,26 +477,33 @@ function MatchCard({
       className={`${sizeClasses[size]} border-2 ${
         isFinal
           ? "border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50"
-          : "border-gray-300 bg-white"
-      } rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer hover:scale-105`}
+          : isEmpty
+            ? "border-dashed border-gray-300 bg-gray-50"
+            : "border-gray-300 bg-white"
+      } rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer hover:scale-105 ${
+        isEmpty ? "opacity-75" : ""
+      }`}
     >
+      {/* Participant 1 */}
       <div
         className={`flex items-center justify-between p-3 ${
-          isP1Winner
-            ? "bg-green-100 border-b-2 border-green-500"
-            : p1Corner === "blue"
-              ? "bg-blue-50 border-b-2 border-blue-300"
-              : "bg-gray-50 border-b-2 border-gray-300"
+          isEmpty
+            ? "bg-gray-100 border-b-2 border-gray-200"
+            : isP1Winner
+              ? "bg-green-100 border-b-2 border-green-500"
+              : p1Corner === "blue"
+                ? "bg-blue-50 border-b-2 border-blue-300"
+                : "bg-gray-50 border-b-2 border-gray-300"
         } rounded-t-xl`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {p1Data?.seedNumber && (
+          {!isEmpty && p1Data?.seedNumber && (
             <div className="flex-shrink-0 w-6 h-6 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center text-xs font-bold">
               {p1Data.seedNumber}
             </div>
           )}
           
-          {logo1 && (
+          {!isEmpty && logo1 && (
             <img
               src={getImageUrl(logo1)}
               alt={institution1?.name || ""}
@@ -512,11 +516,13 @@ function MatchCard({
 
           <div className="min-w-0 flex-1">
             <p
-              className={`font-bold text-gray-900 truncate ${textSizeClasses[size]}`}
+              className={`font-bold ${
+                isEmpty ? "text-gray-400 italic" : "text-gray-900"
+              } truncate ${textSizeClasses[size]}`}
             >
               {name1}
             </p>
-            {institution1 && (
+            {!isEmpty && institution1 && (
               <p className="text-xs text-gray-600 truncate">
                 {institution1.abrev || institution1.name}
               </p>
@@ -526,19 +532,22 @@ function MatchCard({
         <span className={getScoreClass(score1, isP1Winner)}>{score1}</span>
       </div>
 
+      {/* Participant 2 */}
       <div
         className={`flex items-center justify-between p-3 ${
-          isByeProcessed
-            ? "bg-green-50"
-            : isRealBye
-              ? "bg-gray-100"
-              : isWaitingForWinner
-                ? "bg-blue-50"
-                : isP2Winner
-                  ? "bg-green-100"
-                  : p2Corner === "white"
-                    ? "bg-gray-50"
-                    : "bg-white"
+          isEmpty
+            ? "bg-gray-100"
+            : isByeProcessed
+              ? "bg-green-50"
+              : isRealBye
+                ? "bg-gray-100"
+                : isWaitingForWinner
+                  ? "bg-blue-50"
+                  : isP2Winner
+                    ? "bg-green-100"
+                    : p2Corner === "white"
+                      ? "bg-gray-50"
+                      : "bg-white"
         } rounded-b-xl`}
       >
         {isByeProcessed ? (
@@ -550,13 +559,13 @@ function MatchCard({
         ) : (
           <>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {!isRealBye && !isWaitingForWinner && p2Data?.seedNumber && (
+              {!isEmpty && !isRealBye && !isWaitingForWinner && p2Data?.seedNumber && (
                 <div className="flex-shrink-0 w-6 h-6 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center text-xs font-bold">
                   {p2Data.seedNumber}
                 </div>
               )}
               
-              {!isRealBye && !isWaitingForWinner && logo2 && (
+              {!isEmpty && !isRealBye && !isWaitingForWinner && logo2 && (
                 <img
                   src={getImageUrl(logo2)}
                   alt={institution2?.name || ""}
@@ -570,29 +579,32 @@ function MatchCard({
               <div className="min-w-0 flex-1">
                 <p
                   className={`font-bold ${
-                    isRealBye 
-                      ? 'text-gray-400 italic' 
-                      : isWaitingForWinner
-                        ? 'text-blue-500 italic'
-                        : 'text-gray-900'
+                    isEmpty
+                      ? "text-gray-400 italic"
+                      : isRealBye 
+                        ? 'text-gray-400 italic' 
+                        : isWaitingForWinner
+                          ? 'text-blue-500 italic'
+                          : 'text-gray-900'
                   } truncate ${textSizeClasses[size]}`}
                 >
                   {name2}
                 </p>
-                {!isRealBye && !isWaitingForWinner && institution2 && (
+                {!isEmpty && !isRealBye && !isWaitingForWinner && institution2 && (
                   <p className="text-xs text-gray-600 truncate">
                     {institution2.abrev || institution2.name}
                   </p>
                 )}
               </div>
             </div>
-            {!isRealBye && !isWaitingForWinner && (
+            {!isEmpty && !isRealBye && !isWaitingForWinner && (
               <span className={getScoreClass(score2, isP2Winner)}>{score2}</span>
             )}
           </>
         )}
       </div>
 
+      {/* Footer */}
       <div className="px-3 py-2 bg-gray-50 rounded-b-xl border-t">
         <div className="flex items-center justify-between">
           <Badge
@@ -609,10 +621,16 @@ function MatchCard({
             {match.status === "en_curso" && "En Curso"}
             {match.status === "programado" && "Programado"}
           </Badge>
-          {match.platformNumber && (
+          {match.platformNumber ? (
             <span className="text-xs text-gray-500">
               P{match.platformNumber}
             </span>
+          ) : (
+            isEmpty && (
+              <span className="text-xs text-gray-400 italic">
+                Sin asignar
+              </span>
+            )
           )}
         </div>
       </div>

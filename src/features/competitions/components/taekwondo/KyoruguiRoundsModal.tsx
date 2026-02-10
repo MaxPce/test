@@ -57,7 +57,6 @@ export const KyoruguiRoundsModal = ({ match, isOpen, onClose }: Props) => {
 
     return (
       athlete.name ||
-      `${athlete.firstName || ""} ${athlete.lastName || ""}`.trim() ||
       `Atleta #${athlete.athleteId}`
     );
   };

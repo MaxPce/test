@@ -400,7 +400,7 @@ export function CategorySchedulePage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsGenerateBracketModalOpen(true)}
-                          icon={<Zap className="h-4 w-4" />}
+                          
                         >
                           Generar Bracket
                         </Button>
