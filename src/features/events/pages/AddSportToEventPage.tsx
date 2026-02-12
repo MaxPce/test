@@ -93,7 +93,7 @@ export function AddSportToEventPage() {
       {/* Header */}
       <PageHeader
         title="Agregar Deporte al Evento"
-        description="Selecciona un deporte y sus categorías para agregar al evento"
+        
         showBack
         onBack={() => navigate(`/admin/events/${eventId}/sports`, { replace: true })}
       />

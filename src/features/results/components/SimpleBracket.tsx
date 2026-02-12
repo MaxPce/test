@@ -405,7 +405,7 @@ function MatchCard({
     }
 
     // Sin puntaje
-    if (score === null || score === undefined) return "-";
+    if (score === null || score === undefined) return "";
 
     // Sin configuración - entero por defecto
     if (!sportConfig) {
@@ -425,7 +425,7 @@ function MatchCard({
 
     // Judo - Texto especial o entero
     if (sportType === "judo") {
-      if (score === 10 || score === "10") return "Ippon";
+      if (score === 10 || score === "10") return "10 (Ippon)";
       const numScore = parseFloat(score);
       if (isNaN(numScore)) return String(score);
       return String(Math.floor(numScore));

@@ -1,6 +1,7 @@
-import { X, Trophy, Clock, Calendar, MapPin, Circle, Award, Edit3, PlusCircle } from "lucide-react";
+import { X, Trophy, Clock, Calendar, MapPin, Circle, Award, Edit3, PlusCircle, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useKyoruguiRounds } from "../../api/taekwondo.queries";
+import { useAdvanceWinner } from "../../api/bracket.mutations";
 import { KyoruguiRoundsModal } from "./KyoruguiRoundsModal";
 import type { KyoruguiMatch } from "../../types/taekwondo.types";
 import { getImageUrl } from "@/lib/utils/imageUrl";
@@ -13,7 +14,9 @@ interface Props {
 
 export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
   const { data: rounds, isLoading } = useKyoruguiRounds(match.matchId);
-  // 🆕 Estado para controlar el modal de registro de puntajes
+  const advanceWinnerMutation = useAdvanceWinner();
+  
+  // Estado para controlar el modal de registro de puntajes
   const [isRoundsModalOpen, setIsRoundsModalOpen] = useState(false);
 
   if (!isOpen) return null;
@@ -66,9 +69,34 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
 
   const { p1Rounds, p2Rounds } = calculateRoundsWon();
 
-  // 🆕 Verificar si el match tiene ambos participantes para poder registrar puntaje
+  // Verificar si el match tiene ambos participantes para poder registrar puntaje
   const canRegisterScore = participant1 && participant2;
   const hasRounds = rounds && rounds.length > 0;
+  
+  // 🆕 Verificar si solo hay 1 participante para poder pasar automáticamente
+  const participations = match.participations || [];
+  const hasOnlyOneParticipant = participations.length === 1;
+  const canAdvance = hasOnlyOneParticipant && match.status !== "finalizado";
+
+  // 🆕 Función para avanzar participante automáticamente
+  const handleAdvanceParticipant = async () => {
+    if (!participations[0]) return;
+    
+    const participantName = participations[0].registration?.athlete?.name || "este participante";
+    
+    if (confirm(`¿Avanzar a ${participantName} automáticamente?`)) {
+      try {
+        await advanceWinnerMutation.mutateAsync({
+          matchId: match.matchId,
+          winnerRegistrationId: participations[0].registrationId!,
+        });
+        // El modal se cerrará automáticamente cuando se actualice la data
+      } catch (error) {
+        console.error("Error al avanzar participante:", error);
+        alert("Hubo un error al avanzar al participante. Por favor intenta nuevamente.");
+      }
+    }
+  };
 
   return (
     <>
@@ -90,8 +118,23 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
               </div>
             </div>
             
-            {/* 🆕 Botón de registro de puntajes en el header */}
+            {/* Botones de acción en el header */}
             <div className="flex items-center gap-2">
+              {canAdvance && (
+                <button
+                  onClick={handleAdvanceParticipant}
+                  disabled={advanceWinnerMutation.isPending}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 disabled:cursor-not-allowed rounded-lg transition-colors font-medium text-sm backdrop-blur-sm shadow-lg"
+                  title="Avanzar participante a la siguiente ronda"
+                >
+                  
+                  <span className="hidden sm:inline">
+                    {advanceWinnerMutation.isPending ? "Procesando..." : "Pasar Participante"}
+                  </span>
+                </button>
+              )}
+              
+              {/* Botón "Registrar/Editar Puntajes" */}
               {canRegisterScore && (
                 <button
                   onClick={() => setIsRoundsModalOpen(true)}
@@ -100,12 +143,10 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
                 >
                   {hasRounds ? (
                     <>
-                      <Edit3 className="w-4 h-4" />
                       <span className="hidden sm:inline">Editar Puntajes</span>
                     </>
                   ) : (
                     <>
-                      <PlusCircle className="w-4 h-4" />
                       <span className="hidden sm:inline">Registrar Puntajes</span>
                     </>
                   )}
@@ -151,6 +192,19 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
               </span>
             </div>
           </div>
+
+          
+          {canAdvance && (
+            <div className="mx-6 mt-4 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
+              <div className="flex items-start gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">
+                    Participante sin oponente
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Participants */}
           <div className="p-6">
@@ -298,8 +352,6 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
               </div>
             </div>
 
-            
-
             {/* Rounds Details */}
             <div className="bg-gray-50 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
@@ -307,8 +359,6 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
                   <Circle className="w-5 h-5" />
                   Detalle de Rounds
                 </h3>
-                
-                
               </div>
 
               {isLoading ? (
@@ -394,9 +444,7 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
           </div>
 
           {/* Footer */}
-          <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-between items-center rounded-b-xl">
-            
-            
+          <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end items-center rounded-b-xl">
             <button
               onClick={onClose}
               className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
@@ -407,7 +455,7 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
         </div>
       </div>
 
-      {/* 🆕 Modal de registro de puntajes */}
+      {/* Modal de registro de puntajes */}
       {canRegisterScore && (
         <KyoruguiRoundsModal
           isOpen={isRoundsModalOpen}

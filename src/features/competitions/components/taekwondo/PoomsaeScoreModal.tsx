@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 interface Props {
   match: Match;
-  phase: Phase;
+  phase?: Phase; // 🔧 Hacer opcional
   isOpen: boolean;
   onClose: () => void;
 }
@@ -87,7 +87,9 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
       return;
     }
 
-    if (phase.type === "eliminacion") {
+    // 🔧 Verificar si phase existe antes de acceder a sus propiedades
+    // Si no existe phase o es de tipo eliminación, proceder
+    if (!phase || phase.type === "eliminacion") {
       advanceWinnerMutation.mutate(
         {
           matchId: match.matchId,
@@ -113,6 +115,9 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
           },
         },
       );
+    } else {
+      // 🔧 Manejar otros tipos de fase si es necesario
+      toast.warning(`Tipo de fase "${phase.type}" no soportado aún`);
     }
   };
 
@@ -143,7 +148,6 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
 
     return name;
   };
-
 
   if (!match.participations || match.participations.length < 2) {
     return (

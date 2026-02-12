@@ -1,14 +1,23 @@
-import { X, Trophy, Calendar, Clock, MapPin, Users, User } from "lucide-react";
-import type { KyoruguiMatch } from "../../types/taekwondo.types";
+import { X, Trophy, Calendar, Clock, MapPin, Users, User, TrendingUp, Edit3, PlusCircle } from "lucide-react";
+import { useState } from "react";
+import { useAdvanceWinner } from "../../api/bracket.mutations";
+import { PoomsaeScoreModal } from "./PoomsaeScoreModal";
+import type { Match } from "../../types"; // 🔧 Cambiado a Match
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface Props {
-  match: KyoruguiMatch;
+  match: Match; // 🔧 Cambiado de KyoruguiMatch a Match
   isOpen: boolean;
   onClose: () => void;
+  phase?: any; // Opcional, para pasarlo al PoomsaeScoreModal
 }
 
-export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
+export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose, phase }: Props) => {
+  const advanceWinnerMutation = useAdvanceWinner();
+  
+  // Estado para controlar el modal de registro de puntajes
+  const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
+  
   if (!isOpen) return null;
 
   const participant1 = match.participations?.[0];
@@ -73,7 +82,37 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
 
   const hasScores = p1Total > 0 || p2Total > 0;
 
-  if (!match.participations || match.participations.length < 2) {
+  // Verificar si solo hay 1 participante para poder pasar automáticamente
+  const participations = match.participations || [];
+  const hasOnlyOneParticipant = participations.length === 1;
+  const canAdvance = hasOnlyOneParticipant && match.status !== "finalizado";
+
+  // Verificar si el match tiene ambos participantes para poder registrar puntaje
+  const canRegisterScore = participant1 && participant2;
+
+  // Función para avanzar participante automáticamente
+  const handleAdvanceParticipant = async () => {
+    if (!participations[0]) return;
+    
+    const participantName = isTeam 
+      ? participations[0].registration?.team?.name 
+      : participations[0].registration?.athlete?.name;
+    const displayName = participantName || (isTeam ? "este equipo" : "este participante");
+    
+    if (confirm(`¿Avanzar a ${displayName} automáticamente?`)) {
+      try {
+        await advanceWinnerMutation.mutateAsync({
+          matchId: match.matchId,
+          winnerRegistrationId: participations[0].registrationId!,
+        });
+      } catch (error) {
+        console.error("Error al avanzar participante:", error);
+        alert("Hubo un error al avanzar al participante. Por favor intenta nuevamente.");
+      }
+    }
+  };
+
+  if (!match.participations || match.participations.length === 0) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -102,6 +141,33 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
     participant: typeof participant1;
     color: "indigo" | "purple";
   }) => {
+    if (!participant) {
+      // Mostrar tarjeta vacía para TBD
+      const colorClasses = {
+        indigo: {
+          border: "border-gray-300",
+          bg: "bg-gray-50",
+        },
+        purple: {
+          border: "border-gray-300",
+          bg: "bg-gray-50",
+        },
+      };
+      const classes = colorClasses[color];
+
+      return (
+        <div className={`border-2 ${classes.border} ${classes.bg} rounded-lg p-6 flex items-center justify-center`}>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-3">
+              ?
+            </div>
+            <p className="text-xl font-bold text-gray-400">TBD</p>
+            <p className="text-sm text-gray-500">Sin asignar</p>
+          </div>
+        </div>
+      );
+    }
+
     const isWinnerCard = isWinner(participant?.participationId || 0);
     const isParticipant1 = participant === participant1;
     const accuracy = isParticipant1 ? p1Accuracy : p2Accuracy;
@@ -242,114 +308,176 @@ export const PoomsaeMatchDetailsModal = ({ match, isOpen, onClose }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between z-10 rounded-t-xl">
-          <div>
-            <div className="flex items-center gap-3">
-              <Trophy className="w-6 h-6" />
-              <div>
-                <h2 className="text-2xl font-bold">
-                  Match #{match.matchNumber}
-                </h2>
-                <p className="text-sm text-indigo-100 flex items-center gap-2">
-                  {match.round} • Poomsae •{" "}
-                  {isTeam ? (
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+          {/* Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between z-10 rounded-t-xl">
+            <div>
+              <div className="flex items-center gap-3">
+                <Trophy className="w-6 h-6" />
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    Match #{match.matchNumber}
+                  </h2>
+                  <p className="text-sm text-indigo-100 flex items-center gap-2">
+                    {match.round} • Poomsae •{" "}
+                    {isTeam ? (
+                      <>
+                        <Users className="h-3.5 w-3.5" />
+                        Equipo
+                      </>
+                    ) : (
+                      <>
+                        <User className="h-3.5 w-3.5" />
+                        Individual
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Botones de acción en el header */}
+            <div className="flex items-center gap-2">
+              {/* Botón "Pasar Participante" */}
+              {canAdvance && (
+                <button
+                  onClick={handleAdvanceParticipant}
+                  disabled={advanceWinnerMutation.isPending}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 disabled:cursor-not-allowed rounded-lg transition-colors font-medium text-sm backdrop-blur-sm shadow-lg"
+                  title="Avanzar participante a la siguiente ronda"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {advanceWinnerMutation.isPending ? "Procesando..." : "Pasar Participante"}
+                  </span>
+                </button>
+              )}
+              
+              {/* Botón "Registrar/Editar Puntajes" */}
+              {canRegisterScore && (
+                <button
+                  onClick={() => setIsScoreModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors font-medium text-sm backdrop-blur-sm"
+                  title={hasScores ? "Editar puntajes" : "Registrar puntajes"}
+                >
+                  {hasScores ? (
                     <>
-                      <Users className="h-3.5 w-3.5" />
-                      Equipo
+                      <Edit3 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Editar Puntajes</span>
                     </>
                   ) : (
                     <>
-                      <User className="h-3.5 w-3.5" />
-                      Individual
+                      <PlusCircle className="w-4 h-4" />
+                      <span className="hidden sm:inline">Registrar Puntajes</span>
                     </>
                   )}
-                </p>
-              </div>
+                </button>
+              )}
+              
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
 
-        {/* Match Info */}
-        <div className="px-6 py-4 bg-gray-50 border-b grid grid-cols-3 gap-4 text-sm">
-          <div className="flex items-center gap-2 text-gray-600">
-            <Calendar className="w-4 h-4" />
-            <span>
-              {match.scheduledTime
-                ? new Date(match.scheduledTime).toLocaleDateString("es-ES")
-                : "Fecha pendiente"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <Clock className="w-4 h-4" />
-            <span>
-              {match.scheduledTime
-                ? new Date(match.scheduledTime).toLocaleTimeString("es-ES", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "Hora pendiente"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <MapPin className="w-4 h-4" />
-            <span>
-              {match.platformNumber
-                ? `Plataforma ${match.platformNumber}`
-                : "Sin asignar"}
-            </span>
-          </div>
-        </div>
-
-        {/* Participants */}
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <ParticipantCard participant={participant1} color="indigo" />
-            <ParticipantCard participant={participant2} color="purple" />
+          {/* Match Info */}
+          <div className="px-6 py-4 bg-gray-50 border-b grid grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center gap-2 text-gray-600">
+              <Calendar className="w-4 h-4" />
+              <span>
+                {match.scheduledTime
+                  ? new Date(match.scheduledTime).toLocaleDateString("es-ES")
+                  : "Fecha pendiente"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Clock className="w-4 h-4" />
+              <span>
+                {match.scheduledTime
+                  ? new Date(match.scheduledTime).toLocaleTimeString("es-ES", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Hora pendiente"}
+              </span>
+            </div>
+            
           </div>
 
-          {!hasScores && (
-            <div className="bg-gray-50 rounded-lg p-6 text-center">
-              <p className="text-gray-500">No hay puntajes registrados aún</p>
+          {/* Banner para participante unico */}
+          {canAdvance && (
+            <div className="mx-6 mt-4 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
+              <div className="flex items-start gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">
+                    {isTeam ? "Equipo sin oponente" : "Participante sin oponente"}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Status Badge */}
-          <div className="mt-6 text-center">
-            <span
-              className={`inline-block px-4 py-2 rounded-full font-semibold ${
-                match.status === "finalizado"
-                  ? "bg-green-100 text-green-800"
-                  : match.status === "en_curso"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-gray-100 text-gray-800"
-              }`}
+          {/* Participants */}
+          <div className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <ParticipantCard participant={participant1} color="indigo" />
+              <ParticipantCard participant={participant2} color="purple" />
+            </div>
+
+            {!hasScores && participations.length === 2 && (
+              <div className="bg-gray-50 rounded-lg p-6 text-center">
+                <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="font-medium text-gray-700">No hay puntajes registrados aún</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {canRegisterScore 
+                    ? "Usa el botón de arriba para comenzar a registrar"
+                    : "Se necesitan ambos participantes para registrar puntajes"}
+                </p>
+              </div>
+            )}
+
+            {/* Status Badge */}
+            <div className="mt-6 text-center">
+              <span
+                className={`inline-block px-4 py-2 rounded-full font-semibold ${
+                  match.status === "finalizado"
+                    ? "bg-green-100 text-green-800"
+                    : match.status === "en_curso"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {match.status === "programado" && "Programado"}
+                {match.status === "en_curso" && "En Curso"}
+                {match.status === "finalizado" && "Finalizado"}
+              </span>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end rounded-b-xl">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
             >
-              {match.status === "programado" && "Programado"}
-              {match.status === "en_curso" && "En Curso"}
-              {match.status === "finalizado" && "Finalizado"}
-            </span>
+              Cerrar
+            </button>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
-          >
-            Cerrar
-          </button>
-        </div>
       </div>
-    </div>
+
+      {/* Modal de registro de puntajes */}
+      <PoomsaeScoreModal
+        isOpen={isScoreModalOpen}
+        onClose={() => setIsScoreModalOpen(false)}
+        match={match}
+        phase={phase}
+      />
+    </>
   );
 };

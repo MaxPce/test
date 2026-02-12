@@ -535,43 +535,28 @@ export function CategorySchedulePage() {
                               </div>
 
                               {/* Puntajes */}
-                              {(getTaekwondoType() === "poomsae" ||
-                                getTaekwondoType() === "kyorugui" ||
+                              {(getTaekwondoType() === "poomsae" || 
+                                getTaekwondoType() === "kyorugui" || 
                                 isJudoMatch) &&
-                                (match.participant1Score !== null ||
-                                  match.participant2Score !== null) && (
-                                  <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                                    <p className="text-sm font-semibold text-slate-700 mb-1">
-                                      Puntaje Final
+                                match.participant1Score !== null &&
+                                match.participant2Score !== null && (
+                                <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                                  <p className="text-sm font-semibold text-slate-700 mb-1">
+                                    Puntaje Final
+                                  </p>
+                                  <p className="text-2xl font-bold text-slate-900">
+                                    {getTaekwondoType() === "poomsae" 
+                                      ? `${Number(match.participant1Score).toFixed(2)} - ${Number(match.participant2Score).toFixed(2)}`
+                                      : `${Math.floor(Number(match.participant1Score))} - ${Math.floor(Number(match.participant2Score))}`
+                                    }
+                                  </p>
+                                  {getTaekwondoType() === "poomsae" && match.participant1Accuracy !== null && (
+                                    <p className="text-xs text-slate-600 mt-1">
+                                      {Number(match.participant1Accuracy).toFixed(2)} + {Number(match.participant1Presentation).toFixed(2)} - {Number(match.participant2Accuracy).toFixed(2)} + {Number(match.participant2Presentation).toFixed(2)}
                                     </p>
-                                    <p className="text-2xl font-bold text-slate-900">
-                                      {match.participant1Score ?? "-"} -{" "}
-                                      {match.participant2Score ?? "-"}
-                                    </p>
-                                    {getTaekwondoType() === "poomsae" &&
-                                      match.participant1Accuracy !== null && (
-                                        <p className="text-xs text-slate-600 mt-1">
-                                          (
-                                          {Number(
-                                            match.participant1Accuracy
-                                          ).toFixed(2)}
-                                          +
-                                          {Number(
-                                            match.participant1Presentation
-                                          ).toFixed(2)}
-                                          ) - (
-                                          {Number(
-                                            match.participant2Accuracy
-                                          ).toFixed(2)}
-                                          +
-                                          {Number(
-                                            match.participant2Presentation
-                                          ).toFixed(2)}
-                                          )
-                                        </p>
-                                      )}
-                                  </div>
-                                )}
+                                  )}
+                                </div>
+                            )}  
                             </div>
 
                             {/* Botón eliminar */}
