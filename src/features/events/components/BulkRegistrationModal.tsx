@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
-import { Search, Filter, X } from "lucide-react";
-import { useAthletes } from "@/features/institutions/api/athletes.queries";
+import { Search, Filter, X, AlertCircle } from "lucide-react";
+import { useAccreditedAthletes } from "@/features/institutions/api/sismaster.queries";
 import { useBulkRegistration } from "../api/registrations.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { EventCategory } from "../types";
@@ -15,12 +14,16 @@ interface BulkRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventCategory: EventCategory;
+  eventId: number;
+  sportId: number;
 }
 
 export function BulkRegistrationModal({
   isOpen,
   onClose,
   eventCategory,
+  eventId,
+  sportId,
 }: BulkRegistrationModalProps) {
   const [selectedAthletes, setSelectedAthletes] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,35 +31,56 @@ export function BulkRegistrationModal({
   const [selectedGender, setSelectedGender] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: athletes = [], isLoading } = useAthletes();
+  // Obtener atletas acreditados desde sismaster
+  const {
+    data: athletesFromSismaster = [],
+    isLoading,
+    error,
+  } = useAccreditedAthletes(
+    {
+      idevent: eventId,
+      idsport: sportId,
+      gender:
+        selectedGender !== "all" &&
+        (selectedGender === "M" || selectedGender === "F")
+          ? selectedGender
+          : undefined,
+    },
+    isOpen, // Solo cargar cuando el modal está abierto
+  );
+
   const bulkMutation = useBulkRegistration();
 
-  // Atletas ya inscritos
+  // Atletas ya inscritos (por sus IDs de sismaster)
   const registeredAthleteIds =
-    eventCategory.registrations?.map((r) => r.athleteId).filter(Boolean) || [];
+    eventCategory.registrations
+      ?.map((r) => r.external_athlete_id)
+      .filter(Boolean) || [];
 
   // Obtener lista única de instituciones
   const institutions = useMemo(() => {
     const uniqueInstitutions = Array.from(
-      new Set(athletes.map((a) => a.institution?.name).filter(Boolean))
+      new Set(
+        athletesFromSismaster.map((a) => a.institution_name).filter(Boolean),
+      ),
     ).sort();
     return uniqueInstitutions;
-  }, [athletes]);
+  }, [athletesFromSismaster]);
 
   // Filtrado de atletas
   const filteredAthletes = useMemo(() => {
-    let filtered = athletes;
+    let filtered = athletesFromSismaster;
 
     // Filtrar por género de la categoría
     filtered = filtered.filter(
       (athlete) =>
         athlete.gender === eventCategory.category?.gender ||
-        eventCategory.category?.gender === "MIXTO"
+        eventCategory.category?.gender === "MIXTO",
     );
 
     // Excluir ya inscritos
     filtered = filtered.filter(
-      (athlete) => !registeredAthleteIds.includes(athlete.athleteId)
+      (athlete) => !registeredAthleteIds.includes(athlete.idperson),
     );
 
     // Filtrar por búsqueda
@@ -64,39 +88,35 @@ export function BulkRegistrationModal({
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (athlete) =>
-          athlete.name.toLowerCase().includes(search) ||
-          athlete.institution?.name.toLowerCase().includes(search) ||
-          athlete.docNumber?.toLowerCase().includes(search)
+          `${athlete.firstname} ${athlete.lastname}`
+            .toLowerCase()
+            .includes(search) ||
+          athlete.institution_name?.toLowerCase().includes(search) ||
+          athlete.docnumber?.toLowerCase().includes(search),
       );
     }
 
     // Filtrar por institución
     if (selectedInstitution !== "all") {
       filtered = filtered.filter(
-        (athlete) => athlete.institution?.name === selectedInstitution
+        (athlete) => athlete.institution_name === selectedInstitution,
       );
-    }
-
-    // Filtrar por género adicional (si se muestra filtros)
-    if (selectedGender !== "all") {
-      filtered = filtered.filter((athlete) => athlete.gender === selectedGender);
     }
 
     return filtered;
   }, [
-    athletes,
+    athletesFromSismaster,
     eventCategory.category?.gender,
     registeredAthleteIds,
     searchTerm,
     selectedInstitution,
-    selectedGender,
   ]);
 
   const handleToggleAthlete = (athleteId: number) => {
     setSelectedAthletes((prev) =>
       prev.includes(athleteId)
         ? prev.filter((id) => id !== athleteId)
-        : [...prev, athleteId]
+        : [...prev, athleteId],
     );
   };
 
@@ -104,7 +124,7 @@ export function BulkRegistrationModal({
     if (selectedAthletes.length === filteredAthletes.length) {
       setSelectedAthletes([]);
     } else {
-      setSelectedAthletes(filteredAthletes.map((a) => a.athleteId));
+      setSelectedAthletes(filteredAthletes.map((a) => a.idperson));
     }
   };
 
@@ -119,7 +139,7 @@ export function BulkRegistrationModal({
 
     await bulkMutation.mutateAsync({
       eventCategoryId: eventCategory.eventCategoryId,
-      athleteIds: selectedAthletes,
+      external_athlete_ids: selectedAthletes, // Usar IDs de sismaster
     });
 
     setSelectedAthletes([]);
@@ -177,9 +197,23 @@ export function BulkRegistrationModal({
           </div>
         </div>
 
+        {/* Estado de carga o error */}
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <Spinner size="lg" label="Cargando atletas..." />
+            <Spinner size="lg" label="Cargando atletas acreditados..." />
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-red-900">
+                Error al cargar atletas
+              </p>
+              <p className="text-sm text-red-700 mt-1">
+                No se pudieron obtener los atletas acreditados. Verifica que el
+                evento y deporte estén correctamente configurados.
+              </p>
+            </div>
           </div>
         ) : (
           <>
@@ -239,6 +273,14 @@ export function BulkRegistrationModal({
                   </button>
                 </div>
               )}
+
+              {/* Info: Mostrando atletas acreditados */}
+              <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <p className="text-sm text-green-800">
+                  ✓ Mostrando <strong>{athletesFromSismaster.length}</strong>{" "}
+                  atletas acreditados para este evento y deporte
+                </p>
+              </div>
             </div>
 
             {/* Lista de atletas */}
@@ -250,7 +292,7 @@ export function BulkRegistrationModal({
                 <p className="text-sm">
                   {hasActiveFilters
                     ? "Intenta ajustar los filtros de búsqueda"
-                    : "No hay atletas que cumplan los requisitos de esta categoría"}
+                    : "No hay atletas acreditados que cumplan los requisitos de esta categoría"}
                 </p>
               </div>
             ) : (
@@ -271,60 +313,44 @@ export function BulkRegistrationModal({
                 {/* Lista con scroll */}
                 <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
                   {filteredAthletes.map((athlete) => {
-                    const photoUrl = athlete.photoUrl
-                      ? getImageUrl(athlete.photoUrl)
+                    const photoUrl = athlete.photo
+                      ? getImageUrl(athlete.photo)
                       : null;
 
                     return (
                       <label
-                        key={athlete.athleteId}
+                        key={athlete.idperson}
                         className="flex items-center gap-3 p-4 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                       >
                         <input
                           type="checkbox"
-                          checked={selectedAthletes.includes(
-                            athlete.athleteId
-                          )}
-                          onChange={() =>
-                            handleToggleAthlete(athlete.athleteId)
-                          }
+                          checked={selectedAthletes.includes(athlete.idperson)}
+                          onChange={() => handleToggleAthlete(athlete.idperson)}
                           className="h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 flex-shrink-0"
                         />
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {photoUrl ? (
                             <img
                               src={photoUrl}
-                              alt={athlete.name}
+                              alt={`${athlete.firstname} ${athlete.lastname}`}
                               className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 flex-shrink-0"
                               onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = "none";
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  const placeholder =
-                                    document.createElement("div");
-                                  placeholder.className =
-                                    "h-12 w-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg border-2 border-gray-200 flex-shrink-0";
-                                  placeholder.textContent =
-                                    athlete.name.charAt(0);
-                                  parent.appendChild(placeholder);
-                                }
+                                e.currentTarget.style.display = "none";
                               }}
                             />
                           ) : (
                             <div className="h-12 w-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg border-2 border-gray-200 flex-shrink-0">
-                              {athlete.name.charAt(0)}
+                              {athlete.firstname.charAt(0)}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900 truncate">
-                              {athlete.name}
+                              {athlete.firstname} {athlete.lastname}
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               <p className="text-sm text-gray-600 truncate">
-                                {athlete.institution?.name || "Sin institución"}
+                                {athlete.institution_name || "Sin institución"}
                               </p>
-                              
                             </div>
                           </div>
                         </div>

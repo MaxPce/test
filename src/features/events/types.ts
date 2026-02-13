@@ -37,6 +37,8 @@ export interface EventCategory {
   eventCategoryId: number;
   eventId: number;
   categoryId: number;
+  externalEventId?: number; // ✅ NUEVO - ID del evento en sismaster
+  externalSportId?: number; // ✅ NUEVO - ID del deporte en sismaster
   status: "pendiente" | "en_curso" | "finalizado";
   createdAt: string;
   updatedAt: string;
@@ -48,10 +50,14 @@ export interface EventCategory {
 export interface CreateEventCategoryData {
   eventId: number;
   categoryId: number;
-  status: "pendiente" | "en_curso" | "finalizado";
+  externalEventId?: number;
+  externalSportId?: number;
+  status?: "pendiente" | "en_curso" | "finalizado";
 }
 
 export interface UpdateEventCategoryData {
+  externalEventId?: number;
+  externalSportId?: number;
   status?: "pendiente" | "en_curso" | "finalizado";
 }
 
@@ -59,6 +65,8 @@ export interface Registration {
   registrationId: number;
   eventCategoryId: number;
   athleteId?: number;
+  external_athlete_id?: number;
+  external_institution_id?: number;
   teamId?: number;
   seedNumber?: number;
   createdAt: string;
@@ -71,11 +79,13 @@ export interface Registration {
 export interface CreateRegistrationData {
   eventCategoryId: number;
   athleteId?: number;
+  external_athlete_id?: number;
   teamId?: number;
   seedNumber?: number;
 }
 
 export interface BulkRegistrationData {
   eventCategoryId: number;
-  athleteIds: number[];
+  athleteIds?: number[];
+  external_athlete_ids?: number[];
 }

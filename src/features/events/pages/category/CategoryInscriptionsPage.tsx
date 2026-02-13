@@ -39,10 +39,20 @@ export function CategoryInscriptionsPage() {
   // Calcular estadísticas
   const stats = {
     total: registrations.length,
-    male: registrations.filter((r) => r.athlete?.gender === "M" || r.team?.members?.some((m) => m.athlete?.gender === "M")).length,
-    female: registrations.filter((r) => r.athlete?.gender === "F" || r.team?.members?.some((m) => m.athlete?.gender === "F")).length,
+    male: registrations.filter(
+      (r) =>
+        r.athlete?.gender === "M" ||
+        r.team?.members?.some((m) => m.athlete?.gender === "M"),
+    ).length,
+    female: registrations.filter(
+      (r) =>
+        r.athlete?.gender === "F" ||
+        r.team?.members?.some((m) => m.athlete?.gender === "F"),
+    ).length,
     institutions: new Set(
-      registrations.map((r) => r.athlete?.institutionId || r.team?.institutionId)
+      registrations.map(
+        (r) => r.athlete?.institutionId || r.team?.institutionId,
+      ),
     ).size,
   };
 
@@ -74,8 +84,8 @@ export function CategoryInscriptionsPage() {
               athleteId: member.athleteId,
               rol: member.rol,
             },
-          })
-        )
+          }),
+        ),
       );
 
       // 3. Inscribir el equipo en la categoría
@@ -116,7 +126,6 @@ export function CategoryInscriptionsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">Participantes Inscritos</h3>
-                
               </div>
             </div>
           </div>
@@ -144,14 +153,11 @@ export function CategoryInscriptionsPage() {
                 >
                   Inscripción de Atletas
                 </Button>
-                
               </>
             )}
           </div>
         </div>
       </div>
-
-      
 
       {/* Lista de Inscripciones */}
       {registrations.length === 0 ? (
@@ -159,9 +165,7 @@ export function CategoryInscriptionsPage() {
           icon={isTeamCategory ? Users : UserPlus}
           title={`No hay ${isTeamCategory ? "equipos" : "atletas"} inscritos`}
           description={`Comienza agregando ${
-            isTeamCategory
-              ? "el primer equipo a"
-              : "atletas a"
+            isTeamCategory ? "el primer equipo a" : "atletas a"
           } esta categoría`}
           action={{
             label: isTeamCategory
@@ -216,13 +220,17 @@ export function CategoryInscriptionsPage() {
       </Modal>
 
       {/* Modal para Inscripción Masiva */}
-      {!isTeamCategory && (
-        <BulkRegistrationModal
-          isOpen={isBulkModalOpen}
-          onClose={() => setIsBulkModalOpen(false)}
-          eventCategory={eventCategory}
-        />
-      )}
+      {!isTeamCategory &&
+        eventCategory.externalEventId &&
+        eventCategory.externalSportId && (
+          <BulkRegistrationModal
+            isOpen={isBulkModalOpen}
+            onClose={() => setIsBulkModalOpen(false)}
+            eventCategory={eventCategory}
+            eventId={eventCategory.externalEventId}
+            sportId={eventCategory.externalSportId}
+          />
+        )}
     </div>
   );
 }

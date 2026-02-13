@@ -44,7 +44,7 @@ export function TeamCreationForm({
   const availableAthletes = allAthletes.filter(
     (athlete) =>
       athlete.institution?.institutionId === selectedInstitution &&
-      !members.some((m) => m.athleteId === athlete.athleteId)
+      !members.some((m) => m.athleteId === athlete.athleteId),
   );
 
   const institutionOptions = [
@@ -72,7 +72,7 @@ export function TeamCreationForm({
   const addMember = () => {
     if (selectedAthlete > 0) {
       const athlete = availableAthletes.find(
-        (a) => a.athleteId === selectedAthlete
+        (a) => a.athleteId === selectedAthlete,
       );
       if (athlete) {
         setMembers([

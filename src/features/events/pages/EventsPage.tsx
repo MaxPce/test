@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Plus, Calendar, Search, Grid3x3, List } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  Search,
+  Grid3x3,
+  List,
+  AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -8,94 +15,34 @@ import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/PageHeader";
-import { useEvents } from "../api/events.queries";
-import {
-  useCreateEvent,
-  useUpdateEvent,
-  useDeleteEvent,
-  useUploadEventLogo,
-} from "../api/events.mutations";
-import { EventForm } from "../components/EventForm";
+import { useSismasterEvents } from "@/features/institutions/api/sismaster.queries";
 import { EventCard } from "../components/EventCard";
-import { DeleteConfirmModal } from "@/features/sports/components/DeleteConfirmModal";
-import type { Event, CreateEventData } from "../types";
+import { adaptSismasterEventsToLocal } from "../utils/sismasterAdapter";
+import type { Event } from "../types";
 import type { EventStatus } from "@/lib/types/common.types";
 
 export function EventsPage() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [filterStatus, setFilterStatus] = useState<EventStatus | undefined>(
     undefined,
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const { data: events = [], isLoading } = useEvents(
-    filterStatus ? { status: filterStatus } : undefined,
-  );
-  const createMutation = useCreateEvent();
-  const updateMutation = useUpdateEvent();
-  const deleteMutation = useDeleteEvent();
-  const uploadLogoMutation = useUploadEventLogo();
+  const { data: sismasterEvents = [], isLoading } = useSismasterEvents();
 
-  const handleCreate = async (data: CreateEventData, logoFile?: File) => {
-    try {
-      const event = await createMutation.mutateAsync(data);
+  const events = adaptSismasterEventsToLocal(sismasterEvents);
 
-      if (logoFile && event.eventId) {
-        await uploadLogoMutation.mutateAsync({
-          id: event.eventId,
-          file: logoFile,
-        });
-      }
-
-      setIsCreateModalOpen(false);
-    } catch (error) {
-      console.error("Error al crear evento:", error);
-    }
+  // Mostrar alerta de que son eventos de Sismaster (no editables)
+  const handleEdit = (event: Event) => {
+    alert(
+      "Los eventos de Sismaster no pueden ser editados desde esta aplicación.",
+    );
   };
 
-  const handleUpdate = async (data: CreateEventData, logoFile?: File) => {
-    if (selectedEvent) {
-      try {
-        await updateMutation.mutateAsync({
-          id: selectedEvent.eventId,
-          data,
-        });
-
-        if (logoFile) {
-          await uploadLogoMutation.mutateAsync({
-            id: selectedEvent.eventId,
-            file: logoFile,
-          });
-        }
-
-        setIsEditModalOpen(false);
-        setSelectedEvent(null);
-      } catch (error) {
-        console.error("Error al actualizar evento:", error);
-      }
-    }
-  };
-
-  const handleDelete = async () => {
-    if (selectedEvent) {
-      await deleteMutation.mutateAsync(selectedEvent.eventId);
-      setIsDeleteModalOpen(false);
-      setSelectedEvent(null);
-    }
-  };
-
-  const openEditModal = (event: Event) => {
-    setSelectedEvent(event);
-    setIsEditModalOpen(true);
-  };
-
-  const openDeleteModal = (event: Event) => {
-    setSelectedEvent(event);
-    setIsDeleteModalOpen(true);
+  const handleDelete = (event: Event) => {
+    alert(
+      "Los eventos de Sismaster no pueden ser eliminados desde esta aplicación.",
+    );
   };
 
   const filterOptions = [
@@ -105,10 +52,13 @@ export function EventsPage() {
     { value: "finalizado", label: "Finalizados" },
   ];
 
-  // Filtrar eventos por búsqueda
-  const filteredEvents = events.filter((event) =>
-    event.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtrar eventos por búsqueda y estado
+  const filteredEvents = events.filter((event) => {
+    const matchesSearch =
+      event.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? true;
+    const matchesStatus = !filterStatus || event.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
   if (isLoading) {
     return (
@@ -121,22 +71,7 @@ export function EventsPage() {
   return (
     <div className="space-y-6 animate-in">
       {/* Header profesional */}
-      <PageHeader
-        title="Gestión de Eventos"
-        description="Administre eventos deportivos, competencias y torneos"
-        actions={
-          <Button
-            onClick={() => setIsCreateModalOpen(true)}
-            variant="gradient"
-            size="lg"
-            icon={<Plus className="h-5 w-5" />}
-          >
-            Nuevo Evento
-          </Button>
-        }
-      />
-
-      
+      <PageHeader title="Eventos" />
 
       {/* Barra de búsqueda y filtros mejorada */}
       <Card variant="glass">
@@ -159,7 +94,9 @@ export function EventsPage() {
                 value={filterStatus || ""}
                 onChange={(e) =>
                   setFilterStatus(
-                    e.target.value ? (e.target.value as EventStatus) : undefined,
+                    e.target.value
+                      ? (e.target.value as EventStatus)
+                      : undefined,
                   )
                 }
                 options={filterOptions}
@@ -182,6 +119,34 @@ export function EventsPage() {
               >
                 <List className="h-5 w-5" />
               </Button>
+            </div>
+          </div>
+
+          {/* Estadísticas rápidas */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-200">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-slate-900">
+                {events.length}
+              </p>
+              <p className="text-xs text-slate-600 mt-1">Total Eventos</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-600">
+                {events.filter((e) => e.status === "programado").length}
+              </p>
+              <p className="text-xs text-slate-600 mt-1">Programados</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-emerald-600">
+                {events.filter((e) => e.status === "en_curso").length}
+              </p>
+              <p className="text-xs text-slate-600 mt-1">En Curso</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-slate-600">
+                {events.filter((e) => e.status === "finalizado").length}
+              </p>
+              <p className="text-xs text-slate-600 mt-1">Finalizados</p>
             </div>
           </div>
 
@@ -223,20 +188,12 @@ export function EventsPage() {
           title={
             searchQuery || filterStatus
               ? "No se encontraron eventos"
-              : "No hay eventos registrados"
+              : "No hay eventos en Sismaster"
           }
           description={
             searchQuery || filterStatus
               ? "Intenta ajustar los filtros de búsqueda"
-              : "Comienza creando tu primer evento deportivo"
-          }
-          action={
-            !searchQuery && !filterStatus
-              ? {
-                  label: "Crear Primer Evento",
-                  onClick: () => setIsCreateModalOpen(true),
-                }
-              : undefined
+              : "No hay eventos registrados en Sismaster"
           }
         />
       ) : (
@@ -251,60 +208,12 @@ export function EventsPage() {
             <EventCard
               key={event.eventId}
               event={event}
-              onEdit={openEditModal}
-              onDelete={openDeleteModal}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
           ))}
         </div>
       )}
-
-      {/* Create Modal */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        title="Crear Nuevo Evento"
-        size="lg"
-      >
-        <EventForm
-          onSubmit={handleCreate}
-          onCancel={() => setIsCreateModalOpen(false)}
-          isLoading={createMutation.isPending || uploadLogoMutation.isPending}
-        />
-      </Modal>
-
-      {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedEvent(null);
-        }}
-        title="Editar Evento"
-        size="lg"
-      >
-        <EventForm
-          event={selectedEvent || undefined}
-          onSubmit={handleUpdate}
-          onCancel={() => {
-            setIsEditModalOpen(false);
-            setSelectedEvent(null);
-          }}
-          isLoading={updateMutation.isPending || uploadLogoMutation.isPending}
-        />
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSelectedEvent(null);
-        }}
-        onConfirm={handleDelete}
-        title="Eliminar Evento"
-        message={`¿Estás seguro de que deseas eliminar "${selectedEvent?.name}"? Se eliminarán todas las categorías e inscripciones asociadas.`}
-        isLoading={deleteMutation.isPending}
-      />
     </div>
   );
 }

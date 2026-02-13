@@ -50,7 +50,7 @@ export function EventCategoriesPage() {
   const handleDeleteCategory = async () => {
     if (selectedCategory) {
       await deleteCategoryMutation.mutateAsync(
-        selectedCategory.eventCategoryId
+        selectedCategory.eventCategoryId,
       );
       setIsDeleteCategoryModalOpen(false);
       setSelectedCategory(null);
@@ -246,6 +246,8 @@ export function EventCategoriesPage() {
               setSelectedCategory(null);
             }}
             eventCategory={selectedCategory}
+            eventId={selectedCategory.externalEventId || 0}
+            sportId={selectedCategory.externalSportId || 0}
           />
         </>
       )}
