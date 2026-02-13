@@ -7,15 +7,30 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
-import { useEventCategories } from "../api/eventCategories.queries";
+import { useEventCategories, useSismasterEventCategories } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function EventSportsPage() {
-  const { eventId } = useParams<{ eventId: string }>();
+  // ✅ Detectar si es evento local o de Sismaster
+  const { eventId, externalEventId } = useParams<{ eventId?: string; externalEventId?: string }>();
   const navigate = useNavigate();
-  const { data: eventCategories = [], isLoading } = useEventCategories({
-    eventId: Number(eventId),
-  });
+  
+  const eventIdNum = eventId ? Number(eventId) : undefined;
+  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
+  const isExternalEvent = !!externalEventId;
+
+  // ✅ Usar el hook correcto según el tipo de evento
+  const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
+    { eventId: eventIdNum },
+    { enabled: !isExternalEvent && !!eventIdNum }
+  );
+  
+  const { data: externalEventCategories = [], isLoading: externalLoading } = useSismasterEventCategories(
+    externalEventIdNum
+  );
+
+  const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
+  const isLoading = isExternalEvent ? externalLoading : localLoading;
 
   if (isLoading) {
     return (
@@ -45,16 +60,26 @@ export function EventSportsPage() {
 
   const sports = Object.values(sportGroups);
 
+  // ✅ Rutas dinámicas según el tipo de evento
+  const addSportPath = isExternalEvent
+    ? `/admin/sismaster-events/${externalEventId}/add-sport`
+    : `/admin/events/${eventId}/sports/add`;
+
+  const getSportDetailPath = (sportId: number) => {
+    return isExternalEvent
+      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`
+      : `/admin/events/${eventId}/sports/${sportId}`;
+  };
+
   return (
     <div className="space-y-6 animate-in">
       {/* Header profesional */}
       <PageHeader
-        title="Deportes del Evento"
-        
+        title={`Deportes del Evento ${isExternalEvent ? '(Sismaster)' : ''}`}
         showBack
         actions={
           <Button
-            onClick={() => navigate(`/admin/events/${eventId}/sports/add`)}
+            onClick={() => navigate(addSportPath)}
             variant="gradient"
             size="lg"
             icon={<Plus className="h-5 w-5" />}
@@ -72,7 +97,7 @@ export function EventSportsPage() {
           description="Agrega el primer deporte a este evento para comenzar con las inscripciones"
           action={{
             label: "Agregar Primer Deporte",
-            onClick: () => navigate(`/admin/events/${eventId}/sports/add`),
+            onClick: () => navigate(addSportPath),
           }}
         />
       ) : (
@@ -86,9 +111,7 @@ export function EventSportsPage() {
                 (sum, cat) => sum + (cat.registrations?.length || 0),
                 0,
               )}
-              onClick={() =>
-                navigate(`/admin/events/${eventId}/sports/${sport.sportId}`)
-              }
+              onClick={() => navigate(getSportDetailPath(sport.sportId))}
             />
           ))}
         </div>
@@ -154,8 +177,6 @@ function SportEventCard({
           </div>
         </div>
       </div>
-
-      
 
       {/* Bottom accent con animación */}
       <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

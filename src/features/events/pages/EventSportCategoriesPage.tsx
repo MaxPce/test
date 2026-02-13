@@ -6,18 +6,34 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
-import { useEventCategories } from "../api/eventCategories.queries";
+import { useEventCategories, useSismasterEventCategories } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function EventSportCategoriesPage() {
-  const { eventId, sportId } = useParams<{
-    eventId: string;
+  // ✅ Detectar si es evento local o de Sismaster
+  const { eventId, externalEventId, sportId } = useParams<{
+    eventId?: string;
+    externalEventId?: string;
     sportId: string;
   }>();
   const navigate = useNavigate();
-  const { data: eventCategories = [], isLoading } = useEventCategories({
-    eventId: Number(eventId),
-  });
+  
+  const eventIdNum = eventId ? Number(eventId) : undefined;
+  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
+  const isExternalEvent = !!externalEventId;
+
+  // ✅ Usar el hook correcto según el tipo de evento
+  const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
+    { eventId: eventIdNum },
+    { enabled: !isExternalEvent && !!eventIdNum }
+  );
+  
+  const { data: externalEventCategories = [], isLoading: externalLoading } = useSismasterEventCategories(
+    externalEventIdNum
+  );
+
+  const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
+  const isLoading = isExternalEvent ? externalLoading : localLoading;
 
   if (isLoading) {
     return (
@@ -67,14 +83,28 @@ export function EventSportCategoriesPage() {
     0
   );
 
+  // ✅ Rutas dinámicas según el tipo de evento
+  const backPath = isExternalEvent
+    ? `/admin/sismaster-events/${externalEventId}/sports`
+    : `/admin/events/${eventId}/sports`;
+
+  const getCategoryDetailPath = (eventCategoryId: number) => {
+    return isExternalEvent
+      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/${eventCategoryId}`
+      : `/admin/events/${eventId}/sports/${sportId}/categories/${eventCategoryId}`;
+  };
+
+  const addCategoryPath = isExternalEvent
+    ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/add`
+    : `/admin/events/${eventId}/sports/${sportId}/categories/add`;
+
   return (
     <div className="space-y-6 animate-in">
       {/* Header profesional */}
       <PageHeader
-        title={`Categorías de ${sportName}`}
+        title={`Categorías de ${sportName} ${isExternalEvent ? '(Sismaster)' : ''}`}
         showBack
-        onBack={() => navigate(`/admin/events/${eventId}/sports`)}
-        
+        onBack={() => navigate(backPath)}
       />
 
       {/* Header del deporte */}
@@ -126,10 +156,7 @@ export function EventSportCategoriesPage() {
           description={`Agrega la primera categoría para ${sportName} en este evento`}
           action={{
             label: "Agregar Primera Categoría",
-            onClick: () =>
-              navigate(
-                `/admin/events/${eventId}/sports/${sportId}/categories/add`
-              ),
+            onClick: () => navigate(addCategoryPath),
           }}
         />
       ) : (
@@ -146,9 +173,7 @@ export function EventSportCategoriesPage() {
                 variant="elevated"
                 padding="none"
                 onClick={() =>
-                  navigate(
-                    `/admin/events/${eventId}/sports/${sportId}/categories/${eventCategory.eventCategoryId}`
-                  )
+                  navigate(getCategoryDetailPath(eventCategory.eventCategoryId))
                 }
                 className="group cursor-pointer overflow-hidden"
               >

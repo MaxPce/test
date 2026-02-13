@@ -94,6 +94,13 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
           </Badge>
         </div>
 
+        {/* Badge de Sismaster */}
+        <div className="absolute top-4 left-4">
+          <Badge variant="default" className="bg-purple-600 text-white">
+            Sismaster
+          </Badge>
+        </div>
+
         {/* Nombre del evento sobre la imagen */}
         <div className="absolute bottom-4 left-4 right-4">
           <h3 className="text-xl font-bold text-white drop-shadow-lg line-clamp-2 leading-tight">
@@ -138,38 +145,17 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
         {/* Divider */}
         <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mb-5" />
 
-        {/* Acciones mejoradas */}
+        {/* Acciones */}
         <div className="flex gap-2">
           <Button
             size="md"
             variant="gradient"
-            onClick={() => navigate(`/admin/events/${event.eventId}`)}
+            onClick={() => navigate(`/admin/sismaster-events/${event.eventId}/sports`)}
             className="flex-1 group/btn"
           >
-            <span>Ver Detalles</span>
+            <Trophy className="h-4 w-4" />
+            <span>Gestionar Deportes</span>
             <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
-          </Button>
-          <Button
-            size="md"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(event);
-            }}
-            className="px-3 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600"
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            size="md"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(event);
-            }}
-            className="px-3 hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-          >
-            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>

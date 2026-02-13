@@ -22,12 +22,24 @@ export const useCreateEventCategory = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: eventCategoryKeys.lists() });
-      queryClient.invalidateQueries({
-        queryKey: eventKeys.detail(data.eventId),
-      });
+      
+      // Invalidar eventos locales
+      if (data.eventId) {
+        queryClient.invalidateQueries({
+          queryKey: eventKeys.detail(data.eventId),
+        });
+      }
+      
+      // Invalidar eventos de Sismaster
+      if (data.externalEventId) {
+        queryClient.invalidateQueries({
+          queryKey: ['sismaster-event-categories', data.externalEventId],
+        });
+      }
     },
   });
 };
+
 
 export const useUpdateEventCategory = () => {
   const queryClient = useQueryClient();

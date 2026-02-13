@@ -9,27 +9,36 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useSports } from "@/features/sports/api/sports.queries";
 import { useCategories } from "@/features/sports/api/categories.queries";
-import { useEventCategories } from "../api/eventCategories.queries";
+import { useEventCategories, useSismasterEventCategories } from "../api/eventCategories.queries";
 import { useCreateEventCategory } from "../api/eventCategories.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function AddSportToEventPage() {
-  const { eventId } = useParams<{ eventId: string }>();
+  // ✅ Detectar si es evento local o de Sismaster
+  const { eventId, externalEventId } = useParams<{ eventId?: string; externalEventId?: string }>();
   const navigate = useNavigate();
-  const eventIdNum = Number(eventId);
+  
+  const eventIdNum = eventId ? Number(eventId) : undefined;
+  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
+  const isExternalEvent = !!externalEventId;
 
   const [selectedSport, setSelectedSport] = useState<number | null>(null);
-  const [selectedCategories, setSelectedCategories] = useState<Set<number>>(
-    new Set(),
-  );
+  const [selectedCategories, setSelectedCategories] = useState<Set<number>>(new Set());
 
   const { data: sports = [], isLoading: sportsLoading } = useSports();
-  const { data: allCategories = [], isLoading: categoriesLoading } =
-    useCategories();
-  const { data: eventCategories = [] } = useEventCategories({
-    eventId: eventIdNum,
-  });
+  const { data: allCategories = [], isLoading: categoriesLoading } = useCategories();
+  
+  // ✅ Usar el hook correcto según el tipo de evento
+  const { data: localEventCategories = [] } = useEventCategories(
+    { eventId: eventIdNum },
+    { enabled: !isExternalEvent }
+  );
+  const { data: externalEventCategories = [] } = useSismasterEventCategories(
+    externalEventIdNum,
+    { enabled: isExternalEvent }
+  );
 
+  const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
   const createEventCategoryMutation = useCreateEventCategory();
 
   // Filtrar categorías del deporte seleccionado
@@ -62,19 +71,26 @@ export function AddSportToEventPage() {
 
   const handleSubmit = async () => {
     try {
-      // Crear EventCategory para cada categoría seleccionada
+      // ✅ Crear EventCategory con el campo correcto según el tipo de evento
       const promises = Array.from(selectedCategories).map((categoryId) =>
         createEventCategoryMutation.mutateAsync({
-          eventId: eventIdNum,
+          ...(isExternalEvent 
+            ? { externalEventId: externalEventIdNum } 
+            : { eventId: eventIdNum }
+          ),
           categoryId,
+          externalSportId: selectedSport || undefined,
           status: "pendiente",
         }),
       );
 
       await Promise.all(promises);
 
-      // Redirigir de vuelta a la lista de deportes
-      navigate(`/admin/events/${eventId}/sports`, { replace: true });
+      // ✅ Redirigir a la URL correcta
+      const redirectPath = isExternalEvent
+        ? `/admin/sismaster-events/${externalEventId}/sports`
+        : `/admin/events/${eventId}/sports`;
+      navigate(redirectPath, { replace: true });
     } catch (error) {
       console.error("Error al agregar categorías:", error);
     }
@@ -88,14 +104,18 @@ export function AddSportToEventPage() {
     );
   }
 
+  // ✅ Rutas dinámicas para navegación
+  const backPath = isExternalEvent
+    ? `/admin/sismaster-events/${externalEventId}/sports`
+    : `/admin/events/${eventId}/sports`;
+
   return (
     <div className="space-y-6 animate-in">
       {/* Header */}
       <PageHeader
-        title="Agregar Deporte al Evento"
-        
+        title={`Agregar Deporte al Evento ${isExternalEvent ? '(Sismaster)' : ''}`}
         showBack
-        onBack={() => navigate(`/admin/events/${eventId}/sports`, { replace: true })}
+        onBack={() => navigate(backPath, { replace: true })}
       />
 
       {/* Indicador de progreso */}
@@ -385,9 +405,7 @@ export function AddSportToEventPage() {
               <div className="flex gap-3">
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    navigate(`/admin/events/${eventId}/sports`, { replace: true })
-                  }
+                  onClick={() => navigate(backPath, { replace: true })}
                   disabled={createEventCategoryMutation.isPending}
                 >
                   Cancelar

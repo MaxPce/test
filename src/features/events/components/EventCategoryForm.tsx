@@ -10,7 +10,8 @@ import {
 import type { EventCategory, CreateEventCategoryData } from "../types";
 
 interface EventCategoryFormProps {
-  eventId: number;
+  eventId?: number; // ✅ Ahora es opcional
+  externalEventId?: number; // ✅ Agregar para eventos de Sismaster
   eventCategory?: EventCategory;
   onSubmit: (data: CreateEventCategoryData) => void;
   onCancel: () => void;
@@ -19,6 +20,7 @@ interface EventCategoryFormProps {
 
 export function EventCategoryForm({
   eventId,
+  externalEventId, // ✅ Agregar
   eventCategory,
   onSubmit,
   onCancel,
@@ -28,11 +30,13 @@ export function EventCategoryForm({
   const { data: sismasterEvents = [] } = useSismasterEvents();
   const { data: sismasterSports = [] } = useSismasterSports();
 
+  const isExternalEvent = !!externalEventId; // ✅ Detectar tipo de evento
+
   const [formData, setFormData] = useState<CreateEventCategoryData>({
-    eventId,
+    eventId: isExternalEvent ? undefined : eventId, // ✅ Condicional
+    externalEventId: isExternalEvent ? externalEventId : undefined, // ✅ Condicional
     categoryId: 0,
     status: "pendiente",
-    externalEventId: undefined,
     externalSportId: undefined,
   });
 
@@ -40,9 +44,9 @@ export function EventCategoryForm({
     if (eventCategory) {
       setFormData({
         eventId: eventCategory.eventId,
+        externalEventId: eventCategory.externalEventId,
         categoryId: eventCategory.categoryId,
         status: eventCategory.status,
-        externalEventId: eventCategory.externalEventId,
         externalSportId: eventCategory.externalSportId,
       });
     } else if (categories.length > 0 && formData.categoryId === 0) {
@@ -51,7 +55,7 @@ export function EventCategoryForm({
         categoryId: categories[0].categoryId,
       }));
     }
-  }, [eventCategory, categories, eventId]);
+  }, [eventCategory, categories, eventId, externalEventId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +94,8 @@ export function EventCategoryForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Selector de Categoría Local */}
+      
+
       <Select
         label="Categoría *"
         value={formData.categoryId}
@@ -115,67 +120,70 @@ export function EventCategoryForm({
         required
       />
 
-      {/* Separador visual */}
-      <div className="border-t border-gray-200 pt-4 mt-4">
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">
-          🔗 Integración con Sismaster (Opcional)
-        </h4>
-        <p className="text-xs text-gray-500 mb-4">
-          Vincula esta categoría con un evento y deporte de Sismaster para
-          habilitar la inscripción de atletas acreditados.
-        </p>
+      {!isExternalEvent && (
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">
+            🔗 Integración con Sismaster (Opcional)
+          </h4>
+          <p className="text-xs text-gray-500 mb-4">
+            Vincula esta categoría con un evento y deporte de Sismaster para
+            habilitar la inscripción de atletas acreditados.
+          </p>
 
-        {/* Evento de Sismaster */}
-        <Select
-          label="Evento en Sismaster"
-          value={formData.externalEventId || 0}
-          onChange={(e) => {
-            const value = Number(e.target.value);
-            setFormData({
-              ...formData,
-              externalEventId: value === 0 ? undefined : value,
-            });
-          }}
-          options={sismasterEventOptions}
-          helperText="Selecciona el evento correspondiente en Sismaster"
-        />
+          {/* Evento de Sismaster */}
+          <Select
+            label="Evento en Sismaster"
+            value={formData.externalEventId || 0}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              setFormData({
+                ...formData,
+                externalEventId: value === 0 ? undefined : value,
+              });
+            }}
+            options={sismasterEventOptions}
+            helperText="Selecciona el evento correspondiente en Sismaster"
+          />
 
-        {/* Deporte de Sismaster */}
-        <Select
-          label="Deporte en Sismaster"
-          value={formData.externalSportId || 0}
-          onChange={(e) => {
-            const value = Number(e.target.value);
-            setFormData({
-              ...formData,
-              externalSportId: value === 0 ? undefined : value,
-            });
-          }}
-          options={sismasterSportOptions}
-          helperText="Selecciona el deporte correspondiente en Sismaster"
-        />
+          {/* Deporte de Sismaster */}
+          <Select
+            label="Deporte en Sismaster"
+            value={formData.externalSportId || 0}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              setFormData({
+                ...formData,
+                externalSportId: value === 0 ? undefined : value,
+              });
+            }}
+            options={sismasterSportOptions}
+            helperText="Selecciona el deporte correspondiente en Sismaster"
+          />
 
-        {/* Alerta si ambos están configurados */}
-        {formData.externalEventId && formData.externalSportId && (
-          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-xs text-green-800">
-              Integración configurada. Podrás inscribir atletas acreditados
-              desde Sismaster.
-            </p>
-          </div>
-        )}
+          {/* Alerta si ambos están configurados */}
+          {formData.externalEventId && formData.externalSportId && (
+            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-xs text-green-800">
+                ✅ Integración configurada. Podrás inscribir atletas acreditados
+                desde Sismaster.
+              </p>
+            </div>
+          )}
 
-        {/* Advertencia si solo uno está configurado */}
-        {((formData.externalEventId && !formData.externalSportId) ||
-          (!formData.externalEventId && formData.externalSportId)) && (
-          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-xs text-yellow-800">
-              Configura ambos campos (evento y deporte) para habilitar la
-              integración completa.
-            </p>
-          </div>
-        )}
-      </div>
+          {/* Advertencia si solo uno está configurado */}
+          {((formData.externalEventId && !formData.externalSportId) ||
+            (!formData.externalEventId && formData.externalSportId)) && (
+            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs text-yellow-800">
+                ⚠️ Configura ambos campos (evento y deporte) para habilitar la
+                integración completa.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      
 
       {/* Botones */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
@@ -185,7 +193,10 @@ export function EventCategoryForm({
         <Button
           type="submit"
           isLoading={isLoading}
-          disabled={formData.categoryId === 0}
+          disabled={
+            formData.categoryId === 0 ||
+            (isExternalEvent && !formData.externalSportId)
+          }
         >
           {eventCategory ? "Actualizar" : "Agregar"}
         </Button>

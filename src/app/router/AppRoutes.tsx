@@ -49,11 +49,11 @@ export function AppRoutes() {
       >
         <Route index element={<AdminDashboard />} />
 
-        {/* Rutas de Eventos */}
+        {/* ==================== EVENTOS LOCALES ==================== */}
         <Route path="events">
           <Route index element={<EventsPage />} />
 
-          {/* Estructura jerárquica del evento */}
+          {/* Estructura jerárquica del evento local */}
           <Route path=":eventId" element={<EventLayout />}>
             {/* Lista de deportes del evento */}
             <Route index element={<EventSportsPage />} />
@@ -85,21 +85,54 @@ export function AppRoutes() {
           </Route>
         </Route>
 
-        {/* Rutas de Gestión Global de Deportes */}
+        {/* ==================== EVENTOS DE SISMASTER ==================== */}
+        <Route path="sismaster-events">
+          {/* Ver deportes de un evento de Sismaster */}
+          <Route path=":externalEventId/sports" element={<EventSportsPage />} />
+
+          {/* Agregar deporte a evento de Sismaster */}
+          <Route
+            path=":externalEventId/add-sport"
+            element={<AddSportToEventPage />}
+          />
+
+          {/* Ver categorías de un deporte específico */}
+          <Route
+            path=":externalEventId/sports/:sportId"
+            element={<EventSportCategoriesPage />}
+          />
+
+          {/* Detalle de una categoría con tabs */}
+          <Route
+            path=":externalEventId/sports/:sportId/categories/:categoryId"
+            element={<CategoryDetailLayout />}
+          >
+            <Route index element={<CategoryInscriptionsPage />} />
+            <Route path="schedule" element={<CategorySchedulePage />} />
+            <Route path="standings" element={<CategoryStandingsPage />} />
+            <Route
+              path="institutions"
+              element={<CategoryInstitutionsPage />}
+            />
+            <Route path="results" element={<SwimmingResultsPage />} />
+          </Route>
+        </Route>
+
+        {/* ==================== DEPORTES (Gestión Global) ==================== */}
         <Route path="sports">
           <Route index element={<SportsPage />} />
           <Route path="types" element={<SportTypesPage />} />
           <Route path="categories" element={<CategoriesPage />} />
         </Route>
 
-        {/* Rutas de Gestión Global de Instituciones */}
+        {/* ==================== INSTITUCIONES (Gestión Global) ==================== */}
         <Route path="institutions">
           <Route index element={<InstitutionsPage />} />
           <Route path="athletes" element={<AthletesPage />} />
           <Route path="teams" element={<TeamsPage />} />
         </Route>
 
-        {/* Configuración */}
+        {/* ==================== CONFIGURACIÓN ==================== */}
         <Route
           path="settings"
           element={<div className="p-4">Configuración - Próximamente</div>}

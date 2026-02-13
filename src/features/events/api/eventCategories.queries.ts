@@ -41,3 +41,18 @@ export const useEventCategory = (id: number) => {
     enabled: !!id,
   });
 };
+
+export const useSismasterEventCategories = (externalEventId?: number) => {
+  return useQuery({
+    queryKey: ['sismaster-event-categories', externalEventId],
+    queryFn: async () => {
+      if (!externalEventId) return [];
+      const { data } = await apiClient.get<EventCategory[]>(
+        `/events/sismaster/${externalEventId}/categories`
+      );
+      return data;
+    },
+    enabled: !!externalEventId,
+  });
+};
+

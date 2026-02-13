@@ -36,6 +36,10 @@ export function CategoryInscriptionsPage() {
   const isTeamCategory = eventCategory.category?.type === "equipo";
   const registrations = eventCategory.registrations || [];
 
+  // ✅ Verificar si hay integración con Sismaster
+  const hasSismasterIntegration =
+    !!eventCategory.externalEventId && !!eventCategory.externalSportId;
+
   // Calcular estadísticas
   const stats = {
     total: registrations.length,
@@ -112,7 +116,7 @@ export function CategoryInscriptionsPage() {
   return (
     <div className="space-y-6 animate-in">
       {/* Header mejorado */}
-      <div className="bg-gradient-to-br from-blue-600  rounded-2xl p-6 shadow-strong text-white">
+      <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 shadow-strong text-white">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Info */}
           <div className="flex-1">
@@ -126,6 +130,11 @@ export function CategoryInscriptionsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">Participantes Inscritos</h3>
+                {hasSismasterIntegration && (
+                  <p className="text-sm text-white/80 mt-1">
+                    ✓ Integrado con Sismaster
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -144,20 +153,32 @@ export function CategoryInscriptionsPage() {
               </Button>
             ) : (
               <>
-                <Button
-                  onClick={() => setIsBulkModalOpen(true)}
-                  variant="outline"
-                  size="lg"
-                  icon={<Upload className="h-5 w-5" />}
-                  className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-                >
-                  Inscripción de Atletas
-                </Button>
+                {hasSismasterIntegration && (
+                  <Button
+                    onClick={() => setIsBulkModalOpen(true)}
+                    variant="outline"
+                    size="lg"
+                    icon={<Upload className="h-5 w-5" />}
+                    className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                  >
+                    Inscripción de Atletas
+                  </Button>
+                )}
               </>
             )}
           </div>
         </div>
       </div>
+
+      {!hasSismasterIntegration && !isTeamCategory && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-sm text-yellow-800">
+            ⚠️ Esta categoría no está integrada con Sismaster. Configura el evento
+            y deporte de Sismaster en la categoría para habilitar la inscripción
+            masiva de atletas acreditados.
+          </p>
+        </div>
+      )}
 
       {/* Lista de Inscripciones */}
       {registrations.length === 0 ? (
@@ -170,10 +191,14 @@ export function CategoryInscriptionsPage() {
           action={{
             label: isTeamCategory
               ? "Crear Primer Equipo"
+              : hasSismasterIntegration
+              ? "Inscribir Atletas"
               : "Inscribir Primer Atleta",
             onClick: () =>
               isTeamCategory
                 ? setIsTeamModalOpen(true)
+                : hasSismasterIntegration
+                ? setIsBulkModalOpen(true)
                 : setIsIndividualModalOpen(true),
           }}
         />
@@ -219,18 +244,15 @@ export function CategoryInscriptionsPage() {
         />
       </Modal>
 
-      {/* Modal para Inscripción Masiva */}
-      {!isTeamCategory &&
-        eventCategory.externalEventId &&
-        eventCategory.externalSportId && (
-          <BulkRegistrationModal
-            isOpen={isBulkModalOpen}
-            onClose={() => setIsBulkModalOpen(false)}
-            eventCategory={eventCategory}
-            eventId={eventCategory.externalEventId}
-            sportId={eventCategory.externalSportId}
-          />
-        )}
+      {!isTeamCategory && hasSismasterIntegration && (
+        <BulkRegistrationModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          eventCategory={eventCategory}
+          eventId={eventCategory.externalEventId!}
+          sportId={eventCategory.externalSportId!}
+        />
+      )}
     </div>
   );
 }

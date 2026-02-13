@@ -14,19 +14,35 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Tabs } from "@/components/ui/Tabs";
 import { PageHeader } from "@/components/PageHeader";
-import { useEventCategories } from "../api/eventCategories.queries";
+import { useEventCategories, useSismasterEventCategories } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function CategoryDetailLayout() {
-  const { eventId, sportId, categoryId } = useParams<{
-    eventId: string;
+  // ✅ Detectar si es evento local o de Sismaster
+  const { eventId, externalEventId, sportId, categoryId } = useParams<{
+    eventId?: string;
+    externalEventId?: string;
     sportId: string;
     categoryId: string;
   }>();
   const navigate = useNavigate();
-  const { data: eventCategories = [], isLoading } = useEventCategories({
-    eventId: Number(eventId),
-  });
+  
+  const eventIdNum = eventId ? Number(eventId) : undefined;
+  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
+  const isExternalEvent = !!externalEventId;
+
+  // ✅ Usar el hook correcto según el tipo de evento
+  const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
+    { eventId: eventIdNum },
+    { enabled: !isExternalEvent && !!eventIdNum }
+  );
+  
+  const { data: externalEventCategories = [], isLoading: externalLoading } = useSismasterEventCategories(
+    externalEventIdNum
+  );
+
+  const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
+  const isLoading = isExternalEvent ? externalLoading : localLoading;
 
   const eventCategory = eventCategories.find(
     (ec) => ec.eventCategoryId === Number(categoryId),
@@ -53,7 +69,12 @@ export function CategoryDetailLayout() {
           La categoría que buscas no existe o ha sido eliminada
         </p>
         <Button
-          onClick={() => navigate(`/admin/events/${eventId}/sports/${sportId}`)}
+          onClick={() => {
+            const backPath = isExternalEvent
+              ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`
+              : `/admin/events/${eventId}/sports/${sportId}`;
+            navigate(backPath);
+          }}
           variant="gradient"
         >
           Volver a Categorías
@@ -101,17 +122,26 @@ export function CategoryDetailLayout() {
   const sportIconUrl = eventCategory.category?.sport?.iconUrl;
   const sportImage = sportIconUrl ? getImageUrl(sportIconUrl) : null;
 
+  // ✅ Generar rutas dinámicas según el tipo de evento
+  const baseUrl = isExternalEvent
+    ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/${categoryId}`
+    : `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}`;
+
+  const backPath = isExternalEvent
+    ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`
+    : `/admin/events/${eventId}/sports/${sportId}`;
+
   const tabs = [
     {
       label: "Inscripciones",
-      to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}`,
+      to: baseUrl,
       icon: <UserPlus className="h-4 w-4" />,
     },
     ...(!isTimedSport
       ? [
           {
             label: "Programación",
-            to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/schedule`,
+            to: `${baseUrl}/schedule`,
             icon: <Calendar className="h-4 w-4" />,
           },
         ]
@@ -120,19 +150,19 @@ export function CategoryDetailLayout() {
       ? [
           {
             label: "Registrar Tiempos",
-            to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/results`,
+            to: `${baseUrl}/results`,
             icon: <Timer className="h-4 w-4" />,
           },
         ]
       : []),
     {
       label: "Posiciones",
-      to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/standings`,
+      to: `${baseUrl}/standings`,
       icon: <BarChart3 className="h-4 w-4" />,
     },
     {
       label: "Instituciones",
-      to: `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}/institutions`,
+      to: `${baseUrl}/institutions`,
       icon: <Building2 className="h-4 w-4" />,
     },
   ];
@@ -141,9 +171,9 @@ export function CategoryDetailLayout() {
     <div className="space-y-6 animate-in">
       {/* PageHeader con botón de volver */}
       <PageHeader
-        title={eventCategory.category?.name || "Categoría"}
+        title={`${eventCategory.category?.name || "Categoría"} ${isExternalEvent ? "(Sismaster)" : ""}`}
         showBack
-        onBack={() => navigate(`/admin/events/${eventId}/sports/${sportId}`)}
+        onBack={() => navigate(backPath)}
       />
 
       {/* Header de la Categoría */}
