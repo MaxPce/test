@@ -95,23 +95,28 @@ export const useBulkRegistrationFromSismaster = () => {
       return response.data;
     },
     onSuccess: async (_, variables) => {
+      // ✅ Construir la key exacta según tu estructura
       const detailKey = [
         "eventCategories",
         "detail",
         variables.eventCategoryId,
       ];
 
-      // Invalidar
-      await queryClient.invalidateQueries({ queryKey: detailKey });
-
-      // Refetch inmediato
-      await queryClient.refetchQueries({
+      // Invalidar la query específica
+      await queryClient.invalidateQueries({
         queryKey: detailKey,
         exact: true,
       });
 
-      // También invalidar la lista general
-      await queryClient.invalidateQueries({
+      // Refetch inmediato y forzado
+      await queryClient.refetchQueries({
+        queryKey: detailKey,
+        exact: true,
+        type: "active",
+      });
+
+      // Invalidar listas generales
+      queryClient.invalidateQueries({
         queryKey: ["eventCategories", "list"],
       });
     },

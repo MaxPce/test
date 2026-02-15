@@ -135,14 +135,18 @@ export function BulkRegistrationModal({
         external_athlete_ids: selectedAthletes,
       });
 
+      // Limpiar estado
       setSelectedAthletes([]);
       handleClearFilters();
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // ✅ Esperar 500ms para asegurar que el backend procesó todo
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
+      // Cerrar modal
       onClose();
     } catch (error) {
       console.error("Error al inscribir atletas:", error);
+      // Aquí podrías agregar un toast de error
     }
   };
 
