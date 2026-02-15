@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Plus, Users, UserPlus, Upload, Award, TrendingUp } from "lucide-react";
+import { Plus, Users, UserPlus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RegistrationForm } from "../../components/RegistrationForm";
 import { TeamCreationForm } from "../../components/TeamCreationForm";
 import { BulkRegistrationModal } from "../../components/BulkRegistrationModal";
 import { RegistrationsList } from "../../components/RegistrationsList";
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "react-router-dom";
 import {
   useCreateRegistration,
   useDeleteRegistration,
@@ -24,6 +25,9 @@ export function CategoryInscriptionsPage() {
   const { eventCategory } = useOutletContext<{
     eventCategory: EventCategory;
   }>();
+
+  const queryClient = useQueryClient();
+  const { id } = useParams();
   const [isIndividualModalOpen, setIsIndividualModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -36,9 +40,7 @@ export function CategoryInscriptionsPage() {
   const isTeamCategory = eventCategory.category?.type === "equipo";
   const registrations = eventCategory.registrations || [];
 
-  // ✅ Verificar si hay integración con Sismaster
-  const hasSismasterIntegration =
-    !!eventCategory.externalEventId && !!eventCategory.externalSportId;
+  const hasSismasterIntegration = !!eventCategory.externalEventId;
 
   // Calcular estadísticas
   const stats = {
@@ -131,7 +133,7 @@ export function CategoryInscriptionsPage() {
               <div>
                 <h3 className="text-2xl font-bold">Participantes Inscritos</h3>
                 {hasSismasterIntegration && (
-                  <p className="text-sm text-white/80 mt-1">
+                  <p className="text-sm text-white/90 mt-1">
                     ✓ Integrado con Sismaster
                   </p>
                 )}
@@ -173,8 +175,8 @@ export function CategoryInscriptionsPage() {
       {!hasSismasterIntegration && !isTeamCategory && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <p className="text-sm text-yellow-800">
-            ⚠️ Esta categoría no está integrada con Sismaster. Configura el evento
-            y deporte de Sismaster en la categoría para habilitar la inscripción
+            ⚠️ Esta categoría no está integrada con Sismaster. Configura el
+            evento de Sismaster en la categoría para habilitar la inscripción
             masiva de atletas acreditados.
           </p>
         </div>
@@ -192,14 +194,14 @@ export function CategoryInscriptionsPage() {
             label: isTeamCategory
               ? "Crear Primer Equipo"
               : hasSismasterIntegration
-              ? "Inscribir Atletas"
-              : "Inscribir Primer Atleta",
+                ? "Inscribir Atletas"
+                : "Inscribir Primer Atleta",
             onClick: () =>
               isTeamCategory
                 ? setIsTeamModalOpen(true)
                 : hasSismasterIntegration
-                ? setIsBulkModalOpen(true)
-                : setIsIndividualModalOpen(true),
+                  ? setIsBulkModalOpen(true)
+                  : setIsIndividualModalOpen(true),
           }}
         />
       ) : (
@@ -247,10 +249,14 @@ export function CategoryInscriptionsPage() {
       {!isTeamCategory && hasSismasterIntegration && (
         <BulkRegistrationModal
           isOpen={isBulkModalOpen}
-          onClose={() => setIsBulkModalOpen(false)}
+          onClose={() => {
+            setIsBulkModalOpen(false);
+            queryClient.invalidateQueries({
+              queryKey: ["event-categories", eventCategory.eventCategoryId],
+            });
+          }}
           eventCategory={eventCategory}
           eventId={eventCategory.externalEventId!}
-          sportId={eventCategory.externalSportId!}
         />
       )}
     </div>

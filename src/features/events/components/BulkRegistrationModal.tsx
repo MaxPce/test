@@ -6,7 +6,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { Search, Filter, X, AlertCircle } from "lucide-react";
 import { useAccreditedAthletes } from "@/features/institutions/api/sismaster.queries";
-import { useBulkRegistration } from "../api/registrations.mutations";
+import { useBulkRegistrationFromSismaster } from "../api/registrations.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { EventCategory } from "../types";
 
@@ -15,7 +15,6 @@ interface BulkRegistrationModalProps {
   onClose: () => void;
   eventCategory: EventCategory;
   eventId: number;
-  sportId: number;
 }
 
 export function BulkRegistrationModal({
@@ -23,15 +22,12 @@ export function BulkRegistrationModal({
   onClose,
   eventCategory,
   eventId,
-  sportId,
 }: BulkRegistrationModalProps) {
   const [selectedAthletes, setSelectedAthletes] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedInstitution, setSelectedInstitution] = useState<string>("all");
-  const [selectedGender, setSelectedGender] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Obtener atletas acreditados desde sismaster
   const {
     data: athletesFromSismaster = [],
     isLoading,
@@ -39,17 +35,15 @@ export function BulkRegistrationModal({
   } = useAccreditedAthletes(
     {
       idevent: eventId,
-      idsport: sportId,
       gender:
-        selectedGender !== "all" &&
-        (selectedGender === "M" || selectedGender === "F")
-          ? selectedGender
+        eventCategory.category?.gender !== "MIXTO"
+          ? (eventCategory.category?.gender as "M" | "F")
           : undefined,
     },
     isOpen, // Solo cargar cuando el modal está abierto
   );
 
-  const bulkMutation = useBulkRegistration();
+  const bulkMutation = useBulkRegistrationFromSismaster();
 
   // Atletas ya inscritos (por sus IDs de sismaster)
   const registeredAthleteIds =
@@ -61,7 +55,7 @@ export function BulkRegistrationModal({
   const institutions = useMemo(() => {
     const uniqueInstitutions = Array.from(
       new Set(
-        athletesFromSismaster.map((a) => a.institution_name).filter(Boolean),
+        athletesFromSismaster.map((a) => a.institutionName).filter(Boolean),
       ),
     ).sort();
     return uniqueInstitutions;
@@ -71,12 +65,11 @@ export function BulkRegistrationModal({
   const filteredAthletes = useMemo(() => {
     let filtered = athletesFromSismaster;
 
-    // Filtrar por género de la categoría
-    filtered = filtered.filter(
-      (athlete) =>
-        athlete.gender === eventCategory.category?.gender ||
-        eventCategory.category?.gender === "MIXTO",
-    );
+    if (eventCategory.category?.gender !== "MIXTO") {
+      filtered = filtered.filter(
+        (athlete) => athlete.gender === eventCategory.category?.gender,
+      );
+    }
 
     // Excluir ya inscritos
     filtered = filtered.filter(
@@ -91,7 +84,7 @@ export function BulkRegistrationModal({
           `${athlete.firstname} ${athlete.lastname}`
             .toLowerCase()
             .includes(search) ||
-          athlete.institution_name?.toLowerCase().includes(search) ||
+          athlete.institutionName?.toLowerCase().includes(search) ||
           athlete.docnumber?.toLowerCase().includes(search),
       );
     }
@@ -99,7 +92,7 @@ export function BulkRegistrationModal({
     // Filtrar por institución
     if (selectedInstitution !== "all") {
       filtered = filtered.filter(
-        (athlete) => athlete.institution_name === selectedInstitution,
+        (athlete) => athlete.institutionName === selectedInstitution,
       );
     }
 
@@ -131,20 +124,26 @@ export function BulkRegistrationModal({
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedInstitution("all");
-    setSelectedGender("all");
   };
 
   const handleSubmit = async () => {
     if (selectedAthletes.length === 0) return;
 
-    await bulkMutation.mutateAsync({
-      eventCategoryId: eventCategory.eventCategoryId,
-      external_athlete_ids: selectedAthletes, // Usar IDs de sismaster
-    });
+    try {
+      await bulkMutation.mutateAsync({
+        eventCategoryId: eventCategory.eventCategoryId,
+        external_athlete_ids: selectedAthletes,
+      });
 
-    setSelectedAthletes([]);
-    handleClearFilters();
-    onClose();
+      setSelectedAthletes([]);
+      handleClearFilters();
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      onClose();
+    } catch (error) {
+      console.error("Error al inscribir atletas:", error);
+    }
   };
 
   const handleClose = () => {
@@ -154,26 +153,18 @@ export function BulkRegistrationModal({
   };
 
   const hasActiveFilters =
-    searchTerm.trim() !== "" ||
-    selectedInstitution !== "all" ||
-    selectedGender !== "all";
+    searchTerm.trim() !== "" || selectedInstitution !== "all";
 
   const institutionOptions = [
     { value: "all", label: "Todas las instituciones" },
     ...institutions.map((inst) => ({ value: inst, label: inst })),
   ];
 
-  const genderOptions = [
-    { value: "all", label: "Todos los géneros" },
-    { value: "M", label: "Masculino" },
-    { value: "F", label: "Femenino" },
-  ];
-
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Inscripción Masiva"
+      title="Inscripción Masiva de Atletas"
       size="lg"
     >
       <div className="space-y-4">
@@ -185,7 +176,7 @@ export function BulkRegistrationModal({
                 {eventCategory.category?.name}
               </h4>
               <p className="text-sm text-blue-700 mt-1">
-                {eventCategory.category?.sport?.name} •{" "}
+                {eventCategory.category?.sport?.name}
                 {eventCategory.category?.type === "individual"
                   ? "Individual"
                   : "Equipo"}
@@ -211,7 +202,7 @@ export function BulkRegistrationModal({
               </p>
               <p className="text-sm text-red-700 mt-1">
                 No se pudieron obtener los atletas acreditados. Verifica que el
-                evento y deporte estén correctamente configurados.
+                evento esté correctamente configurado en Sismaster.
               </p>
             </div>
           </div>
@@ -242,18 +233,12 @@ export function BulkRegistrationModal({
 
               {/* Filtros adicionales */}
               {showFilters && (
-                <div className="grid grid-cols-2 gap-3 p-4 bg-gray-50 rounded-lg">
+                <div className="p-4 bg-gray-50 rounded-lg">
                   <Select
                     label="Institución"
                     value={selectedInstitution}
                     onChange={(e) => setSelectedInstitution(e.target.value)}
                     options={institutionOptions}
-                  />
-                  <Select
-                    label="Género"
-                    value={selectedGender}
-                    onChange={(e) => setSelectedGender(e.target.value)}
-                    options={genderOptions}
                   />
                 </div>
               )}
@@ -273,12 +258,10 @@ export function BulkRegistrationModal({
                   </button>
                 </div>
               )}
-
-              {/* Info: Mostrando atletas acreditados */}
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                 <p className="text-sm text-green-800">
                   ✓ Mostrando <strong>{athletesFromSismaster.length}</strong>{" "}
-                  atletas acreditados para este evento y deporte
+                  atletas acreditados en este evento
                 </p>
               </div>
             </div>
@@ -349,7 +332,7 @@ export function BulkRegistrationModal({
                             </p>
                             <div className="flex items-center gap-2 mt-1">
                               <p className="text-sm text-gray-600 truncate">
-                                {athlete.institution_name || "Sin institución"}
+                                {athlete.institutionName || "Sin institución"}
                               </p>
                             </div>
                           </div>

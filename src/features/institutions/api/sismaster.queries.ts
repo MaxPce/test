@@ -69,6 +69,8 @@ export interface SismasterAthlete {
   institutionName: string;
   institutionAbrev: string;
   institutionLogo?: string;
+  fullName?: string;
+  age?: number | null;
 }
 
 // ==================== ENDPOINTS ====================
@@ -87,6 +89,7 @@ const SISMASTER_ENDPOINTS = {
     ACCREDITED: "/sismaster/athletes/accredited",
     DETAIL: (id: number) => `/sismaster/athletes/${id}`,
     BY_DOCUMENT: (doc: string) => `/sismaster/athletes/document/${doc}`,
+    COUNT: "/sismaster/athletes/count",
   },
   INSTITUTIONS: {
     LIST: "/sismaster/institutions",
@@ -118,17 +121,13 @@ export const sismasterKeys = {
       [...sismasterKeys.athletes.all, "detail", id] as const,
     byDocument: (dni: string) =>
       [...sismasterKeys.athletes.all, "document", dni] as const,
-    accredited: (
-      idevent?: number,
-      idsport?: number,
-      idinstitution?: number,
-      gender?: string,
-    ) =>
+    accredited: (idevent?: number, idinstitution?: number, gender?: string) =>
       [
         ...sismasterKeys.athletes.all,
         "accredited",
-        { idevent, idsport, idinstitution, gender },
+        { idevent, idinstitution, gender },
       ] as const,
+    count: () => [...sismasterKeys.athletes.all, "count"] as const,
   },
   institutions: {
     all: ["sismaster", "institutions"] as const,
@@ -212,7 +211,7 @@ export const useSearchAthletes = (searchTerm: string, enabled = true) => {
   return useQuery({
     queryKey: sismasterKeys.athletes.search(searchTerm),
     queryFn: async () => {
-      const { data } = await apiClient.get<SismasterAthlete[]>( // ✅ Cambio aquí
+      const { data } = await apiClient.get<SismasterAthlete[]>(
         SISMASTER_ENDPOINTS.ATHLETES.SEARCH,
         {
           params: { q: searchTerm, limit: 50 },
@@ -225,14 +224,9 @@ export const useSearchAthletes = (searchTerm: string, enabled = true) => {
   });
 };
 
-/**
- * Obtener atletas acreditados con filtros
- */
 interface AccreditedAthletesOptions {
   idevent: number;
-  idsport: number;
   idinstitution?: number;
-  tregister?: "D" | "E" | "O";
   gender?: "M" | "F";
 }
 
@@ -240,19 +234,13 @@ export const useAccreditedAthletes = (
   options: AccreditedAthletesOptions,
   enabled = true,
 ) => {
-  const { idevent, idsport, idinstitution, tregister, gender } = options;
+  const { idevent, idinstitution, gender } = options;
 
   return useQuery({
-    queryKey: sismasterKeys.athletes.accredited(
-      idevent,
-      idsport,
-      idinstitution,
-      gender,
-    ),
+    queryKey: sismasterKeys.athletes.accredited(idevent, idinstitution, gender),
     queryFn: async () => {
-      const params: Record<string, any> = { idevent, idsport };
+      const params: Record<string, any> = { idevent };
       if (idinstitution) params.idinstitution = idinstitution;
-      if (tregister) params.tregister = tregister;
       if (gender) params.gender = gender;
 
       const { data } = await apiClient.get<SismasterAthlete[]>(
@@ -261,7 +249,7 @@ export const useAccreditedAthletes = (
       );
       return data;
     },
-    enabled: enabled && !!idevent && !!idsport,
+    enabled: enabled && !!idevent,
     staleTime: 1000 * 60 * 2, // Cache 2 minutos
   });
 };
@@ -308,10 +296,10 @@ export const useSismasterAthleteByDocument = (
  */
 export const useAthletesCount = () => {
   return useQuery({
-    queryKey: ["sismaster", "athletes", "count"],
+    queryKey: sismasterKeys.athletes.count(),
     queryFn: async () => {
       const { data } = await apiClient.get<{ count: number }>(
-        "/sismaster/athletes/count",
+        SISMASTER_ENDPOINTS.ATHLETES.COUNT,
       );
       return data.count;
     },
