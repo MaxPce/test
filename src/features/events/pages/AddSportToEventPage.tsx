@@ -104,7 +104,6 @@ export function AddSportToEventPage() {
     );
   }
 
-  // ✅ Rutas dinámicas para navegación
   const backPath = isExternalEvent
     ? `/admin/sismaster-events/${externalEventId}/sports`
     : `/admin/events/${eventId}/sports`;

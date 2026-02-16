@@ -46,13 +46,7 @@ export const updatePoomsaeScore = async (
     presentation: Number(data.presentation),
   };
 
-  console.log(
-    "🚀 Enviando al backend (modo grupos):",
-    payload,
-    "Tipos:",
-    typeof payload.accuracy,
-    typeof payload.presentation,
-  );
+  
 
   const response = await apiClient.patch(
     `/competitions/taekwondo/poomsae/participations/${participationId}/score`,
@@ -90,13 +84,7 @@ export const updatePoomsaeBracketScore = async (
     presentation: Number(data.presentation),
   };
 
-  console.log(
-    "🥋 Enviando al backend (modo BRACKET):",
-    payload,
-    "Tipos:",
-    typeof payload.accuracy,
-    typeof payload.presentation,
-  );
+  
 
   const response = await apiClient.patch<PoomsaeBracketScoreResponse>(
     `/competitions/taekwondo/poomsae/bracket/participations/${participationId}/score`,
@@ -152,7 +140,7 @@ export const updateKyoruguiSingleRound = async (
     participant2Points: number;
   },
 ) => {
-  console.log("🥋 Actualizando round individual:", { matchId, ...data });
+  
   
   const response = await apiClient.post(
     `/competitions/taekwondo/kyorugui/matches/${matchId}/rounds/single`,
@@ -172,7 +160,7 @@ export const updateKyoruguiRounds = async (
     participant2Points: number;
   }>,
 ) => {
-  console.log("🥋 Actualizando múltiples rounds:", { matchId, rounds });
+  
   
   const response = await apiClient.post(
     `/competitions/taekwondo/kyorugui/matches/${matchId}/rounds`,

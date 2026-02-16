@@ -125,11 +125,6 @@ export function CategoryInscriptionsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">Participantes Inscritos</h3>
-                {hasSismasterIntegration && (
-                  <p className="text-sm text-white/90 mt-1">
-                    ✓ Integrado con Sismaster
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -239,7 +234,7 @@ export function CategoryInscriptionsPage() {
         />
       </Modal>
 
-      {/* ✅ CORRECCIÓN: Removida la invalidación manual */}
+      
       {!isTeamCategory && hasSismasterIntegration && (
         <BulkRegistrationModal
           isOpen={isBulkModalOpen}

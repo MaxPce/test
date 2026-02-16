@@ -23,6 +23,9 @@ export const useCreateRegistration = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: registrationKeys.all });
       queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+      queryClient.invalidateQueries({ 
+        queryKey: ['sismaster-event-categories'] 
+      });
     },
   });
 };

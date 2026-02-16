@@ -123,12 +123,7 @@ export function BulkRegistrationModal({
   const handleSubmit = async () => {
     if (selectedAthletes.length === 0) return;
 
-    console.log("🚀 [BulkModal] Iniciando inscripción masiva...");
-    console.log("📝 [BulkModal] Atletas seleccionados:", selectedAthletes);
-    console.log(
-      "📂 [BulkModal] Event Category ID:",
-      eventCategory.eventCategoryId,
-    );
+    
 
     try {
       // Ejecutar mutation
@@ -137,19 +132,9 @@ export function BulkRegistrationModal({
         external_athlete_ids: selectedAthletes,
       });
 
-      console.log("✅ [BulkModal] Respuesta del backend:", result);
-      console.log(
-        "📊 [BulkModal] Cantidad de registrations:",
-        result?.length || 0,
-      );
 
       if (result && result.length > 0) {
         result.forEach((reg: any, index: number) => {
-          console.log(
-            `  [${index + 1}] Registration ${reg.registrationId}:`,
-            `Atleta="${reg.athlete?.name}"`,
-            `Institution="${reg.athlete?.institution?.name || "NO TIENE"}"`,
-          );
         });
       }
 
@@ -157,10 +142,10 @@ export function BulkRegistrationModal({
       setSelectedAthletes([]);
       handleClearFilters();
 
-      console.log("🎉 [BulkModal] Proceso completado, cerrando modal...");
+      
       onClose();
     } catch (error) {
-      console.error("❌ [BulkModal] Error al inscribir atletas:", error);
+      console.error("Error al inscribir atletas:", error);
     }
   };
 
