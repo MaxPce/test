@@ -22,10 +22,11 @@ export const useEventCategories = (params?: EventCategoriesParams) => {
     queryFn: async () => {
       const { data } = await apiClient.get<EventCategory[]>(
         ENDPOINTS.EVENT_CATEGORIES.LIST,
-        { params }
+        { params },
       );
       return data;
     },
+    staleTime: 0,
   });
 };
 
@@ -34,25 +35,26 @@ export const useEventCategory = (id: number) => {
     queryKey: eventCategoryKeys.detail(id),
     queryFn: async () => {
       const { data } = await apiClient.get<EventCategory>(
-        ENDPOINTS.EVENT_CATEGORIES.DETAIL(id)
+        ENDPOINTS.EVENT_CATEGORIES.DETAIL(id),
       );
       return data;
     },
     enabled: !!id,
+    staleTime: 0,
   });
 };
 
 export const useSismasterEventCategories = (externalEventId?: number) => {
   return useQuery({
-    queryKey: ['sismaster-event-categories', externalEventId],
+    queryKey: ["sismaster-event-categories", externalEventId],
     queryFn: async () => {
       if (!externalEventId) return [];
       const { data } = await apiClient.get<EventCategory[]>(
-        `/events/sismaster/${externalEventId}/categories`
+        `/events/sismaster/${externalEventId}/categories`,
       );
       return data;
     },
     enabled: !!externalEventId,
+    staleTime: 0,
   });
 };
-

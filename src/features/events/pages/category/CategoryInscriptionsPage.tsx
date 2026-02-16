@@ -9,7 +9,6 @@ import { RegistrationForm } from "../../components/RegistrationForm";
 import { TeamCreationForm } from "../../components/TeamCreationForm";
 import { BulkRegistrationModal } from "../../components/BulkRegistrationModal";
 import { RegistrationsList } from "../../components/RegistrationsList";
-import { useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import {
   useCreateRegistration,
@@ -26,8 +25,6 @@ export function CategoryInscriptionsPage() {
     eventCategory: EventCategory;
   }>();
 
-  const queryClient = useQueryClient();
-  const { id } = useParams();
   const [isIndividualModalOpen, setIsIndividualModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -42,7 +39,6 @@ export function CategoryInscriptionsPage() {
 
   const hasSismasterIntegration = !!eventCategory.externalEventId;
 
-  // Calcular estadísticas
   const stats = {
     total: registrations.length,
     male: registrations.filter(
@@ -74,14 +70,12 @@ export function CategoryInscriptionsPage() {
     members: { athleteId: number; rol: string }[];
   }) => {
     try {
-      // 1. Crear el equipo
       const team = await createTeamMutation.mutateAsync({
         name: data.teamName,
         institutionId: data.institutionId,
         categoryId: data.categoryId,
       });
 
-      // 2. Agregar los miembros al equipo
       await Promise.all(
         data.members.map((member) =>
           addTeamMemberMutation.mutateAsync({
@@ -94,7 +88,6 @@ export function CategoryInscriptionsPage() {
         ),
       );
 
-      // 3. Inscribir el equipo en la categoría
       await createRegistrationMutation.mutateAsync({
         eventCategoryId: eventCategory.eventCategoryId,
         teamId: team.teamId,
@@ -246,15 +239,11 @@ export function CategoryInscriptionsPage() {
         />
       </Modal>
 
+      {/* ✅ CORRECCIÓN: Removida la invalidación manual */}
       {!isTeamCategory && hasSismasterIntegration && (
         <BulkRegistrationModal
           isOpen={isBulkModalOpen}
-          onClose={() => {
-            setIsBulkModalOpen(false);
-            queryClient.invalidateQueries({
-              queryKey: ["event-categories", eventCategory.eventCategoryId],
-            });
-          }}
+          onClose={() => setIsBulkModalOpen(false)}
           eventCategory={eventCategory}
           eventId={eventCategory.externalEventId!}
         />

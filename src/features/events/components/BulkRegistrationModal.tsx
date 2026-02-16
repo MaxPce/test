@@ -40,18 +40,16 @@ export function BulkRegistrationModal({
           ? (eventCategory.category?.gender as "M" | "F")
           : undefined,
     },
-    isOpen, // Solo cargar cuando el modal está abierto
+    isOpen,
   );
 
   const bulkMutation = useBulkRegistrationFromSismaster();
 
-  // Atletas ya inscritos (por sus IDs de sismaster)
   const registeredAthleteIds =
     eventCategory.registrations
       ?.map((r) => r.external_athlete_id)
       .filter(Boolean) || [];
 
-  // Obtener lista única de instituciones
   const institutions = useMemo(() => {
     const uniqueInstitutions = Array.from(
       new Set(
@@ -61,7 +59,6 @@ export function BulkRegistrationModal({
     return uniqueInstitutions;
   }, [athletesFromSismaster]);
 
-  // Filtrado de atletas
   const filteredAthletes = useMemo(() => {
     let filtered = athletesFromSismaster;
 
@@ -71,12 +68,10 @@ export function BulkRegistrationModal({
       );
     }
 
-    // Excluir ya inscritos
     filtered = filtered.filter(
       (athlete) => !registeredAthleteIds.includes(athlete.idperson),
     );
 
-    // Filtrar por búsqueda
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -89,7 +84,6 @@ export function BulkRegistrationModal({
       );
     }
 
-    // Filtrar por institución
     if (selectedInstitution !== "all") {
       filtered = filtered.filter(
         (athlete) => athlete.institutionName === selectedInstitution,
@@ -129,24 +123,44 @@ export function BulkRegistrationModal({
   const handleSubmit = async () => {
     if (selectedAthletes.length === 0) return;
 
+    console.log("🚀 [BulkModal] Iniciando inscripción masiva...");
+    console.log("📝 [BulkModal] Atletas seleccionados:", selectedAthletes);
+    console.log(
+      "📂 [BulkModal] Event Category ID:",
+      eventCategory.eventCategoryId,
+    );
+
     try {
-      await bulkMutation.mutateAsync({
+      // Ejecutar mutation
+      const result = await bulkMutation.mutateAsync({
         eventCategoryId: eventCategory.eventCategoryId,
         external_athlete_ids: selectedAthletes,
       });
+
+      console.log("✅ [BulkModal] Respuesta del backend:", result);
+      console.log(
+        "📊 [BulkModal] Cantidad de registrations:",
+        result?.length || 0,
+      );
+
+      if (result && result.length > 0) {
+        result.forEach((reg: any, index: number) => {
+          console.log(
+            `  [${index + 1}] Registration ${reg.registrationId}:`,
+            `Atleta="${reg.athlete?.name}"`,
+            `Institution="${reg.athlete?.institution?.name || "NO TIENE"}"`,
+          );
+        });
+      }
 
       // Limpiar estado
       setSelectedAthletes([]);
       handleClearFilters();
 
-      // ✅ Esperar 500ms para asegurar que el backend procesó todo
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Cerrar modal
+      console.log("🎉 [BulkModal] Proceso completado, cerrando modal...");
       onClose();
     } catch (error) {
-      console.error("Error al inscribir atletas:", error);
-      // Aquí podrías agregar un toast de error
+      console.error("❌ [BulkModal] Error al inscribir atletas:", error);
     }
   };
 
@@ -182,8 +196,8 @@ export function BulkRegistrationModal({
               <p className="text-sm text-blue-700 mt-1">
                 {eventCategory.category?.sport?.name}
                 {eventCategory.category?.type === "individual"
-                  ? "Individual"
-                  : "Equipo"}
+                  ? " • Individual"
+                  : " • Equipo"}
               </p>
             </div>
             <Badge variant="primary" size="lg">

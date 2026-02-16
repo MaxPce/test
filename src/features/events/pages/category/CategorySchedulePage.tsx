@@ -30,8 +30,14 @@ import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwond
 import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { usePhases } from "@/features/competitions/api/phases.queries";
-import { useMatches, useMatch } from "@/features/competitions/api/matches.queries";
-import { useCreatePhase, useDeletePhase } from "@/features/competitions/api/phases.mutations";
+import {
+  useMatches,
+  useMatch,
+} from "@/features/competitions/api/matches.queries";
+import {
+  useCreatePhase,
+  useDeletePhase,
+} from "@/features/competitions/api/phases.mutations";
 import {
   useCreateMatch,
   useUpdateMatch,
@@ -64,8 +70,10 @@ export function CategorySchedulePage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] = useState(false);
-  const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] = useState(false);
+  const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] =
+    useState(false);
+  const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
+    useState(false);
 
   const initializeRoundRobinMutation = useInitializeRoundRobin();
   const updateStandingsMutation = useUpdateStandings();
@@ -207,10 +215,22 @@ export function CategorySchedulePage() {
 
   const getStatusConfig = (status: string) => {
     const configs = {
-      programado: { variant: "primary" as const, label: "Programado", dot: true },
+      programado: {
+        variant: "primary" as const,
+        label: "Programado",
+        dot: true,
+      },
       en_curso: { variant: "success" as const, label: "En Curso", dot: true },
-      finalizado: { variant: "default" as const, label: "Finalizado", dot: false },
-      cancelado: { variant: "warning" as const, label: "Cancelado", dot: false },
+      finalizado: {
+        variant: "default" as const,
+        label: "Finalizado",
+        dot: false,
+      },
+      cancelado: {
+        variant: "warning" as const,
+        label: "Cancelado",
+        dot: false,
+      },
     };
     return configs[status as keyof typeof configs] || configs.programado;
   };
@@ -222,7 +242,13 @@ export function CategorySchedulePage() {
       repechaje: { label: "Repechaje", icon: TrendingUp, color: "amber" },
       mejor_de_3: { label: "Mejor de 3", icon: Award, color: "emerald" },
     };
-    return configs[type as keyof typeof configs] || { label: type, icon: Trophy, color: "blue" };
+    return (
+      configs[type as keyof typeof configs] || {
+        label: type,
+        icon: Trophy,
+        color: "blue",
+      }
+    );
   };
 
   const handleGenerateRoundRobin = async (data: {
@@ -236,17 +262,19 @@ export function CategorySchedulePage() {
   // Calcular estadísticas
   const totalMatches = phases.reduce(
     (sum, phase) => sum + (phase.matches?.length || 0),
-    0
+    0,
   );
   const finishedMatches = phases.reduce(
     (sum, phase) =>
       sum +
       (phase.matches?.filter((m) => m.status === "finalizado").length || 0),
-    0
+    0,
   );
 
   if (phasesLoading) {
-    return <div className="flex justify-center items-center h-96">Cargando...</div>;
+    return (
+      <div className="flex justify-center items-center h-96">Cargando...</div>
+    );
   }
 
   return (
@@ -254,7 +282,6 @@ export function CategorySchedulePage() {
       {/* Header profesional */}
       <PageHeader
         title="Programación & Competencia"
-        
         actions={
           <Button
             onClick={() => setIsPhaseModalOpen(true)}
@@ -266,8 +293,6 @@ export function CategorySchedulePage() {
           </Button>
         }
       />
-
-      
 
       {phases.length === 0 ? (
         <EmptyState
@@ -305,9 +330,11 @@ export function CategorySchedulePage() {
                   }`}
                 >
                   {/* Header con gradiente */}
-                  <div className={`relative h-24 bg-gradient-to-br from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 overflow-hidden`}>
+                  <div
+                    className={`relative h-24 bg-gradient-to-br from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 overflow-hidden`}
+                  >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    
+
                     {/* Icono */}
                     <div className="absolute top-4 left-4">
                       <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -359,7 +386,9 @@ export function CategorySchedulePage() {
                   </CardBody>
 
                   {/* Bottom accent */}
-                  <div className={`h-1 bg-gradient-to-r from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 opacity-0 group-hover:opacity-100 transition-opacity`} />
+                  <div
+                    className={`h-1 bg-gradient-to-r from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                  />
                 </Card>
               );
             })}
@@ -374,7 +403,9 @@ export function CategorySchedulePage() {
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-strong">
                       {(() => {
-                        const Icon = getPhaseTypeConfig(selectedPhase.type).icon;
+                        const Icon = getPhaseTypeConfig(
+                          selectedPhase.type,
+                        ).icon;
                         return <Icon className="h-7 w-7 text-white" />;
                       })()}
                     </div>
@@ -385,7 +416,9 @@ export function CategorySchedulePage() {
                       <p className="text-sm text-slate-600">
                         {getTaekwondoType() === "poomsae"
                           ? `${eventCategory.registrations?.length || 0} participante${
-                              eventCategory.registrations?.length !== 1 ? "s" : ""
+                              eventCategory.registrations?.length !== 1
+                                ? "s"
+                                : ""
                             }`
                           : `${matches.length} partido${matches.length !== 1 ? "s" : ""}`}
                       </p>
@@ -400,7 +433,6 @@ export function CategorySchedulePage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsGenerateBracketModalOpen(true)}
-                          
                         >
                           Generar Bracket
                         </Button>
@@ -424,7 +456,9 @@ export function CategorySchedulePage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setIsGenerateBestOf3ModalOpen(true)}
+                              onClick={() =>
+                                setIsGenerateBestOf3ModalOpen(true)
+                              }
                               icon={<Zap className="h-4 w-4" />}
                             >
                               Generar Serie
@@ -479,7 +513,8 @@ export function CategorySchedulePage() {
                     {matches.map((match) => {
                       const participants = match.participations || [];
                       const hasParticipants = participants.length > 0;
-                      const isTaekwondoKyorugui = getTaekwondoType() === "kyorugui";
+                      const isTaekwondoKyorugui =
+                        getTaekwondoType() === "kyorugui";
                       const isJudoMatch = isJudo();
                       const statusConfig = getStatusConfig(match.status);
 
@@ -521,7 +556,7 @@ export function CategorySchedulePage() {
                                     <Clock className="h-4 w-4" />
                                     <span>
                                       {new Date(
-                                        match.scheduledTime
+                                        match.scheduledTime,
                                       ).toLocaleString("es-ES")}
                                     </span>
                                   </div>
@@ -529,34 +564,50 @@ export function CategorySchedulePage() {
                                 {match.platformNumber && (
                                   <div className="flex items-center gap-1.5">
                                     <MapPin className="h-4 w-4" />
-                                    <span>Plataforma {match.platformNumber}</span>
+                                    <span>
+                                      Plataforma {match.platformNumber}
+                                    </span>
                                   </div>
                                 )}
                               </div>
 
                               {/* Puntajes */}
-                              {(getTaekwondoType() === "poomsae" || 
-                                getTaekwondoType() === "kyorugui" || 
+                              {(getTaekwondoType() === "poomsae" ||
+                                getTaekwondoType() === "kyorugui" ||
                                 isJudoMatch) &&
                                 match.participant1Score !== null &&
                                 match.participant2Score !== null && (
-                                <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                                  <p className="text-sm font-semibold text-slate-700 mb-1">
-                                    Puntaje Final
-                                  </p>
-                                  <p className="text-2xl font-bold text-slate-900">
-                                    {getTaekwondoType() === "poomsae" 
-                                      ? `${Number(match.participant1Score).toFixed(2)} - ${Number(match.participant2Score).toFixed(2)}`
-                                      : `${Math.floor(Number(match.participant1Score))} - ${Math.floor(Number(match.participant2Score))}`
-                                    }
-                                  </p>
-                                  {getTaekwondoType() === "poomsae" && match.participant1Accuracy !== null && (
-                                    <p className="text-xs text-slate-600 mt-1">
-                                      {Number(match.participant1Accuracy).toFixed(2)} + {Number(match.participant1Presentation).toFixed(2)} - {Number(match.participant2Accuracy).toFixed(2)} + {Number(match.participant2Presentation).toFixed(2)}
+                                  <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                                    <p className="text-sm font-semibold text-slate-700 mb-1">
+                                      Puntaje Final
                                     </p>
-                                  )}
-                                </div>
-                            )}  
+                                    <p className="text-2xl font-bold text-slate-900">
+                                      {getTaekwondoType() === "poomsae"
+                                        ? `${Number(match.participant1Score).toFixed(2)} - ${Number(match.participant2Score).toFixed(2)}`
+                                        : `${Math.floor(Number(match.participant1Score))} - ${Math.floor(Number(match.participant2Score))}`}
+                                    </p>
+                                    {getTaekwondoType() === "poomsae" &&
+                                      match.participant1Accuracy !== null && (
+                                        <p className="text-xs text-slate-600 mt-1">
+                                          {Number(
+                                            match.participant1Accuracy,
+                                          ).toFixed(2)}{" "}
+                                          +{" "}
+                                          {Number(
+                                            match.participant1Presentation,
+                                          ).toFixed(2)}{" "}
+                                          -{" "}
+                                          {Number(
+                                            match.participant2Accuracy,
+                                          ).toFixed(2)}{" "}
+                                          +{" "}
+                                          {Number(
+                                            match.participant2Presentation,
+                                          ).toFixed(2)}
+                                        </p>
+                                      )}
+                                  </div>
+                                )}
                             </div>
 
                             {/* Botón eliminar */}
@@ -602,7 +653,8 @@ export function CategorySchedulePage() {
                                           alt={institution?.name || ""}
                                           className="h-10 w-10 rounded-lg object-contain bg-white p-1"
                                           onError={(e) => {
-                                            e.currentTarget.style.display = "none";
+                                            e.currentTarget.style.display =
+                                              "none";
                                           }}
                                         />
                                       ) : (
@@ -636,10 +688,14 @@ export function CategorySchedulePage() {
                                       }
                                       size="sm"
                                     >
-                                      {participation.corner === "blue" && "Azul"}
-                                      {participation.corner === "white" && "Blanco"}
-                                      {participation.corner === "A" && "Equipo A"}
-                                      {participation.corner === "B" && "Equipo B"}
+                                      {participation.corner === "blue" &&
+                                        "Azul"}
+                                      {participation.corner === "white" &&
+                                        "Blanco"}
+                                      {participation.corner === "A" &&
+                                        "Equipo A"}
+                                      {participation.corner === "B" &&
+                                        "Equipo B"}
                                     </Badge>
                                   </div>
                                 );
@@ -668,21 +724,24 @@ export function CategorySchedulePage() {
                                         `¿Avanzar a ${
                                           participant.registration?.athlete
                                             ?.name ||
-                                          participant.registration?.team?.name ||
+                                          participant.registration?.team
+                                            ?.name ||
                                           "este participante"
-                                        } automáticamente?`
+                                        } automáticamente?`,
                                       )
                                     ) {
                                       try {
-                                        await advanceWinnerMutation.mutateAsync({
-                                          matchId: match.matchId,
-                                          winnerRegistrationId:
-                                            participant.registrationId!,
-                                        });
+                                        await advanceWinnerMutation.mutateAsync(
+                                          {
+                                            matchId: match.matchId,
+                                            winnerRegistrationId:
+                                              participant.registrationId!,
+                                          },
+                                        );
                                       } catch (error) {
                                         console.error(
                                           "Error al avanzar participante:",
-                                          error
+                                          error,
                                         );
                                       }
                                     }

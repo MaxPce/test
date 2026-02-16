@@ -14,8 +14,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Tabs } from "@/components/ui/Tabs";
 import { PageHeader } from "@/components/PageHeader";
-import { useEventCategories, useSismasterEventCategories } from "../api/eventCategories.queries";
+import {
+  useEventCategories,
+  useSismasterEventCategories,
+} from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
+import React from "react";
 
 export function CategoryDetailLayout() {
   // ✅ Detectar si es evento local o de Sismaster
@@ -26,22 +30,26 @@ export function CategoryDetailLayout() {
     categoryId: string;
   }>();
   const navigate = useNavigate();
-  
+
   const eventIdNum = eventId ? Number(eventId) : undefined;
-  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
+  const externalEventIdNum = externalEventId
+    ? Number(externalEventId)
+    : undefined;
   const isExternalEvent = !!externalEventId;
 
   // ✅ Usar el hook correcto según el tipo de evento
-  const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
-    { eventId: eventIdNum },
-    { enabled: !isExternalEvent && !!eventIdNum }
-  );
-  
-  const { data: externalEventCategories = [], isLoading: externalLoading } = useSismasterEventCategories(
-    externalEventIdNum
-  );
+  const { data: localEventCategories = [], isLoading: localLoading } =
+    useEventCategories(
+      { eventId: eventIdNum },
+      { enabled: !isExternalEvent && !!eventIdNum },
+    );
 
-  const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
+  const { data: externalEventCategories = [], isLoading: externalLoading } =
+    useSismasterEventCategories(externalEventIdNum);
+
+  const eventCategories = isExternalEvent
+    ? externalEventCategories
+    : localEventCategories;
   const isLoading = isExternalEvent ? externalLoading : localLoading;
 
   const eventCategory = eventCategories.find(

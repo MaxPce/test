@@ -98,7 +98,9 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                     <div className="text-sm font-medium text-gray-900">
                       {participant.participantName}
                       {participant.isTeam && (
-                        <span className="ml-1 text-xs text-blue-600">(Equipo)</span>
+                        <span className="ml-1 text-xs text-blue-600">
+                          (Equipo)
+                        </span>
                       )}
                     </div>
                     <div className="text-xs text-gray-500">
@@ -148,7 +150,9 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                   <div className="text-sm font-medium text-gray-900">
                     {participant.participantName}
                     {participant.isTeam && (
-                      <span className="ml-1 text-xs text-blue-600">(Equipo)</span>
+                      <span className="ml-1 text-xs text-blue-600">
+                        (Equipo)
+                      </span>
                     )}
                   </div>
                   <div className="text-xs text-gray-500">

@@ -50,8 +50,12 @@ export const useDeleteRegistration = () => {
       await apiClient.delete(ENDPOINTS.REGISTRATIONS.DELETE(id));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: registrationKeys.all });
-      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: eventCategoryKeys.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["sismaster-event-categories"],
+      });
     },
   });
 };
@@ -74,8 +78,15 @@ export const useUpdateRegistrationSeed = () => {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: registrationKeys.all });
-      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: eventCategoryKeys.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["sismaster-event-categories"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: registrationKeys.all,
+      });
     },
   });
 };
@@ -88,37 +99,36 @@ export const useBulkRegistrationFromSismaster = () => {
       eventCategoryId: number;
       external_athlete_ids: number[];
     }) => {
+      console.log("🌐 [Mutation] Llamando al backend con:", data);
+
       const response = await apiClient.post(
         "/events/registrations/bulk-sismaster",
         data,
       );
+
       return response.data;
     },
-    onSuccess: async (_, variables) => {
-      // ✅ Construir la key exacta según tu estructura
-      const detailKey = [
-        "eventCategories",
-        "detail",
-        variables.eventCategoryId,
-      ];
-
-      // Invalidar la query específica
+    onSuccess: async (data) => {
       await queryClient.invalidateQueries({
-        queryKey: detailKey,
-        exact: true,
+        queryKey: eventCategoryKeys.all,
       });
 
-      // Refetch inmediato y forzado
+      await queryClient.invalidateQueries({
+        queryKey: ["sismaster-event-categories"],
+      });
+
       await queryClient.refetchQueries({
-        queryKey: detailKey,
-        exact: true,
+        queryKey: eventCategoryKeys.all,
         type: "active",
       });
 
-      // Invalidar listas generales
-      queryClient.invalidateQueries({
-        queryKey: ["eventCategories", "list"],
+      await queryClient.refetchQueries({
+        queryKey: ["sismaster-event-categories"],
+        type: "active",
       });
+    },
+    onError: (error) => {
+      console.error("[Mutation] Error:", error);
     },
   });
 };

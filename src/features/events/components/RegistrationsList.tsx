@@ -13,6 +13,7 @@ import {
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { useUpdateRegistrationSeed } from "../api/registrations.mutations";
 import type { Registration } from "../types";
+import React from "react";
 
 interface RegistrationsListProps {
   registrations: Registration[];
@@ -27,7 +28,7 @@ export function RegistrationsList({
 }: RegistrationsListProps) {
   const [editingSeedId, setEditingSeedId] = useState<number | null>(null);
   const [seedValue, setSeedValue] = useState<string>("");
-  
+
   const updateSeedMutation = useUpdateRegistrationSeed();
 
   const handleEditSeed = (registration: Registration) => {
@@ -37,7 +38,7 @@ export function RegistrationsList({
 
   const handleSaveSeed = (registrationId: number) => {
     const seedNumber = seedValue.trim() === "" ? null : parseInt(seedValue);
-    
+
     if (seedNumber !== null && (isNaN(seedNumber) || seedNumber < 1)) {
       return;
     }
@@ -49,13 +50,41 @@ export function RegistrationsList({
           setEditingSeedId(null);
           setSeedValue("");
         },
-      }
+      },
     );
   };
 
   const handleCancelEdit = () => {
     setEditingSeedId(null);
     setSeedValue("");
+  };
+
+  // ✅ NUEVA FUNCIÓN: Obtener el nombre de la institución de manera robusta
+  const getInstitutionName = (registration: Registration): string => {
+    // Para atletas individuales
+    if (registration.athlete) {
+      return registration.athlete.institution?.name || "Sin institución";
+    }
+
+    // Para equipos
+    if (registration.team) {
+      return registration.team.institution?.name || "Sin institución";
+    }
+
+    return "N/A";
+  };
+
+  // ✅ NUEVA FUNCIÓN: Obtener el logo de la institución
+  const getInstitutionLogo = (registration: Registration): string | null => {
+    if (registration.athlete?.institution?.logoUrl) {
+      return getImageUrl(registration.athlete.institution.logoUrl);
+    }
+
+    if (registration.team?.institution?.logoUrl) {
+      return getImageUrl(registration.team.institution.logoUrl);
+    }
+
+    return null;
   };
 
   if (registrations.length === 0) {
@@ -87,6 +116,10 @@ export function RegistrationsList({
             : null;
 
           const isEditing = editingSeedId === registration.registrationId;
+
+          // ✅ Obtener datos de institución de forma robusta
+          const institutionName = getInstitutionName(registration);
+          const institutionLogo = getInstitutionLogo(registration);
 
           return (
             <TableRow key={registration.registrationId}>
@@ -164,13 +197,24 @@ export function RegistrationsList({
                   )}
                 </div>
               </TableCell>
+
+              {/* ✅ COLUMNA DE INSTITUCIÓN MEJORADA */}
               <TableCell>
-                <Badge variant="primary">
-                  {registration.athlete?.institution?.name ||
-                    registration.team?.institution?.name ||
-                    "N/A"}
-                </Badge>
+                <div className="flex items-center justify-center gap-2">
+                  {institutionLogo && (
+                    <img
+                      src={institutionLogo}
+                      alt={institutionName}
+                      className="h-6 w-6 rounded object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
+                  <Badge variant="primary">{institutionName}</Badge>
+                </div>
               </TableCell>
+
               <TableCell>
                 <div className="flex items-center justify-center gap-2">
                   {isEditing ? (
@@ -192,7 +236,9 @@ export function RegistrationsList({
                         }}
                       />
                       <button
-                        onClick={() => handleSaveSeed(registration.registrationId)}
+                        onClick={() =>
+                          handleSaveSeed(registration.registrationId)
+                        }
                         disabled={updateSeedMutation.isPending}
                         className="p-1 text-green-600 hover:bg-green-50 rounded"
                       >
