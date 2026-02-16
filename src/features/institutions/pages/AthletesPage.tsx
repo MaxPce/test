@@ -32,8 +32,8 @@ export function AthletesPage() {
           </h1>
           <p className="text-gray-600 mt-1">
             {totalAthletes
-              ? `${totalAthletes.toLocaleString("es-PE")} atletas acreditados en Sismaster`
-              : "Atletas acreditados en Sismaster"}
+              ? `${totalAthletes.toLocaleString("es-PE")} atletas `
+              : "Atletas"}
           </p>
         </div>
       </div>

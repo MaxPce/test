@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, X, UserCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
-import { useInstitutions } from "@/features/institutions/api/institutions.queries";
-import { useAthletes } from "@/features/institutions/api/athletes.queries";
+import { Spinner } from "@/components/ui/Spinner";
+import { useAccreditedAthletes } from "@/features/institutions/api/sismaster.queries"; 
+import type { EventCategory } from "../types";
 
 interface TeamMember {
   athleteId: number;
@@ -14,6 +15,8 @@ interface TeamMember {
 }
 
 interface TeamCreationFormProps {
+  eventId: number; 
+  eventCategory: EventCategory; 
   categoryId: number;
   onSubmit: (data: {
     teamName: string;
@@ -26,6 +29,8 @@ interface TeamCreationFormProps {
 }
 
 export function TeamCreationForm({
+  eventId, 
+  eventCategory, 
   categoryId,
   onSubmit,
   onCancel,
@@ -37,20 +42,50 @@ export function TeamCreationForm({
   const [selectedAthlete, setSelectedAthlete] = useState<number>(0);
   const [selectedRole, setSelectedRole] = useState<string>("titular");
 
-  const { data: institutions = [] } = useInstitutions();
-  const { data: allAthletes = [] } = useAthletes();
-
-  // Filtrar atletas de la institución seleccionada que no estén ya en el equipo
-  const availableAthletes = allAthletes.filter(
-    (athlete) =>
-      athlete.institution?.institutionId === selectedInstitution &&
-      !members.some((m) => m.athleteId === athlete.athleteId),
+  
+  const {
+    data: athletesFromSismaster = [],
+    isLoading: isLoadingAthletes,
+  } = useAccreditedAthletes(
+    {
+      idevent: eventId,
+      gender:
+        eventCategory.category?.gender !== "MIXTO"
+          ? (eventCategory.category?.gender as "M" | "F")
+          : undefined,
+    },
+    true, 
   );
+
+  const institutions = useMemo(() => {
+    const institutionMap = new Map<number, { id: number; name: string }>();
+    
+    athletesFromSismaster.forEach((athlete) => {
+      if (athlete.idinstitution && athlete.institutionName) {
+        institutionMap.set(athlete.idinstitution, {
+          id: athlete.idinstitution,
+          name: athlete.institutionName,
+        });
+      }
+    });
+
+    return Array.from(institutionMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [athletesFromSismaster]);
+
+  const availableAthletes = useMemo(() => {
+    return athletesFromSismaster.filter(
+      (athlete) =>
+        athlete.idinstitution === selectedInstitution &&
+        !members.some((m) => m.athleteId === athlete.idperson)
+    );
+  }, [athletesFromSismaster, selectedInstitution, members]);
 
   const institutionOptions = [
     { value: 0, label: "Seleccione una institución" },
     ...institutions.map((inst) => ({
-      value: inst.institutionId,
+      value: inst.id,
       label: inst.name,
     })),
   ];
@@ -58,8 +93,8 @@ export function TeamCreationForm({
   const athleteOptions = [
     { value: 0, label: "Seleccione un atleta" },
     ...availableAthletes.map((athlete) => ({
-      value: athlete.athleteId,
-      label: athlete.name,
+      value: athlete.idperson,
+      label: `${athlete.firstname} ${athlete.lastname}`,
     })),
   ];
 
@@ -72,14 +107,14 @@ export function TeamCreationForm({
   const addMember = () => {
     if (selectedAthlete > 0) {
       const athlete = availableAthletes.find(
-        (a) => a.athleteId === selectedAthlete,
+        (a) => a.idperson === selectedAthlete,
       );
       if (athlete) {
         setMembers([
           ...members,
           {
-            athleteId: athlete.athleteId,
-            athleteName: athlete.name,
+            athleteId: athlete.idperson,
+            athleteName: `${athlete.firstname} ${athlete.lastname}`,
             rol: selectedRole,
           },
         ]);
@@ -112,8 +147,35 @@ export function TeamCreationForm({
     return "default";
   };
 
+  if (isLoadingAthletes) {
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner size="lg" label="Cargando atletas acreditados..." />
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Info de la categoría */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-bold text-blue-900 text-lg">
+              {eventCategory.category?.name}
+            </h4>
+            <p className="text-sm text-blue-700 mt-1">
+              {eventCategory.category?.sport?.name} • Equipo
+            </p>
+          </div>
+          <Badge variant="primary" size="lg">
+            {eventCategory.category?.gender}
+          </Badge>
+        </div>
+      </div>
+
+      
+
       {/* Paso 1: Información del Equipo */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900">
@@ -133,7 +195,7 @@ export function TeamCreationForm({
           value={selectedInstitution}
           onChange={(e) => {
             setSelectedInstitution(Number(e.target.value));
-            setMembers([]); // Limpiar miembros al cambiar institución
+            setMembers([]); 
           }}
           options={institutionOptions}
           required
@@ -176,7 +238,7 @@ export function TeamCreationForm({
                   disabled={selectedAthlete === 0}
                   className="w-full"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  
                   Agregar
                 </Button>
               </div>

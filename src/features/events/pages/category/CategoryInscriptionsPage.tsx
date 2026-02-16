@@ -227,6 +227,8 @@ export function CategoryInscriptionsPage() {
         size="lg"
       >
         <TeamCreationForm
+          eventId={eventCategory.externalEventId!} 
+          eventCategory={eventCategory} 
           categoryId={eventCategory.categoryId}
           onSubmit={handleTeamCreation}
           onCancel={() => setIsTeamModalOpen(false)}

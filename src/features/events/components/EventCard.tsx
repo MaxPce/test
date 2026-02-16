@@ -94,12 +94,7 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
           </Badge>
         </div>
 
-        {/* Badge de Sismaster */}
-        <div className="absolute top-4 left-4">
-          <Badge variant="default" className="bg-purple-600 text-white">
-            Sismaster
-          </Badge>
-        </div>
+        
 
         {/* Nombre del evento sobre la imagen */}
         <div className="absolute bottom-4 left-4 right-4">
@@ -153,9 +148,8 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
             onClick={() => navigate(`/admin/sismaster-events/${event.eventId}/sports`)}
             className="flex-1 group/btn"
           >
-            <Trophy className="h-4 w-4" />
+            
             <span>Gestionar Deportes</span>
-            <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
           </Button>
         </div>
       </div>

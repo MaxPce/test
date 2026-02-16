@@ -36,7 +36,7 @@ export function InstitutionsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Instituciones</h1>
           <p className="text-gray-600 mt-1">
-            Instituciones registradas en Sismaster ({institutions.length})
+            ({institutions.length})
           </p>
         </div>
       </div>
