@@ -3,6 +3,7 @@ import type { EventCategory } from "@/features/events/types";
 import type { Athlete, Team } from "@/features/institutions/types";
 
 export interface Phase {
+  type: string;
   phaseId: number;
   eventCategoryId: number;
   name: string;
@@ -57,7 +58,6 @@ export interface Match {
   createdAt: string;
   updatedAt: string;
 
-  // ✅ AGREGAR: Relación completa con phase (incluyendo sport)
   phase?: {
     phaseId: number;
     name: string;
@@ -70,19 +70,18 @@ export interface Match {
         type: string;
         sport?: {
           sportId: number;
-          name: string; // ← Necesario para detectar "tenis de mesa"
+          name: string; 
         };
       };
     };
   };
 
-  // ✅ AGREGAR: Participations con registrations y teams completos
   participations?: Array<{
     participationId: number;
     phaseId: number;
     athleteId?: number;
     teamId?: number;
-    registrationId?: number; // ← Agregado
+    registrationId?: number; 
     registration?: {
       registrationId: number;
       athleteId?: number;
@@ -114,7 +113,6 @@ export interface Match {
     };
   }>;
 
-  // Mantener compatibilidad con código existente
   participantAData?: Participation;
   participantBData?: Participation;
   winnerData?: Participation;
@@ -147,7 +145,7 @@ export interface Participation {
   phaseId: number;
   athleteId?: number;
   teamId?: number;
-  registrationId?: number; // ✅ Agregado
+  registrationId?: number; 
   wins: number;
   losses: number;
   points: number;
@@ -159,7 +157,6 @@ export interface Participation {
   athlete?: Athlete;
   team?: Team;
   registration?: {
-    // ✅ Agregado
     registrationId: number;
     athleteId?: number;
     teamId?: number;

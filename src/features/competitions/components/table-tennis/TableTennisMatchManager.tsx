@@ -27,6 +27,7 @@ import {
 import {
   useFinalizeMatch,
   useReopenMatch,
+  useSetWalkover
 } from "../../api/table-tennis.mutations";
 import { useAdvanceWinner } from "../../api/bracket.mutations";
 import type { Match, Phase } from "../../types";
@@ -37,19 +38,27 @@ import {
   isTableTennisMatch,
 } from "../../utils/table-tennis.utils";
 
+import { WalkoverDialog } from "./WalkoverDialog";
+
+
 interface TableTennisMatchManagerProps {
   match: Match;
   phase: Phase;
+  onClose?: () => void;
+  onMatchUpdate?: () => void;
 }
 
 export function TableTennisMatchManager({
   match,
   phase,
+  onClose,
+  onMatchUpdate,
 }: TableTennisMatchManagerProps) {
   const modality = detectTableTennisModality(match);
   const requiresLineup = needsLineup(modality);
 
   const [activeTab, setActiveTab] = useState<string>("overview");
+  const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
 
   // Queries
   const { data: lineups = [], isLoading: lineupsLoading } = useMatchLineups(
@@ -68,7 +77,8 @@ export function TableTennisMatchManager({
   const generateGamesMutation = useGenerateGames();
   const finalizeMatchMutation = useFinalizeMatch();
   const reopenMatchMutation = useReopenMatch();
-  const advanceWinnerMutation = useAdvanceWinner(); // ✅ NUEVO
+  const advanceWinnerMutation = useAdvanceWinner(); 
+  const setWalkoverMutation = useSetWalkover();
 
   // Estados derivados
   const hasLineups = lineups.length === 2 && lineups.every((l) => l.hasLineup);
@@ -164,7 +174,7 @@ export function TableTennisMatchManager({
         `¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}\n\nEsta acción marcará el match como finalizado.`,
       )
     ) {
-      if (phase.type === "eliminacion") {
+      if (phase && phase.type === "eliminacion") {
         advanceWinnerMutation.mutate(
           {
             matchId: match.matchId,
@@ -172,7 +182,7 @@ export function TableTennisMatchManager({
           },
           {
             onSuccess: () => {
-              alert("Match finalizado y ganador avanzado exitosamente");
+              onClose?.();
             },
             onError: () => {
               alert("Error al finalizar el match");
@@ -180,10 +190,11 @@ export function TableTennisMatchManager({
           },
         );
       } else {
-        // Para otras fases (grupo, mejor_de_3), usar el método tradicional
+        // Para otras fases (grupo, mejor_de_3) o cuando phase no está definido
         finalizeMatchMutation.mutate(match.matchId, {
           onSuccess: () => {
             alert("Match finalizado exitosamente");
+            onClose?.();
           },
           onError: () => {
             alert("Error al finalizar el match");
@@ -192,6 +203,37 @@ export function TableTennisMatchManager({
       }
     }
   };
+
+  const handleSetWalkover = () => {
+    setShowWalkoverDialog(true);
+  };
+
+  const handleWalkoverConfirm = (winnerRegistrationId: number, reason: string) => {
+    setWalkoverMutation.mutate(
+      {
+        matchId: match.matchId,
+        winnerRegistrationId,
+        reason,
+      },
+      {
+        onSuccess: () => {
+          setShowWalkoverDialog(false);
+          onClose?.();
+        },
+        onError: (error: any) => {
+          alert(
+            error.response?.data?.message || 
+            "Error al marcar walkover"
+          );
+        },
+      }
+    );
+  };
+
+
+
+
+
 
   const handleLineupSuccess = () => {
     const team1HasLineup = lineups[0]?.hasLineup;
@@ -293,21 +335,28 @@ export function TableTennisMatchManager({
               </div>
 
               <div className="text-center px-6">
-                {result ? (
-                  <div>
-                    <div className="text-4xl font-bold text-gray-900 mb-1">
-                      {result.team1.wins} - {result.team2.wins}
-                    </div>
-                    <Badge
-                      variant={
-                        match.status === "finalizado" ? "success" : "default"
-                      }
-                    >
-                      {match.status === "finalizado"
-                        ? "Finalizado"
-                        : "En juego"}
-                    </Badge>
+              {result ? (
+                <div>
+                  <div className="text-4xl font-bold text-gray-900 mb-1">
+                    {result.team1.wins} - {result.team2.wins}
                   </div>
+                  <Badge
+                    variant={
+                      match.status === "finalizado" ? "success" : "default"
+                    }
+                  >
+                    {match.status === "finalizado"
+                      ? "Finalizado"
+                      : modality === "team" 
+                        ? "En juego" 
+                        : `Sets: ${result.team1.wins} - ${result.team2.wins}`}
+                  </Badge>
+                  {modality !== "team" && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      (Sets ganados)
+                    </p>
+                  )}
+                </div>
                 ) : (
                   <div>
                     <div className="text-2xl font-bold text-gray-400 mb-2">
@@ -368,15 +417,21 @@ export function TableTennisMatchManager({
               }`}
             ></div>
             <div>
-              <p className="text-sm text-gray-600">Juegos</p>
+              <p className="text-sm text-gray-600">
+                {modality === "team" ? "Juegos" : "Juego"}
+              </p>
               <p className="font-semibold text-gray-900">
                 {hasGames ? (
                   <span>
-                    {games.filter((g) => g.status === "completed").length} /{" "}
-                    {games.length} completados
+                    {modality === "team" 
+                      ? `${games.filter((g) => g.status === "completed").length} / ${games.length} completados`
+                      : games[0]?.status === "completed" 
+                        ? "Completado ✓" 
+                        : "En progreso"
+                    }
                   </span>
                 ) : (
-                  <span className="text-gray-500">No generados</span>
+                  <span className="text-gray-500">No generado</span>
                 )}
               </p>
             </div>
@@ -412,18 +467,17 @@ export function TableTennisMatchManager({
       {/* Botón de finalizar match */}
       {hasGames &&
         result &&
-        result.winner &&
-        match.status !== "finalizado" &&
-        games.every((g) => g.status === "completed") && (
+        result.winner && (
           <Card>
             <CardBody className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-gray-900">
-                    Todos los juegos completados
+                    Ganador determinado
                   </p>
                   <p className="text-sm text-gray-600">
                     Ganador: {getWinnerName()} ({result.score})
+                    {modality !== "team" && <span className="text-xs"> sets</span>}
                   </p>
                 </div>
                 <Button
@@ -432,14 +486,15 @@ export function TableTennisMatchManager({
                     finalizeMatchMutation.isPending ||
                     advanceWinnerMutation.isPending
                   }
-                  variant="default"
+                  variant={match.status === "finalizado" ? "outline" : "default"}
                 >
-                  Finalizar Match
+                  {match.status === "finalizado" ? "Finalizar Match" : "Finalizar Match"}
                 </Button>
               </div>
             </CardBody>
           </Card>
         )}
+
 
       {/* Tabs principales */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -478,6 +533,20 @@ export function TableTennisMatchManager({
               </div>
             </Alert>
           )}
+
+          {!hasGames && match.status !== "finalizado" && (
+          <Alert variant="warning">
+            
+            <Button
+              onClick={handleSetWalkover}
+              isLoading={setWalkoverMutation.isPending}
+              variant="outline"
+              className="ml-4"
+            >
+              Marcar Walkover (WO)
+            </Button>
+          </Alert>
+        )}
 
           {requiresLineup && hasLineups && !hasGames && (
             <Alert variant="info">
@@ -641,7 +710,7 @@ export function TableTennisMatchManager({
         {/* Tab: Scorecard */}
         {hasGames && (
           <TabsContent value="scorecard">
-            <TableTennisScorecardV2 games={games} matchId={match.matchId} />
+            <TableTennisScorecardV2 games={games} matchId={match.matchId} onGameUpdate={onMatchUpdate} />
           </TabsContent>
         )}
 
@@ -649,7 +718,7 @@ export function TableTennisMatchManager({
         {result && (
           <TabsContent value="results">
             <div className="space-y-6">
-              <TableTennisScorecardV2 games={games} matchId={match.matchId} />
+              <TableTennisScorecardV2 games={games} matchId={match.matchId} onGameUpdate={onMatchUpdate}/>
 
               <Card>
                 <CardBody>
@@ -708,6 +777,17 @@ export function TableTennisMatchManager({
           </TabsContent>
         )}
       </Tabs>
+      {showWalkoverDialog && (
+        <WalkoverDialog
+          participant1Name={participant1Name}
+          participant2Name={participant2Name}
+          participant1RegistrationId={participation1?.registration.registrationId!}
+          participant2RegistrationId={participation2?.registration.registrationId!}
+          onConfirm={handleWalkoverConfirm}
+          onCancel={() => setShowWalkoverDialog(false)}
+          isLoading={setWalkoverMutation.isPending}
+        />
+      )}
     </div>
   );
 }

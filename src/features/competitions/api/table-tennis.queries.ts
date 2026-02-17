@@ -119,6 +119,7 @@ export function useUpdateGameResult() {
       // Invalidar todas las queries del match
       const matchId = response.game?.matchId;
       if (matchId) {
+        // Queries específicas de tenis de mesa
         queryClient.invalidateQueries({
           queryKey: tableTennisKeys.games(matchId),
         });
@@ -127,6 +128,18 @@ export function useUpdateGameResult() {
         });
         queryClient.invalidateQueries({
           queryKey: tableTennisKeys.details(matchId),
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: ['matches', matchId],
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: ['matches'],
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: ['phases'],
         });
       }
     },

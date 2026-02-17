@@ -9,11 +9,13 @@ import type { MatchGame, GameSet } from "../../api/table-tennis.api";
 interface TableTennisScorecardProps {
   games: MatchGame[];
   matchId: number;
+  onGameUpdate?: () => void;
 }
 
 export function TableTennisScorecardV2({
   games,
   matchId,
+  onGameUpdate,
 }: TableTennisScorecardProps) {
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   const [currentSets, setCurrentSets] = useState<GameSet[]>([]);
@@ -119,6 +121,7 @@ export function TableTennisScorecardV2({
         onSuccess: () => {
           setEditingGameId(null);
           setCurrentSets([]);
+          onGameUpdate?.(); 
         },
         onError: (error: any) => {
           alert(error.response?.data?.message || "Error al guardar");
@@ -126,6 +129,7 @@ export function TableTennisScorecardV2({
       },
     );
   };
+
 
   const handleCancel = () => {
     setEditingGameId(null);
@@ -213,15 +217,19 @@ export function TableTennisScorecardV2({
                     {game.winnerId === game.player1Id && (
                       <Trophy className="h-4 w-4 text-yellow-500" />
                     )}
-                    <span className="text-xs text-gray-500">
-                      ({game.player1.institution.code})
-                    </span>
+                    {game.player1.institution && (
+                      <span className="text-xs text-gray-500">
+                        ({game.player1.institution.code})
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-end gap-2">
-                    <span className="text-xs text-gray-500">
-                      ({game.player2.institution.code})
-                    </span>
+                    {game.player2.institution && (
+                      <span className="text-xs text-gray-500">
+                        ({game.player2.institution.code})
+                      </span>
+                    )}
                     {game.winnerId === game.player2Id && (
                       <Trophy className="h-4 w-4 text-yellow-500" />
                     )}
@@ -230,7 +238,6 @@ export function TableTennisScorecardV2({
                     </span>
                   </div>
                 </div>
-
                 {/* Sets */}
                 {displaySets.length > 0 && (
                   <div className="space-y-2">

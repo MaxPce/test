@@ -186,4 +186,16 @@ export const tableTennisApi = {
     );
     return response.data;
   },
+
+  setWalkover: async (
+    matchId: number, 
+    winnerRegistrationId: number, 
+    reason?: string
+  ) => {
+    const response = await apiClient.post(
+      `/competitions/table-tennis/matches/${matchId}/walkover`,
+      { winnerRegistrationId, reason }
+    );
+    return response.data;
+  },
 };

@@ -28,3 +28,28 @@ export function useReopenMatch() {
     },
   });
 }
+
+export function useSetWalkover() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ 
+      matchId, 
+      winnerRegistrationId, 
+      reason 
+    }: { 
+      matchId: number; 
+      winnerRegistrationId: number; 
+      reason?: string;
+    }) => tableTennisApi.setWalkover(matchId, winnerRegistrationId, reason),
+    onSuccess: (response) => {
+      const matchId = response.match?.matchId;
+      if (matchId) {
+        queryClient.invalidateQueries({ queryKey: ["match-games", matchId] });
+        queryClient.invalidateQueries({ queryKey: ["match-result", matchId] });
+        queryClient.invalidateQueries({ queryKey: ["matches"] });
+        queryClient.invalidateQueries({ queryKey: ["phases"] });
+      }
+    },
+  });
+}

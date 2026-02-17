@@ -5,6 +5,7 @@ import type { EventCategory } from "@/features/events/types";
 interface TableTennisMatchWrapperProps {
   match: Match;
   eventCategory: EventCategory;
+  onClose?: () => void;
 }
 
 export function TableTennisMatchWrapper({
