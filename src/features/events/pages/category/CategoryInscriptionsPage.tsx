@@ -70,11 +70,14 @@ export function CategoryInscriptionsPage() {
     members: { athleteId: number; rol: string }[];
   }) => {
     try {
+      
+
       const team = await createTeamMutation.mutateAsync({
-        name: data.teamName,
-        institutionId: data.institutionId,
-        categoryId: data.categoryId,
+        name: data.teamName, 
+        institutionId: data.institutionId,  
+        categoryId: data.categoryId, 
       });
+
 
       await Promise.all(
         data.members.map((member) =>
@@ -96,8 +99,10 @@ export function CategoryInscriptionsPage() {
       setIsTeamModalOpen(false);
     } catch (error) {
       console.error("Error al crear equipo:", error);
+      console.error("Detalles del error:", error.response?.data);  
     }
   };
+
 
   const handleDeleteRegistration = async (registrationId: number) => {
     await deleteRegistrationMutation.mutateAsync(registrationId);
