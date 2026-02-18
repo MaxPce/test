@@ -169,40 +169,25 @@ export function TableTennisMatchManager({
 
     const winnerName = getWinnerName();
 
-    if (
-      window.confirm(
-        `¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}\n\nEsta acción marcará el match como finalizado.`,
-      )
-    ) {
-      if (phase && phase.type === "eliminacion") {
-        advanceWinnerMutation.mutate(
-          {
-            matchId: match.matchId,
-            winnerRegistrationId: result.winner.registrationId,
-          },
-          {
-            onSuccess: () => {
-              onClose?.();
-            },
-            onError: () => {
-              alert("Error al finalizar el match");
-            },
-          },
-        );
-      } else {
-        // Para otras fases (grupo, mejor_de_3) o cuando phase no está definido
-        finalizeMatchMutation.mutate(match.matchId, {
+    if (window.confirm(`¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}`)) {
+      advanceWinnerMutation.mutate(
+        {
+          matchId: match.matchId,
+          winnerRegistrationId: result.winner.registrationId,
+        },
+        {
           onSuccess: () => {
-            alert("Match finalizado exitosamente");
+            onMatchUpdate?.();
             onClose?.();
           },
           onError: () => {
             alert("Error al finalizar el match");
           },
-        });
-      }
+        }
+      );
     }
   };
+
 
   const handleSetWalkover = () => {
     setShowWalkoverDialog(true);

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
+import { useUpdateMatch } from "@/features/competitions/api/matches.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
 
@@ -23,9 +24,16 @@ export function MatchDetailsModal({
   onClose,
   sportConfig,
 }: MatchDetailsModalProps) {
+  // useMatchDetails siempre se llama — su api.ts ya tiene el fallback interno
   const { data, isLoading, refetch } = useMatchDetails(matchId);
   const advanceWinnerMutation = useAdvanceWinner();
+  const updateMatchMutation = useUpdateMatch();
+
   const [showManageModal, setShowManageModal] = useState(false);
+  const [editScores, setEditScores] = useState(false);
+  const [score1, setScore1] = useState<string>("");
+  const [score2, setScore2] = useState<string>("");
+  const [winnerRegId, setWinnerRegId] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -42,7 +50,11 @@ export function MatchDetailsModal({
 
   if (!data) return null;
 
-  const { match, lineups, games, result } = data;
+
+  const match = (data as any).match ?? data;
+  const lineups: any[] = (data as any).lineups ?? [];
+  const games: any[] = (data as any).games ?? [];
+  const result: any = (data as any).result ?? null;
 
   const detectSportType = (): string => {
     if (sportConfig?.sportType) return sportConfig.sportType;
@@ -54,25 +66,40 @@ export function MatchDetailsModal({
     if (sportName.includes("taekwondo") && categoryName.includes("kyorugi"))
       return "kyorugi";
     if (sportName.includes("tenis de mesa")) return "table-tennis";
-    if (
-      sportName.includes("voleibol") ||
-      sportName.includes("básquetbol") ||
-      sportName.includes("fútbol")
-    )
-      return "team";
     return "generic";
   };
 
   const sportType = detectSportType();
-  const isTeamMatch = lineups.length > 0 && lineups[0].lineups.length > 0;
+  const isTeamMatch = lineups.length > 0 && lineups[0]?.lineups?.length > 0;
   const isTableTennis = sportType === "table-tennis";
   const isJudo = sportType === "judo";
   const isKyorugi = sportType === "kyorugi";
 
   const participations = match.participations || [];
-  const hasOnlyOneParticipant = participations.length === 1;
-  const canAdvance = hasOnlyOneParticipant && match.status !== "finalizado";
-  const canManage = participations.length === 2 && isTableTennis;
+  const p1 = participations[0];
+  const p2 = participations[1];
+
+  const p1Name =
+    p1?.registration?.athlete?.name ||
+    p1?.registration?.team?.name ||
+    "Participante 1";
+  const p2Name =
+    p2?.registration?.athlete?.name ||
+    p2?.registration?.team?.name ||
+    "Participante 2";
+
+  // ── Condiciones de botones ──────────────────────────────────────────────
+  // BYE: único participante sin finalizar
+  const canAdvanceBye =
+    participations.length === 1 && match.status !== "finalizado";
+
+  // TT: botón especializado
+  const canManageTT = participations.length === 2 && isTableTennis;
+
+  // Deportes genéricos: registrar/editar resultado (incluye judo/kyorugi genérico)
+  const canPickWinner =
+    participations.length === 2 && !isTableTennis;
+  // ───────────────────────────────────────────────────────────────────────
 
   const getScoreLabel = () => {
     if (sportConfig?.scoreLabel) return sportConfig.scoreLabel;
@@ -82,35 +109,55 @@ export function MatchDetailsModal({
     return "Puntos";
   };
 
-  const formatScore = (score: number) => {
-    if (isJudo && score === 10) return "Ippon";
-    return score;
+  const formatScore = (score: any) => {
+    if (isJudo && (score === 10 || score === "10")) return "Ippon";
+    return score ?? 0;
   };
 
   const handleAdvanceParticipant = () => {
-    if (!participations[0]) return;
+    if (!p1) return;
     const participantName =
-      participations[0].registration?.athlete?.name || "este participante";
-    if (
-      window.confirm(
-        `¿Avanzar a ${participantName} automáticamente a la siguiente ronda?`,
-      )
-    ) {
+      p1.registration?.athlete?.name ||
+      p1.registration?.team?.name ||
+      "este participante";
+    if (confirm(`¿Avanzar a ${participantName} automáticamente a la siguiente ronda?`)) {
       advanceWinnerMutation.mutate(
         {
           matchId: match.matchId,
-          winnerRegistrationId: participations[0].registrationId!,
+          winnerRegistrationId: p1.registrationId!,
         },
         {
-          onSuccess: () => {
-            refetch();
-          },
-          onError: () => {
-            alert("Error al avanzar el participante. Intenta nuevamente.");
-          },
+          onSuccess: () => refetch(),
+          onError: () => alert("Error al avanzar el participante."),
         },
       );
     }
+  };
+
+  // ✅ Firma real de useUpdateMatch: { id, data }
+  const handleSaveScores = () => {
+    if (winnerRegId === null) {
+      alert("Selecciona un ganador antes de guardar.");
+      return;
+    }
+    updateMatchMutation.mutate(
+      {
+        id: match.matchId,
+        data: {
+          participant1Score: score1 !== "" ? parseFloat(score1) : undefined,
+          participant2Score: score2 !== "" ? parseFloat(score2) : undefined,
+          winnerRegistrationId: winnerRegId,
+          status: "finalizado",
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditScores(false);
+          refetch();
+        },
+        onError: () => alert("Error al guardar los puntajes."),
+      },
+    );
   };
 
   return (
@@ -123,6 +170,7 @@ export function MatchDetailsModal({
           className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* ── Header ── */}
           <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -132,8 +180,10 @@ export function MatchDetailsModal({
                   {match.platformNumber || "N/A"}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                {canAdvance && (
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+
+                {/* BYE */}
+                {canAdvanceBye && (
                   <Button
                     onClick={handleAdvanceParticipant}
                     isLoading={advanceWinnerMutation.isPending}
@@ -144,7 +194,9 @@ export function MatchDetailsModal({
                     Pasar Participante
                   </Button>
                 )}
-                {canManage && (
+
+                {/* Tenis de mesa */}
+                {canManageTT && (
                   <Button
                     onClick={() => setShowManageModal(true)}
                     variant="ghost"
@@ -154,6 +206,26 @@ export function MatchDetailsModal({
                     {games.length > 0 ? "Editar Puntajes" : "Registrar Puntajes"}
                   </Button>
                 )}
+
+                {/* Deportes genéricos (judo, etc.) */}
+                {canPickWinner && (
+                  <Button
+                    onClick={() => {
+                      setScore1(String(match.participant1Score ?? ""));
+                      setScore2(String(match.participant2Score ?? ""));
+                      setWinnerRegId(match.winnerRegistrationId ?? null);
+                      setEditScores(true);
+                    }}
+                    variant="ghost"
+                    className="bg-white/20 hover:bg-white/30 text-white border-0"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    {match.status === "finalizado"
+                      ? "Editar Resultado"
+                      : "Registrar Resultado"}
+                  </Button>
+                )}
+
                 <Button
                   variant="ghost"
                   onClick={onClose}
@@ -165,7 +237,8 @@ export function MatchDetailsModal({
             </div>
           </div>
 
-          {canAdvance && (
+          {/* Aviso BYE */}
+          {canAdvanceBye && (
             <div className="mx-6 mt-4 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
               <p className="text-sm font-semibold text-amber-900">
                 Participante sin oponente
@@ -174,6 +247,94 @@ export function MatchDetailsModal({
           )}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+            {/* ── Panel inline: Registrar/Editar resultado (no-TT) ── */}
+            {editScores && canPickWinner && (
+              <Card>
+                <CardHeader>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Registrar Resultado
+                  </h3>
+                </CardHeader>
+                <CardBody className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">
+                        {p1Name}
+                      </label>
+                      <input
+                        type="number"
+                        value={score1}
+                        onChange={(e) => setScore1(e.target.value)}
+                        placeholder={getScoreLabel()}
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">
+                        {p2Name}
+                      </label>
+                      <input
+                        type="number"
+                        value={score2}
+                        onChange={(e) => setScore2(e.target.value)}
+                        placeholder={getScoreLabel()}
+                        className="w-full border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Selección de ganador */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">
+                      Ganador
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[p1, p2].map((p, idx) => {
+                        if (!p) return null;
+                        const regId = p.registrationId ?? p.registration?.registrationId;
+                        const name = idx === 0 ? p1Name : p2Name;
+                        return (
+                          <button
+                            key={regId}
+                            type="button"
+                            onClick={() => setWinnerRegId(regId)}
+                            className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                              winnerRegId === regId
+                                ? "border-green-500 bg-green-50 text-green-800"
+                                : "border-gray-300 bg-white text-gray-700 hover:border-blue-400"
+                            }`}
+                          >
+                            {winnerRegId === regId && (
+                              <Trophy className="inline h-4 w-4 mr-1 text-green-600" />
+                            )}
+                            {name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditScores(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleSaveScores}
+                      isLoading={updateMatchMutation.isPending}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Guardar y Finalizar
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
+            {/* ── Resultado ── */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -195,80 +356,78 @@ export function MatchDetailsModal({
               </CardHeader>
               <CardBody>
                 <div className="grid grid-cols-2 gap-4">
+                  {/* P1 */}
                   <div
                     className={`p-4 rounded-xl border-2 ${
-                      result?.winner?.registrationId ===
-                      result?.team1?.participation?.registrationId
-                        ? "bg-green-50 border-green-500"
-                        : "bg-gray-50 border-gray-300"
+                      isTableTennis
+                        ? result?.winner?.registrationId ===
+                          result?.team1?.participation?.registrationId
+                          ? "bg-green-50 border-green-500"
+                          : "bg-gray-50 border-gray-300"
+                        : match.winnerRegistrationId != null &&
+                          match.winnerRegistrationId ===
+                            (p1?.registrationId ?? p1?.registration?.registrationId)
+                          ? "bg-green-50 border-green-500"
+                          : "bg-gray-50 border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      {result?.team1?.participation?.registration?.athlete
-                        ?.photoUrl && (
+                      {result?.team1?.participation?.registration?.athlete?.photoUrl && (
                         <img
-                          src={getImageUrl(
-                            result.team1.participation.registration.athlete
-                              .photoUrl,
-                          )}
+                          src={getImageUrl(result.team1.participation.registration.athlete.photoUrl)}
                           alt={result.team1.teamName}
                           className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
                         />
                       )}
                       <h4 className="font-bold text-gray-900">
-                        {result?.team1?.teamName}
+                        {isTableTennis ? result?.team1?.teamName : p1Name}
                       </h4>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        {getScoreLabel()}
-                      </span>
+                      <span className="text-sm text-gray-600">{getScoreLabel()}</span>
                       <Badge variant="primary" className="text-2xl font-bold px-4">
                         {isTableTennis
-                          ? result?.team1?.wins || 0
-                          : formatScore(match.participant1Score || 0)}
+                          ? result?.team1?.wins ?? 0
+                          : formatScore(match.participant1Score)}
                       </Badge>
                     </div>
                   </div>
 
+                  {/* P2 */}
                   <div
                     className={`p-4 rounded-xl border-2 ${
-                      result?.winner?.registrationId ===
-                      result?.team2?.participation?.registrationId
-                        ? "bg-green-50 border-green-500"
-                        : "bg-gray-50 border-gray-300"
+                      isTableTennis
+                        ? result?.winner?.registrationId ===
+                          result?.team2?.participation?.registrationId
+                          ? "bg-green-50 border-green-500"
+                          : "bg-gray-50 border-gray-300"
+                        : match.winnerRegistrationId != null &&
+                          match.winnerRegistrationId ===
+                            (p2?.registrationId ?? p2?.registration?.registrationId)
+                          ? "bg-green-50 border-green-500"
+                          : "bg-gray-50 border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      {result?.team2?.participation?.registration?.athlete
-                        ?.photoUrl && (
+                      {result?.team2?.participation?.registration?.athlete?.photoUrl && (
                         <img
-                          src={getImageUrl(
-                            result.team2.participation.registration.athlete
-                              .photoUrl,
-                          )}
+                          src={getImageUrl(result.team2.participation.registration.athlete.photoUrl)}
                           alt={result.team2.teamName}
                           className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
                         />
                       )}
                       <h4 className="font-bold text-gray-900">
-                        {result?.team2?.teamName}
+                        {isTableTennis ? result?.team2?.teamName : p2Name}
                       </h4>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        {getScoreLabel()}
-                      </span>
+                      <span className="text-sm text-gray-600">{getScoreLabel()}</span>
                       <Badge variant="primary" className="text-2xl font-bold px-4">
                         {isTableTennis
-                          ? result?.team2?.wins || 0
-                          : formatScore(match.participant2Score || 0)}
+                          ? result?.team2?.wins ?? 0
+                          : formatScore(match.participant2Score)}
                       </Badge>
                     </div>
                   </div>
@@ -276,7 +435,8 @@ export function MatchDetailsModal({
               </CardBody>
             </Card>
 
-            {(isJudo || isKyorugi) && match.participant1Score !== null && (
+            {/* Detalle judo/kyorugi */}
+            {(isJudo || isKyorugi) && match.participant1Score != null && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -289,29 +449,21 @@ export function MatchDetailsModal({
                 <CardBody>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">
-                        {result?.team1?.teamName}
-                      </p>
+                      <p className="text-sm text-gray-600 mb-1">{p1Name}</p>
                       <p className="text-3xl font-bold text-blue-600">
-                        {formatScore(match.participant1Score || 0)}
+                        {formatScore(match.participant1Score)}
                       </p>
                       {isJudo && match.participant1Score === 10 && (
-                        <Badge variant="success" className="mt-2">
-                          ¡Ippon!
-                        </Badge>
+                        <Badge variant="success" className="mt-2">¡Ippon!</Badge>
                       )}
                     </div>
                     <div className="text-center p-4 bg-red-50 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">
-                        {result?.team2?.teamName}
-                      </p>
+                      <p className="text-sm text-gray-600 mb-1">{p2Name}</p>
                       <p className="text-3xl font-bold text-red-600">
-                        {formatScore(match.participant2Score || 0)}
+                        {formatScore(match.participant2Score)}
                       </p>
                       {isJudo && match.participant2Score === 10 && (
-                        <Badge variant="success" className="mt-2">
-                          ¡Ippon!
-                        </Badge>
+                        <Badge variant="success" className="mt-2">¡Ippon!</Badge>
                       )}
                     </div>
                   </div>
@@ -319,56 +471,39 @@ export function MatchDetailsModal({
               </Card>
             )}
 
+            {/* Formaciones TT */}
             {isTeamMatch && lineups.length > 0 && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-bold text-gray-900">
-                      Formaciones
-                    </h3>
+                    <h3 className="text-lg font-bold text-gray-900">Formaciones</h3>
                   </div>
                 </CardHeader>
                 <CardBody>
                   <div className="grid grid-cols-2 gap-6">
-                    {lineups.map((lineup, idx) => (
+                    {lineups.map((lineup: any, idx: number) => (
                       <div key={idx}>
-                        <h4 className="font-bold text-gray-900 mb-3">
-                          {lineup.teamName}
-                        </h4>
+                        <h4 className="font-bold text-gray-900 mb-3">{lineup.teamName}</h4>
                         <div className="space-y-2">
                           {lineup.lineups
                             .filter((l: any) => !l.isSubstitute)
                             .map((player: any) => (
-                              <div
-                                key={player.lineupId}
-                                className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
-                              >
-                                <Badge size="sm" variant="primary">
-                                  {player.lineupOrder}
-                                </Badge>
-                                <span className="font-medium">
-                                  {player.athlete?.name}
-                                </span>
+                              <div key={player.lineupId} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                <Badge size="sm" variant="primary">{player.lineupOrder}</Badge>
+                                <span className="font-medium">{player.athlete?.name}</span>
                               </div>
                             ))}
                         </div>
                         {lineup.lineups.some((l: any) => l.isSubstitute) && (
                           <div className="mt-3 pt-3 border-t">
-                            <p className="text-xs text-gray-500 mb-2">
-                              Suplente:
-                            </p>
+                            <p className="text-xs text-gray-500 mb-2">Suplente:</p>
                             {lineup.lineups
                               .filter((l: any) => l.isSubstitute)
                               .map((player: any) => (
-                                <div
-                                  key={player.lineupId}
-                                  className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
-                                >
+                                <div key={player.lineupId} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
                                   <Badge size="sm">S</Badge>
-                                  <span className="text-sm">
-                                    {player.athlete?.name}
-                                  </span>
+                                  <span className="text-sm">{player.athlete?.name}</span>
                                 </div>
                               ))}
                           </div>
@@ -380,14 +515,13 @@ export function MatchDetailsModal({
               </Card>
             )}
 
+            {/* Juegos TT */}
             {isTableTennis && games.length > 0 && (
               <Card>
                 <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {isTeamMatch ? "Juegos Individuales" : "Sets"}
-                    </h3>
-                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {isTeamMatch ? "Juegos Individuales" : "Sets"}
+                  </h3>
                 </CardHeader>
                 <CardBody>
                   <div className="space-y-4">
@@ -402,6 +536,7 @@ export function MatchDetailsModal({
         </div>
       </div>
 
+      {/* Modal TT especializado */}
       {showManageModal && isTableTennis && (
         <div
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
@@ -415,10 +550,7 @@ export function MatchDetailsModal({
               <h2 className="text-xl font-bold text-gray-900">
                 Gestionar Match - Tenis de Mesa
               </h2>
-              <Button
-                variant="ghost"
-                onClick={() => setShowManageModal(false)}
-              >
+              <Button variant="ghost" onClick={() => setShowManageModal(false)}>
                 <X className="h-5 w-5" />
               </Button>
             </div>
@@ -449,11 +581,7 @@ function GameDetails({ game }: { game: any }) {
         <h4 className="font-bold text-gray-700">Juego {game.gameNumber}</h4>
         <Badge
           variant={
-            game.status === "completed"
-              ? "success"
-              : game.status === "in_progress"
-                ? "primary"
-                : "default"
+            game.status === "completed" ? "success" : game.status === "in_progress" ? "primary" : "default"
           }
           size="sm"
         >
@@ -462,44 +590,22 @@ function GameDetails({ game }: { game: any }) {
           {game.status === "pending" && "Pendiente"}
         </Badge>
       </div>
-
       <div className="space-y-2">
-        <div
-          className={`flex items-center justify-between p-3 rounded-lg ${
-            player1Won ? "bg-green-100" : "bg-gray-50"
-          }`}
-        >
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="font-semibold truncate">{game.player1?.name}</span>
-          </div>
-          <Badge variant={player1Won ? "success" : "default"} className="ml-2">
-            {game.score1 ?? 0}
-          </Badge>
+        <div className={`flex items-center justify-between p-3 rounded-lg ${player1Won ? "bg-green-100" : "bg-gray-50"}`}>
+          <span className="font-semibold truncate">{game.player1?.name}</span>
+          <Badge variant={player1Won ? "success" : "default"} className="ml-2">{game.score1 ?? 0}</Badge>
         </div>
-
-        <div
-          className={`flex items-center justify-between p-3 rounded-lg ${
-            player2Won ? "bg-green-100" : "bg-gray-50"
-          }`}
-        >
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="font-semibold truncate">{game.player2?.name}</span>
-          </div>
-          <Badge variant={player2Won ? "success" : "default"} className="ml-2">
-            {game.score2 ?? 0}
-          </Badge>
+        <div className={`flex items-center justify-between p-3 rounded-lg ${player2Won ? "bg-green-100" : "bg-gray-50"}`}>
+          <span className="font-semibold truncate">{game.player2?.name}</span>
+          <Badge variant={player2Won ? "success" : "default"} className="ml-2">{game.score2 ?? 0}</Badge>
         </div>
       </div>
-
       {game.sets && game.sets.length > 0 && (
         <div className="mt-3 pt-3 border-t">
           <p className="text-xs font-semibold text-gray-500 mb-2">Sets:</p>
           <div className="flex gap-2 flex-wrap">
             {game.sets.map((set: any, idx: number) => (
-              <div
-                key={idx}
-                className="text-xs bg-gray-100 px-3 py-1 rounded-full font-medium"
-              >
+              <div key={idx} className="text-xs bg-gray-100 px-3 py-1 rounded-full font-medium">
                 Set {set.setNumber}: {set.player1Score} - {set.player2Score}
               </div>
             ))}

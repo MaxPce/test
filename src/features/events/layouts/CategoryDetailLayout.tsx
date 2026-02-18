@@ -19,10 +19,8 @@ import {
   useSismasterEventCategories,
 } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
-import React from "react";
 
 export function CategoryDetailLayout() {
-  // ✅ Detectar si es evento local o de Sismaster
   const { eventId, externalEventId, sportId, categoryId } = useParams<{
     eventId?: string;
     externalEventId?: string;
@@ -130,7 +128,6 @@ export function CategoryDetailLayout() {
   const sportIconUrl = eventCategory.category?.sport?.iconUrl;
   const sportImage = sportIconUrl ? getImageUrl(sportIconUrl) : null;
 
-  // ✅ Generar rutas dinámicas según el tipo de evento
   const baseUrl = isExternalEvent
     ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/${categoryId}`
     : `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}`;

@@ -3,7 +3,6 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Trophy, Users } from "lucide-react";
 import { useMatches } from "@/features/competitions/api/matches.queries";
-import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries";
 import { MatchDetailsModal } from "./MatchDetailsModal";
 import { KyoruguiMatchDetailsModal } from "@/features/competitions/components/taekwondo/KyoruguiMatchDetailsModal";
 import { PoomsaeMatchDetailsModal } from "@/features/competitions/components/taekwondo/PoomsaeMatchDetailsModal";
@@ -101,7 +100,7 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
           onClose={() => setSelectedMatchId(null)}
         />
       )}
-      
+
       {selectedMatchId && isPoomsae && selectedMatch && (
         <PoomsaeMatchDetailsModal
           match={selectedMatch}
@@ -109,7 +108,7 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
           onClose={() => setSelectedMatchId(null)}
         />
       )}
-      
+
       {selectedMatchId && !isKyorugui && !isPoomsae && (
         <MatchDetailsModal
           matchId={selectedMatchId}
@@ -123,7 +122,7 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
           <div className="bg-white rounded-2xl shadow-lg p-6 overflow-x-auto">
             <div className="min-w-max">
               <div className="flex gap-6 items-center justify-center">
-                
+
                 {sixteenths.length > 0 && (
                   <div className="space-y-3">
                     <h3 className="text-center font-bold text-gray-700 mb-2 text-sm">
@@ -315,12 +314,6 @@ function MatchCard({
   onClick,
   sportConfig,
 }: MatchCardProps) {
-  const shouldFetchTT = sportConfig?.sportType === "table-tennis";
-
-  const { data: ttDetails } = useMatchDetails(
-    shouldFetchTT ? match.matchId : 0,
-  );
-
   const participations = match.participations || [];
   const p1Data = participations[0]?.registration;
   const p2Data = participations[1]?.registration;
@@ -329,9 +322,9 @@ function MatchCard({
   const hasOnlyOne = participations.length === 1 && p1Data;
 
   const roundName = (match.round || "").toLowerCase();
-  const isFirstRound = 
-    roundName.includes("cuarto") || 
-    roundName.includes("octavo") || 
+  const isFirstRound =
+    roundName.includes("cuarto") ||
+    roundName.includes("octavo") ||
     roundName.includes("dieciseisavo") ||
     roundName.includes("16avo") ||
     roundName.includes("8vo");
@@ -340,16 +333,16 @@ function MatchCard({
   const isWaitingForWinner = hasOnlyOne && !isFirstRound;
   const isByeProcessed = isRealBye && match.status === "finalizado";
 
-  const name1 = isEmpty 
-    ? "Por definir" 
+  const name1 = isEmpty
+    ? "Por definir"
     : p1Data?.athlete?.name || p1Data?.team?.name || "Por definir";
-  
+
   const name2 = isEmpty
     ? "Por definir"
-    : isRealBye 
-      ? "BYE" 
-      : isWaitingForWinner 
-        ? "Por definir" 
+    : isRealBye
+      ? "BYE"
+      : isWaitingForWinner
+        ? "Por definir"
         : p2Data?.athlete?.name || p2Data?.team?.name || "Por definir";
 
   const institution1 = p1Data?.athlete?.institution || p1Data?.team?.institution;
@@ -358,56 +351,19 @@ function MatchCard({
   const logo1 = institution1?.logoUrl;
   const logo2 = institution2?.logoUrl;
 
-  const calculateTableTennisSets = (games: any[]): [number, number] => {
-    if (!games || games.length === 0) return [0, 0];
-
-    let p1SetsWon = 0;
-    let p2SetsWon = 0;
-
-    games.forEach((game) => {
-      if (!game.sets || game.sets.length === 0) return;
-
-      let p1GameSets = 0;
-      let p2GameSets = 0;
-
-      game.sets.forEach((set: any) => {
-        if (set.player1Score > set.player2Score) {
-          p1GameSets++;
-        } else if (set.player2Score > set.player1Score) {
-          p2GameSets++;
-        }
-      });
-
-      if (p1GameSets > p2GameSets) p1SetsWon++;
-      else if (p2GameSets > p1GameSets) p2SetsWon++;
-    });
-
-    return [p1SetsWon, p2SetsWon];
-  };
-
-  const formatScore = (score: any, isParticipant1: boolean): string => {
-    // Tenis de mesa - Sets ganados
+  const formatScore = (score: any, _isParticipant1: boolean): string => {
+    // Tenis de mesa — los scores ya vienen como sets ganados en participant1Score / participant2Score
     if (sportConfig?.sportType === "table-tennis") {
-      if (
-        match.status === "finalizado" &&
-        score !== null &&
-        score !== undefined
-      ) {
+      if (score !== null && score !== undefined) {
         return String(Math.floor(Number(score)));
       }
-
-      if (ttDetails?.games && ttDetails.games.length > 0) {
-        const [p1Sets, p2Sets] = calculateTableTennisSets(ttDetails.games);
-        return String(isParticipant1 ? p1Sets : p2Sets);
-      }
-
       return "-";
     }
 
     // Sin puntaje
     if (score === null || score === undefined) return "";
 
-    // Sin configuración - entero por defecto
+    // Sin configuración — entero por defecto
     if (!sportConfig) {
       const numScore = parseFloat(score);
       if (isNaN(numScore)) return "-";
@@ -416,14 +372,14 @@ function MatchCard({
 
     const sportType = sportConfig.sportType;
 
-    // Poomsae - CON DECIMALES
+    // Poomsae — CON DECIMALES
     if (sportType === "poomsae") {
       const numScore = parseFloat(score);
       if (isNaN(numScore)) return "-";
       return numScore.toFixed(2);
     }
 
-    // Judo - Texto especial o entero
+    // Judo — Texto especial o entero
     if (sportType === "judo") {
       if (score === 10 || score === "10") return "10 (Ippon)";
       const numScore = parseFloat(score);
@@ -431,7 +387,7 @@ function MatchCard({
       return String(Math.floor(numScore));
     }
 
-    // Kyorugi y otros deportes - SOLO ENTEROS
+    // Kyorugi y otros deportes — SOLO ENTEROS
     const numScore = parseFloat(score);
     if (isNaN(numScore)) return String(score);
     return String(Math.floor(numScore));
@@ -502,7 +458,7 @@ function MatchCard({
               {p1Data.seedNumber}
             </div>
           )}
-          
+
           {!isEmpty && logo1 && (
             <img
               src={getImageUrl(logo1)}
@@ -564,7 +520,7 @@ function MatchCard({
                   {p2Data.seedNumber}
                 </div>
               )}
-              
+
               {!isEmpty && !isRealBye && !isWaitingForWinner && logo2 && (
                 <img
                   src={getImageUrl(logo2)}
@@ -581,11 +537,11 @@ function MatchCard({
                   className={`font-bold ${
                     isEmpty
                       ? "text-gray-400 italic"
-                      : isRealBye 
-                        ? 'text-gray-400 italic' 
+                      : isRealBye
+                        ? "text-gray-400 italic"
                         : isWaitingForWinner
-                          ? 'text-blue-500 italic'
-                          : 'text-gray-900'
+                          ? "text-blue-500 italic"
+                          : "text-gray-900"
                   } truncate ${textSizeClasses[size]}`}
                 >
                   {name2}
