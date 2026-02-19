@@ -11,18 +11,19 @@ import { useUpdateStandings } from "@/features/competitions/api/standings.mutati
 import { StandingsTable } from "@/features/results/components/StandingsTable";
 import { SimpleBracket } from "@/features/results/components/SimpleBracket";
 import { PoomsaeResultsTable } from "@/features/results/components/PoomsaeResultsTable";
-import { Switch } from "@/components/ui/Switch";
 import { PodiumTable } from "@/features/results/components/PodiumTable";
 import { BestOf3ResultsTable } from "@/features/results/components/BestOf3ResultsTable";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { EventCategory } from "../../types";
+import { ManualPlacements } from "@/features/results/components/ManualPlacements";
 
 export function CategoryStandingsPage() {
   const { eventCategory } = useOutletContext<{
     eventCategory: EventCategory;
   }>();
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
-  const [showPodium, setShowPodium] = useState(false);
+  type EliminationView = "bracket" | "podium" | "manual";
+  const [elimView, setElimView] = useState<EliminationView>("bracket");
 
   const { data: phases = [] } = usePhases(eventCategory.eventCategoryId);
   const { data: standings = [], isLoading: standingsLoading } = useStandings(
@@ -188,139 +189,153 @@ export function CategoryStandingsPage() {
     };
   };
 
+  const renderViewPills = (labels?: { bracket?: string; podium?: string }) => (
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
+      <div className="flex gap-1">
+        {(
+          [
+            { key: "bracket", label: labels?.bracket ?? "Llaves" },
+            { key: "podium", label: labels?.podium ?? "Podio" },
+            { key: "manual", label: "Manual" },
+          ] as { key: EliminationView; label: string }[]
+        ).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setElimView(key)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              elimView === key
+                ? "bg-white text-purple-700 shadow"
+                : "text-white/80 hover:text-white hover:bg-white/20"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+
   const renderBracketWithToggle = (eliminationPhase: any) => {
-    const bracketConfig = getBracketConfig(); 
+    const bracketConfig = getBracketConfig();
+    const viewTitles: Record<EliminationView, string> = {
+      bracket: "Llave de Eliminación",
+      podium: "Podio Final",
+      manual: "Clasificación Manual",
+    };
+    const viewSubtitles: Record<EliminationView, string> = {
+      bracket: "Diagrama de enfrentamientos",
+      podium: "Top 3 de la competencia",
+      manual: "Asignación manual de puestos",
+    };
 
     return (
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
                 <Trophy className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold">
-                  {showPodium ? "Podio Final" : "Llave de Eliminación"}
-                </h3>
-                <p className="text-purple-100 mt-1">
-                  {showPodium
-                    ? "Top 3 de la competencia"
-                    : "Diagrama de enfrentamientos"}
-                </p>
+                <h3 className="text-2xl font-bold">{viewTitles[elimView]}</h3>
+                <p className="text-purple-100 mt-1">{viewSubtitles[elimView]}</p>
               </div>
             </div>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span
-                  className={`text-sm font-medium ${!showPodium ? "text-white" : "text-white/60"}`}
-                >
-                  Llaves
-                </span>
-                <Switch checked={showPodium} onChange={setShowPodium} />
-                <span
-                  className={`text-sm font-medium ${showPodium ? "text-white" : "text-white/60"}`}
-                >
-                  Podio
-                </span>
-              </div>
-            </div>
+            {renderViewPills()}
           </div>
         </div>
 
-        {showPodium ? (
-          <PodiumTable phaseId={eliminationPhase.phaseId} />
-        ) : (
+        {elimView === "bracket" && (
           <SimpleBracket
             phaseId={eliminationPhase.phaseId}
-            sportConfig={bracketConfig} 
+            sportConfig={bracketConfig}
           />
+        )}
+        {elimView === "podium" && (
+          <PodiumTable phaseId={eliminationPhase.phaseId} />
+        )}
+        {elimView === "manual" && (
+          <ManualPlacements phaseId={eliminationPhase.phaseId} />
         )}
       </div>
     );
   };
 
+
   if (isTaekwondoPoomsae) {
     const eliminationPhase = phases.find((p) => p.type === "eliminacion");
     const groupPhases = phases.filter((p) => p.type === "grupo");
 
-    // Si hay fase de eliminación, mostrar bracket
     if (eliminationPhase) {
       const poomsaeBracketConfig = {
         sportType: "poomsae",
         scoreLabel: "Puntos",
         showScores: true,
       };
+      const viewTitles: Record<EliminationView, string> = {
+        bracket: "Llave de Eliminación",
+        podium: "Podio Final",
+        manual: "Clasificación Manual",
+      };
+      const viewSubtitles: Record<EliminationView, string> = {
+        bracket: "Diagrama de enfrentamientos",
+        podium: "Top 3 de Poomsae",
+        manual: "Asignación manual de puestos",
+      };
 
       return (
         <div className="space-y-6">
-          {/* Bracket de Eliminación */}
           <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
                   <Trophy className="h-8 w-8" />
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold">
-                    {showPodium ? "Podio Final" : "Llave de Eliminación"}
+                    {viewTitles[elimView]}
                   </h3>
                   <p className="text-purple-100 mt-1">
-                    {showPodium
-                      ? "Top 3 de Poomsae"
-                      : "Diagrama de enfrentamientos"}
+                    {viewSubtitles[elimView]}
                   </p>
                 </div>
               </div>
-
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`text-sm font-medium ${!showPodium ? "text-white" : "text-white/60"}`}
-                  >
-                    Llaves
-                  </span>
-                  <Switch checked={showPodium} onChange={setShowPodium} />
-                  <span
-                    className={`text-sm font-medium ${showPodium ? "text-white" : "text-white/60"}`}
-                  >
-                    Podio
-                  </span>
-                </div>
-              </div>
+              {renderViewPills()}
             </div>
           </div>
 
-          {showPodium ? (
-            <PodiumTable phaseId={eliminationPhase.phaseId} />
-          ) : (
+          {elimView === "bracket" && (
             <SimpleBracket
               phaseId={eliminationPhase.phaseId}
               sportConfig={poomsaeBracketConfig}
             />
           )}
+          {elimView === "podium" && (
+            <PodiumTable phaseId={eliminationPhase.phaseId} />
+          )}
+          {elimView === "manual" && (
+            <ManualPlacements phaseId={eliminationPhase.phaseId} />
+          )}
 
-          {/* Si también hay fase de grupos, mostrar tabla de Poomsae */}
           {groupPhases.length > 0 && (
-            <>
-              
-              <PoomsaeResultsTable
-                eventCategoryId={eventCategory.eventCategoryId}
-              />
-            </>
+            <PoomsaeResultsTable
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
           )}
         </div>
       );
     }
 
-    // Si solo hay fase de grupos, mostrar solo tabla de resultados
     return (
       <div className="space-y-6">
-        <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+        <PoomsaeResultsTable
+          eventCategoryId={eventCategory.eventCategoryId}
+        />
       </div>
     );
   }
+
 
   if (isTimedSport) {
     return (

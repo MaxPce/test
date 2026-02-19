@@ -1,8 +1,9 @@
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Trophy, Medal, User, Users } from "lucide-react";
+import { Trophy, Medal, User, Users, AlertTriangle } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMatches } from "@/features/competitions/api/matches.queries";
+import { useStandings } from "@/features/competitions/api/standings.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface PodiumTableProps {
@@ -10,7 +11,12 @@ interface PodiumTableProps {
 }
 
 export function PodiumTable({ phaseId }: PodiumTableProps) {
-  const { data: matches = [], isLoading } = useMatches(phaseId);
+  const { data: matches = [], isLoading: matchesLoading } =
+    useMatches(phaseId);
+  const { data: standings = [], isLoading: standingsLoading } =
+    useStandings(phaseId);
+
+  const isLoading = matchesLoading || standingsLoading;
 
   if (isLoading) {
     return (
@@ -22,101 +28,128 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     );
   }
 
-  // Buscar el match final
-  const finalMatch = matches.find(
-    (m: any) =>
-      m.round?.toLowerCase().includes("final") &&
-      !m.round?.toLowerCase().includes("semi") &&
-      !m.round?.toLowerCase().includes("tercer") &&
-      !m.round?.toLowerCase().includes("3er"),
-  );
+  // ── Prioridad 1: puestos manuales ────────────────────────────────────
+  const manualTop3 = (standings as any[])
+    .filter(
+      (s) => s.manualRankPosition != null && s.manualRankPosition <= 3
+    )
+    .sort((a, b) => a.manualRankPosition - b.manualRankPosition);
 
-  // Buscar el match de tercer lugar
-  const thirdPlaceMatch = matches.find(
-    (m: any) =>
-      m.round?.toLowerCase().includes("tercer") ||
-      m.round?.toLowerCase().includes("3er") ||
-      m.round?.toLowerCase().includes("3°"),
-  );
+  const hasManual = manualTop3.length > 0;
+  const manualIncomplete = hasManual && manualTop3.length < 3;
 
-  // Verificar si el torneo ha finalizado
-  if (!finalMatch || finalMatch.status !== "finalizado") {
-    return (
-      <Card>
-        <CardBody className="text-center py-12">
-          <p className="text-sm text-gray-400 mt-2">
-            El podio aparecerá cuando termine la final
-          </p>
-        </CardBody>
-      </Card>
+  // ── Construir podiumData ─────────────────────────────────────────────
+  let podiumData: {
+    position: number;
+    name: string;
+    institution: any;
+    photoUrl: string | undefined;
+    isAthlete: boolean;
+  }[] = [];
+
+  let isTeamCompetition = false;
+
+  if (hasManual) {
+    // Fuente manual
+    isTeamCompetition = manualTop3.some(
+      (s: any) => !!s.registration?.team
     );
-  }
-
-  // Detectar si es competencia por equipos o individual
-  const isTeamCompetition = finalMatch.participations?.some(
-    (p: any) => p.registration?.team !== undefined && p.registration?.team !== null
-  );
-
-  // Construir el podio
-  const podiumData: any[] = [];
-
-  // 1er lugar - Ganador de la final
-  const winner = finalMatch.participations?.find(
-    (p: any) =>
-      p.registration?.registrationId === finalMatch.winnerRegistrationId,
-  );
-
-  if (winner) {
-    const reg = winner.registration;
-    const isAthlete = !!reg?.athlete;
-    podiumData.push({
-      position: 1,
-      name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
-      institution: reg?.athlete?.institution || reg?.team?.institution,
-      photoUrl: reg?.athlete?.photoUrl,
-      isAthlete,
-    });
-  }
-
-  // 2do lugar - Perdedor de la final
-  const runnerUp = finalMatch.participations?.find(
-    (p: any) =>
-      p.registration?.registrationId !== finalMatch.winnerRegistrationId,
-  );
-
-  if (runnerUp) {
-    const reg = runnerUp.registration;
-    const isAthlete = !!reg?.athlete;
-    podiumData.push({
-      position: 2,
-      name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
-      institution: reg?.athlete?.institution || reg?.team?.institution,
-      photoUrl: reg?.athlete?.photoUrl,
-      isAthlete,
-    });
-  }
-
-  // 3er lugar - Ganador del match de tercer lugar (si existe)
-  if (
-    thirdPlaceMatch &&
-    thirdPlaceMatch.status === "finalizado" &&
-    thirdPlaceMatch.winnerRegistrationId
-  ) {
-    const thirdPlace = thirdPlaceMatch.participations?.find(
-      (p: any) =>
-        p.registration?.registrationId === thirdPlaceMatch.winnerRegistrationId,
-    );
-
-    if (thirdPlace) {
-      const reg = thirdPlace.registration;
-      const isAthlete = !!reg?.athlete;
-      podiumData.push({
-        position: 3,
+    podiumData = manualTop3.map((s: any) => {
+      const reg = s.registration;
+      return {
+        position: s.manualRankPosition,
         name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
         institution: reg?.athlete?.institution || reg?.team?.institution,
         photoUrl: reg?.athlete?.photoUrl,
-        isAthlete,
+        isAthlete: !!reg?.athlete,
+      };
+    });
+  } else {
+    // Fuente automática: buscar por matches (lógica original)
+    const finalMatch = (matches as any[]).find(
+      (m) =>
+        m.round?.toLowerCase().includes("final") &&
+        !m.round?.toLowerCase().includes("semi") &&
+        !m.round?.toLowerCase().includes("tercer") &&
+        !m.round?.toLowerCase().includes("3er")
+    );
+
+    const thirdPlaceMatch = (matches as any[]).find(
+      (m) =>
+        m.round?.toLowerCase().includes("tercer") ||
+        m.round?.toLowerCase().includes("3er") ||
+        m.round?.toLowerCase().includes("3°")
+    );
+
+    if (!finalMatch || finalMatch.status !== "finalizado") {
+      return (
+        <Card>
+          <CardBody className="text-center py-12">
+            <p className="text-sm text-gray-400 mt-2">
+              El podio aparecerá cuando termine la final
+            </p>
+          </CardBody>
+        </Card>
+      );
+    }
+
+    isTeamCompetition = finalMatch.participations?.some(
+      (p: any) =>
+        p.registration?.team !== undefined &&
+        p.registration?.team !== null
+    );
+
+    const winner = finalMatch.participations?.find(
+      (p: any) =>
+        p.registration?.registrationId === finalMatch.winnerRegistrationId
+    );
+    if (winner) {
+      const reg = winner.registration;
+      podiumData.push({
+        position: 1,
+        name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
+        institution: reg?.athlete?.institution || reg?.team?.institution,
+        photoUrl: reg?.athlete?.photoUrl,
+        isAthlete: !!reg?.athlete,
       });
+    }
+
+    const runnerUp = finalMatch.participations?.find(
+      (p: any) =>
+        p.registration?.registrationId !== finalMatch.winnerRegistrationId
+    );
+    if (runnerUp) {
+      const reg = runnerUp.registration;
+      podiumData.push({
+        position: 2,
+        name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
+        institution: reg?.athlete?.institution || reg?.team?.institution,
+        photoUrl: reg?.athlete?.photoUrl,
+        isAthlete: !!reg?.athlete,
+      });
+    }
+
+    if (
+      thirdPlaceMatch &&
+      thirdPlaceMatch.status === "finalizado" &&
+      thirdPlaceMatch.winnerRegistrationId
+    ) {
+      const thirdPlace = thirdPlaceMatch.participations?.find(
+        (p: any) =>
+          p.registration?.registrationId ===
+          thirdPlaceMatch.winnerRegistrationId
+      );
+      if (thirdPlace) {
+        const reg = thirdPlace.registration;
+        podiumData.push({
+          position: 3,
+          name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
+          institution:
+            reg?.athlete?.institution || reg?.team?.institution,
+          photoUrl: reg?.athlete?.photoUrl,
+          isAthlete: !!reg?.athlete,
+        });
+      }
     }
   }
 
@@ -130,13 +163,32 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
   const getMedalColor = (position: number) => {
     if (position === 1) return "from-yellow-50 to-amber-50 border-yellow-300";
     if (position === 2) return "from-gray-50 to-slate-50 border-gray-300";
-    if (position === 3) return "from-orange-50 to-amber-50 border-orange-300";
+    if (position === 3)
+      return "from-orange-50 to-amber-50 border-orange-300";
     return "from-gray-50 to-gray-100 border-gray-300";
   };
 
   return (
-    <div className="space-y-6">
-      {/* Tabla del Podio */}
+    <div className="space-y-4">
+      {/* Badge de advertencia si el manual está incompleto */}
+      {manualIncomplete && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm font-medium">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-500" />
+          <span>
+            Podio manual incompleto (faltan puestos). Complétalo en la
+            vista Manual.
+          </span>
+        </div>
+      )}
+
+      {hasManual && !manualIncomplete && (
+        <div className="flex items-center gap-2 text-xs text-purple-600 font-medium px-1">
+          <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
+          Mostrando clasificación manual
+        </div>
+      )}
+
+      {/* Tabla del Podio — render idéntico al original */}
       <Card>
         <CardBody className="p-0">
           <div className="overflow-x-auto">
@@ -166,7 +218,9 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                       <div className="flex items-center justify-center gap-3">
                         {getMedalIcon(item.position)}
                         <Badge
-                          variant={item.position === 1 ? "warning" : "default"}
+                          variant={
+                            item.position === 1 ? "warning" : "default"
+                          }
                           className="text-base px-3 py-1"
                         >
                           {item.position}° Lugar
@@ -175,36 +229,14 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
-                        {/* Logo de institución para equipos, foto para individuales */}
                         {isTeamCompetition ? (
-                          // Para equipos: mostrar logo de institución
                           item.institution?.logoUrl ? (
                             <img
                               src={getImageUrl(item.institution.logoUrl)}
                               alt={item.institution.name}
                               className="w-14 h-14 rounded-full object-contain bg-white p-2 border-3 border-white shadow-lg"
                               onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = "none";
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  const placeholder = document.createElement("div");
-                                  placeholder.className =
-                                    "w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg";
-                                  const icon = document.createElementNS(
-                                    "http://www.w3.org/2000/svg",
-                                    "svg",
-                                  );
-                                  icon.setAttribute("class", "h-7 w-7 text-white");
-                                  icon.setAttribute("fill", "none");
-                                  icon.setAttribute("viewBox", "0 0 24 24");
-                                  icon.setAttribute("stroke", "currentColor");
-                                  icon.setAttribute("stroke-width", "2");
-                                  icon.innerHTML =
-                                    '<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />';
-                                  placeholder.appendChild(icon);
-                                  parent.appendChild(placeholder);
-                                }
+                                e.currentTarget.style.display = "none";
                               }}
                             />
                           ) : (
@@ -212,47 +244,24 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                               <Users className="h-7 w-7 text-white" />
                             </div>
                           )
+                        ) : item.isAthlete && item.photoUrl ? (
+                          <img
+                            src={getImageUrl(item.photoUrl)}
+                            alt={item.name}
+                            className="w-14 h-14 rounded-full object-cover border-3 border-white shadow-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
                         ) : (
-                          // Para individuales: mostrar foto del atleta
-                          item.isAthlete && item.photoUrl ? (
-                            <img
-                              src={getImageUrl(item.photoUrl)}
-                              alt={item.name}
-                              className="w-14 h-14 rounded-full object-cover border-3 border-white shadow-lg"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = "none";
-                                const parent = target.parentElement;
-                                if (parent) {
-                                  const placeholder = document.createElement("div");
-                                  placeholder.className =
-                                    "w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg";
-                                  const icon = document.createElementNS(
-                                    "http://www.w3.org/2000/svg",
-                                    "svg",
-                                  );
-                                  icon.setAttribute("class", "h-7 w-7 text-white");
-                                  icon.setAttribute("fill", "currentColor");
-                                  icon.setAttribute("viewBox", "0 0 24 24");
-                                  icon.innerHTML =
-                                    '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
-                                  placeholder.appendChild(icon);
-                                  parent.appendChild(placeholder);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg">
-                              <User className="h-7 w-7 text-white" />
-                            </div>
-                          )
+                          <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg">
+                            <User className="h-7 w-7 text-white" />
+                          </div>
                         )}
-
                         <div>
                           <p className="text-base font-bold text-gray-900">
                             {item.name}
                           </p>
-                          {/* Para equipos, mostrar el nombre de institución debajo */}
                           {isTeamCompetition && item.institution && (
                             <p className="text-sm text-gray-600 mt-1">
                               {item.institution.name}
@@ -261,12 +270,10 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                         </div>
                       </div>
                     </td>
-                    {/* Columna de institución solo para individuales */}
                     {!isTeamCompetition && (
                       <td className="px-6 py-5">
                         {item.institution && (
                           <div className="flex items-center gap-3">
-                            {/* Logo de la institución */}
                             {item.institution.logoUrl && (
                               <img
                                 src={getImageUrl(item.institution.logoUrl)}

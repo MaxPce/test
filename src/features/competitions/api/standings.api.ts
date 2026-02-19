@@ -15,4 +15,22 @@ export const standingsApi = {
     );
     return response.data;
   },
+
+  setManualRanks: async (
+    phaseId: number,
+    ranks: { registrationId: number; manualRankPosition: number | null }[]
+  ): Promise<{ updated: number }> => {
+    const response = await apiClient.patch(
+      `/competitions/phases/${phaseId}/standings/manual-ranks`,
+      { ranks }
+    );
+    return response.data;
+  },
+
+  clearManualRanks: async (phaseId: number): Promise<{ cleared: number }> => {
+    const response = await apiClient.delete(
+      `/competitions/phases/${phaseId}/standings/manual-ranks`
+    );
+    return response.data;
+  },
 };
