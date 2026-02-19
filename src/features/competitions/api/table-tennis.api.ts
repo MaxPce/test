@@ -31,6 +31,7 @@ export interface LineupData {
     registration: {
       registrationId: number;
       team: {
+        members: { tmId: number; athleteId: number; rol?: string; athlete: { athleteId: number; name: string; institution?: { institutionId: number; name: string; code: string; }; }; }[] | undefined;
         teamId: number;
         name: string;
         institution: {

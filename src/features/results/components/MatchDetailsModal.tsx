@@ -6,11 +6,13 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { useMatchDetails } from "@/features/competitions/api/table-tennis.queries";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { useUpdateMatch } from "@/features/competitions/api/matches.mutations";
+import { useMatch } from "@/features/competitions/api/matches.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
 
 interface MatchDetailsModalProps {
   matchId: number;
+  match?: any;
   onClose: () => void;
   sportConfig?: {
     sportType: string;
@@ -21,11 +23,13 @@ interface MatchDetailsModalProps {
 
 export function MatchDetailsModal({
   matchId,
+  match: matchProp,
   onClose,
   sportConfig,
 }: MatchDetailsModalProps) {
-  // useMatchDetails siempre se llama — su api.ts ya tiene el fallback interno
+  // ── Hooks siempre al tope (antes de cualquier return) ──────────────────
   const { data, isLoading, refetch } = useMatchDetails(matchId);
+  const { data: fullMatchData } = useMatch(matchId); // ← trae team.members populados
   const advanceWinnerMutation = useAdvanceWinner();
   const updateMatchMutation = useUpdateMatch();
 
@@ -34,6 +38,7 @@ export function MatchDetailsModal({
   const [score1, setScore1] = useState<string>("");
   const [score2, setScore2] = useState<string>("");
   const [winnerRegId, setWinnerRegId] = useState<number | null>(null);
+  // ───────────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -50,11 +55,28 @@ export function MatchDetailsModal({
 
   if (!data) return null;
 
-
   const match = (data as any).match ?? data;
   const lineups: any[] = (data as any).lineups ?? [];
   const games: any[] = (data as any).games ?? [];
   const result: any = (data as any).result ?? null;
+
+  // ── Reconstruir participations desde lineups si vienen vacías ──────────
+  const rawParticipations: any[] = match.participations ?? [];
+  const participations =
+    rawParticipations.length > 0
+      ? rawParticipations
+      : lineups.map((l: any) => ({
+          participationId: l.participation?.participationId,
+          registrationId:
+            l.participation?.registrationId ??
+            l.participation?.registration?.registrationId,
+          registration: l.participation?.registration,
+        }));
+
+  
+  // CategorySchedulePage. Se usa solo para el wrapper TT.
+  const matchForWrapper = matchProp ?? fullMatchData ?? { ...match, participations };
+  // ───────────────────────────────────────────────────────────────────────
 
   const detectSportType = (): string => {
     if (sportConfig?.sportType) return sportConfig.sportType;
@@ -65,7 +87,12 @@ export function MatchDetailsModal({
     if (sportName.includes("judo")) return "judo";
     if (sportName.includes("taekwondo") && categoryName.includes("kyorugi"))
       return "kyorugi";
-    if (sportName.includes("tenis de mesa")) return "table-tennis";
+    if (
+      sportName.includes("tenis de mesa") ||
+      sportName.includes("tennis de mesa") ||
+      sportName.includes("ping pong")
+    )
+      return "table-tennis";
     return "generic";
   };
 
@@ -75,7 +102,6 @@ export function MatchDetailsModal({
   const isJudo = sportType === "judo";
   const isKyorugi = sportType === "kyorugi";
 
-  const participations = match.participations || [];
   const p1 = participations[0];
   const p2 = participations[1];
 
@@ -88,18 +114,11 @@ export function MatchDetailsModal({
     p2?.registration?.team?.name ||
     "Participante 2";
 
-  // ── Condiciones de botones ──────────────────────────────────────────────
-  // BYE: único participante sin finalizar
   const canAdvanceBye =
     participations.length === 1 && match.status !== "finalizado";
-
-  // TT: botón especializado
   const canManageTT = participations.length === 2 && isTableTennis;
-
-  // Deportes genéricos: registrar/editar resultado (incluye judo/kyorugi genérico)
-  const canPickWinner =
-    participations.length === 2 && !isTableTennis;
-  // ───────────────────────────────────────────────────────────────────────
+  const canPickWinner = participations.length === 2 && !isTableTennis;
+  const hasGames = games.length > 0;
 
   const getScoreLabel = () => {
     if (sportConfig?.scoreLabel) return sportConfig.scoreLabel;
@@ -120,11 +139,16 @@ export function MatchDetailsModal({
       p1.registration?.athlete?.name ||
       p1.registration?.team?.name ||
       "este participante";
-    if (confirm(`¿Avanzar a ${participantName} automáticamente a la siguiente ronda?`)) {
+    if (
+      confirm(
+        `¿Avanzar a ${participantName} automáticamente a la siguiente ronda?`,
+      )
+    ) {
       advanceWinnerMutation.mutate(
         {
           matchId: match.matchId,
-          winnerRegistrationId: p1.registrationId!,
+          winnerRegistrationId:
+            p1.registrationId ?? p1.registration?.registrationId,
         },
         {
           onSuccess: () => refetch(),
@@ -134,7 +158,6 @@ export function MatchDetailsModal({
     }
   };
 
-  // ✅ Firma real de useUpdateMatch: { id, data }
   const handleSaveScores = () => {
     if (winnerRegId === null) {
       alert("Selecciona un ganador antes de guardar.");
@@ -181,8 +204,6 @@ export function MatchDetailsModal({
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap justify-end">
-
-                {/* BYE */}
                 {canAdvanceBye && (
                   <Button
                     onClick={handleAdvanceParticipant}
@@ -195,7 +216,6 @@ export function MatchDetailsModal({
                   </Button>
                 )}
 
-                {/* Tenis de mesa */}
                 {canManageTT && (
                   <Button
                     onClick={() => setShowManageModal(true)}
@@ -203,11 +223,10 @@ export function MatchDetailsModal({
                     className="bg-white/20 hover:bg-white/30 text-white border-0"
                   >
                     <Settings className="h-4 w-4 mr-2" />
-                    {games.length > 0 ? "Editar Puntajes" : "Registrar Puntajes"}
+                    {hasGames ? "Editar Puntajes" : "Registrar Puntajes"}
                   </Button>
                 )}
 
-                {/* Deportes genéricos (judo, etc.) */}
                 {canPickWinner && (
                   <Button
                     onClick={() => {
@@ -237,7 +256,6 @@ export function MatchDetailsModal({
             </div>
           </div>
 
-          {/* Aviso BYE */}
           {canAdvanceBye && (
             <div className="mx-6 mt-4 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
               <p className="text-sm font-semibold text-amber-900">
@@ -247,8 +265,6 @@ export function MatchDetailsModal({
           )}
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-            {/* ── Panel inline: Registrar/Editar resultado (no-TT) ── */}
             {editScores && canPickWinner && (
               <Card>
                 <CardHeader>
@@ -284,7 +300,6 @@ export function MatchDetailsModal({
                     </div>
                   </div>
 
-                  {/* Selección de ganador */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700">
                       Ganador
@@ -292,11 +307,12 @@ export function MatchDetailsModal({
                     <div className="grid grid-cols-2 gap-3">
                       {[p1, p2].map((p, idx) => {
                         if (!p) return null;
-                        const regId = p.registrationId ?? p.registration?.registrationId;
+                        const regId =
+                          p.registrationId ?? p.registration?.registrationId;
                         const name = idx === 0 ? p1Name : p2Name;
                         return (
                           <button
-                            key={regId}
+                            key={regId ?? idx}
                             type="button"
                             onClick={() => setWinnerRegId(regId)}
                             className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
@@ -356,7 +372,6 @@ export function MatchDetailsModal({
               </CardHeader>
               <CardBody>
                 <div className="grid grid-cols-2 gap-4">
-                  {/* P1 */}
                   <div
                     className={`p-4 rounded-xl border-2 ${
                       isTableTennis
@@ -365,28 +380,42 @@ export function MatchDetailsModal({
                           ? "bg-green-50 border-green-500"
                           : "bg-gray-50 border-gray-300"
                         : match.winnerRegistrationId != null &&
-                          match.winnerRegistrationId ===
-                            (p1?.registrationId ?? p1?.registration?.registrationId)
+                            match.winnerRegistrationId ===
+                              (p1?.registrationId ??
+                                p1?.registration?.registrationId)
                           ? "bg-green-50 border-green-500"
                           : "bg-gray-50 border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      {result?.team1?.participation?.registration?.athlete?.photoUrl && (
+                      {result?.team1?.participation?.registration?.athlete
+                        ?.photoUrl && (
                         <img
-                          src={getImageUrl(result.team1.participation.registration.athlete.photoUrl)}
+                          src={getImageUrl(
+                            result.team1.participation.registration.athlete
+                              .photoUrl,
+                          )}
                           alt={result.team1.teamName}
                           className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
                         />
                       )}
                       <h4 className="font-bold text-gray-900">
-                        {isTableTennis ? result?.team1?.teamName : p1Name}
+                        {isTableTennis
+                          ? result?.team1?.teamName ?? p1Name
+                          : p1Name}
                       </h4>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{getScoreLabel()}</span>
-                      <Badge variant="primary" className="text-2xl font-bold px-4">
+                      <span className="text-sm text-gray-600">
+                        {getScoreLabel()}
+                      </span>
+                      <Badge
+                        variant="primary"
+                        className="text-2xl font-bold px-4"
+                      >
                         {isTableTennis
                           ? result?.team1?.wins ?? 0
                           : formatScore(match.participant1Score)}
@@ -394,7 +423,6 @@ export function MatchDetailsModal({
                     </div>
                   </div>
 
-                  {/* P2 */}
                   <div
                     className={`p-4 rounded-xl border-2 ${
                       isTableTennis
@@ -403,28 +431,42 @@ export function MatchDetailsModal({
                           ? "bg-green-50 border-green-500"
                           : "bg-gray-50 border-gray-300"
                         : match.winnerRegistrationId != null &&
-                          match.winnerRegistrationId ===
-                            (p2?.registrationId ?? p2?.registration?.registrationId)
+                            match.winnerRegistrationId ===
+                              (p2?.registrationId ??
+                                p2?.registration?.registrationId)
                           ? "bg-green-50 border-green-500"
                           : "bg-gray-50 border-gray-300"
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      {result?.team2?.participation?.registration?.athlete?.photoUrl && (
+                      {result?.team2?.participation?.registration?.athlete
+                        ?.photoUrl && (
                         <img
-                          src={getImageUrl(result.team2.participation.registration.athlete.photoUrl)}
+                          src={getImageUrl(
+                            result.team2.participation.registration.athlete
+                              .photoUrl,
+                          )}
                           alt={result.team2.teamName}
                           className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
                         />
                       )}
                       <h4 className="font-bold text-gray-900">
-                        {isTableTennis ? result?.team2?.teamName : p2Name}
+                        {isTableTennis
+                          ? result?.team2?.teamName ?? p2Name
+                          : p2Name}
                       </h4>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{getScoreLabel()}</span>
-                      <Badge variant="primary" className="text-2xl font-bold px-4">
+                      <span className="text-sm text-gray-600">
+                        {getScoreLabel()}
+                      </span>
+                      <Badge
+                        variant="primary"
+                        className="text-2xl font-bold px-4"
+                      >
                         {isTableTennis
                           ? result?.team2?.wins ?? 0
                           : formatScore(match.participant2Score)}
@@ -435,7 +477,6 @@ export function MatchDetailsModal({
               </CardBody>
             </Card>
 
-            {/* Detalle judo/kyorugi */}
             {(isJudo || isKyorugi) && match.participant1Score != null && (
               <Card>
                 <CardHeader>
@@ -454,7 +495,9 @@ export function MatchDetailsModal({
                         {formatScore(match.participant1Score)}
                       </p>
                       {isJudo && match.participant1Score === 10 && (
-                        <Badge variant="success" className="mt-2">¡Ippon!</Badge>
+                        <Badge variant="success" className="mt-2">
+                          ¡Ippon!
+                        </Badge>
                       )}
                     </div>
                     <div className="text-center p-4 bg-red-50 rounded-lg">
@@ -463,7 +506,9 @@ export function MatchDetailsModal({
                         {formatScore(match.participant2Score)}
                       </p>
                       {isJudo && match.participant2Score === 10 && (
-                        <Badge variant="success" className="mt-2">¡Ippon!</Badge>
+                        <Badge variant="success" className="mt-2">
+                          ¡Ippon!
+                        </Badge>
                       )}
                     </div>
                   </div>
@@ -471,39 +516,56 @@ export function MatchDetailsModal({
               </Card>
             )}
 
-            {/* Formaciones TT */}
             {isTeamMatch && lineups.length > 0 && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-blue-600" />
-                    <h3 className="text-lg font-bold text-gray-900">Formaciones</h3>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Formaciones
+                    </h3>
                   </div>
                 </CardHeader>
                 <CardBody>
                   <div className="grid grid-cols-2 gap-6">
                     {lineups.map((lineup: any, idx: number) => (
                       <div key={idx}>
-                        <h4 className="font-bold text-gray-900 mb-3">{lineup.teamName}</h4>
+                        <h4 className="font-bold text-gray-900 mb-3">
+                          {lineup.teamName}
+                        </h4>
                         <div className="space-y-2">
                           {lineup.lineups
                             .filter((l: any) => !l.isSubstitute)
                             .map((player: any) => (
-                              <div key={player.lineupId} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                                <Badge size="sm" variant="primary">{player.lineupOrder}</Badge>
-                                <span className="font-medium">{player.athlete?.name}</span>
+                              <div
+                                key={player.lineupId}
+                                className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+                              >
+                                <Badge size="sm" variant="primary">
+                                  {player.lineupOrder}
+                                </Badge>
+                                <span className="font-medium">
+                                  {player.athlete?.name}
+                                </span>
                               </div>
                             ))}
                         </div>
                         {lineup.lineups.some((l: any) => l.isSubstitute) && (
                           <div className="mt-3 pt-3 border-t">
-                            <p className="text-xs text-gray-500 mb-2">Suplente:</p>
+                            <p className="text-xs text-gray-500 mb-2">
+                              Suplente:
+                            </p>
                             {lineup.lineups
                               .filter((l: any) => l.isSubstitute)
                               .map((player: any) => (
-                                <div key={player.lineupId} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                <div
+                                  key={player.lineupId}
+                                  className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+                                >
                                   <Badge size="sm">S</Badge>
-                                  <span className="text-sm">{player.athlete?.name}</span>
+                                  <span className="text-sm">
+                                    {player.athlete?.name}
+                                  </span>
                                 </div>
                               ))}
                           </div>
@@ -515,7 +577,6 @@ export function MatchDetailsModal({
               </Card>
             )}
 
-            {/* Juegos TT */}
             {isTableTennis && games.length > 0 && (
               <Card>
                 <CardHeader>
@@ -536,7 +597,7 @@ export function MatchDetailsModal({
         </div>
       </div>
 
-      {/* Modal TT especializado */}
+      {/* ── Modal TT especializado ── */}
       {showManageModal && isTableTennis && (
         <div
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
@@ -556,8 +617,9 @@ export function MatchDetailsModal({
             </div>
             <div className="p-6">
               <TableTennisMatchWrapper
-                match={match}
+                match={matchForWrapper}
                 eventCategory={match.phase?.eventCategory}
+                phase={match.phase}
                 onClose={() => {
                   setShowManageModal(false);
                   refetch();
@@ -581,7 +643,11 @@ function GameDetails({ game }: { game: any }) {
         <h4 className="font-bold text-gray-700">Juego {game.gameNumber}</h4>
         <Badge
           variant={
-            game.status === "completed" ? "success" : game.status === "in_progress" ? "primary" : "default"
+            game.status === "completed"
+              ? "success"
+              : game.status === "in_progress"
+                ? "primary"
+                : "default"
           }
           size="sm"
         >
@@ -591,13 +657,25 @@ function GameDetails({ game }: { game: any }) {
         </Badge>
       </div>
       <div className="space-y-2">
-        <div className={`flex items-center justify-between p-3 rounded-lg ${player1Won ? "bg-green-100" : "bg-gray-50"}`}>
+        <div
+          className={`flex items-center justify-between p-3 rounded-lg ${
+            player1Won ? "bg-green-100" : "bg-gray-50"
+          }`}
+        >
           <span className="font-semibold truncate">{game.player1?.name}</span>
-          <Badge variant={player1Won ? "success" : "default"} className="ml-2">{game.score1 ?? 0}</Badge>
+          <Badge variant={player1Won ? "success" : "default"} className="ml-2">
+            {game.score1 ?? 0}
+          </Badge>
         </div>
-        <div className={`flex items-center justify-between p-3 rounded-lg ${player2Won ? "bg-green-100" : "bg-gray-50"}`}>
+        <div
+          className={`flex items-center justify-between p-3 rounded-lg ${
+            player2Won ? "bg-green-100" : "bg-gray-50"
+          }`}
+        >
           <span className="font-semibold truncate">{game.player2?.name}</span>
-          <Badge variant={player2Won ? "success" : "default"} className="ml-2">{game.score2 ?? 0}</Badge>
+          <Badge variant={player2Won ? "success" : "default"} className="ml-2">
+            {game.score2 ?? 0}
+          </Badge>
         </div>
       </div>
       {game.sets && game.sets.length > 0 && (
@@ -605,7 +683,10 @@ function GameDetails({ game }: { game: any }) {
           <p className="text-xs font-semibold text-gray-500 mb-2">Sets:</p>
           <div className="flex gap-2 flex-wrap">
             {game.sets.map((set: any, idx: number) => (
-              <div key={idx} className="text-xs bg-gray-100 px-3 py-1 rounded-full font-medium">
+              <div
+                key={idx}
+                className="text-xs bg-gray-100 px-3 py-1 rounded-full font-medium"
+              >
                 Set {set.setNumber}: {set.player1Score} - {set.player2Score}
               </div>
             ))}

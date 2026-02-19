@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { X, Trophy, Circle, Save } from "lucide-react";
+import { X, Circle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { KyoruguiMatch, KyoruguiRound } from "../../types/taekwondo.types";
 import { useUpdateKyoruguiRounds } from "../../api/taekwondo.mutations";
 import { useKyoruguiRounds } from "../../api/taekwondo.queries";
+import { useSetWalkoverGeneric } from "../../api/bracket.mutations";
+import { WalkoverDialog } from "@/features/competitions/components/table-tennis/WalkoverDialog";
 import { toast } from "sonner";
 
 interface Props {
@@ -24,16 +26,17 @@ export const KyoruguiRoundsModal = ({ match, isOpen, onClose }: Props) => {
     { roundNumber: 2, participant1Points: 0, participant2Points: 0 },
     { roundNumber: 3, participant1Points: 0, participant2Points: 0 },
   ]);
+  const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
 
   const updateMutation = useUpdateKyoruguiRounds();
+  const setWalkoverMutation = useSetWalkoverGeneric();
   const { data: existingRounds } = useKyoruguiRounds(match.matchId);
 
-  // Cargar rounds existentes
   useEffect(() => {
     if (existingRounds && existingRounds.length > 0) {
       const loadedRounds = [1, 2, 3].map((roundNum) => {
         const existing = existingRounds.find(
-          (r: KyoruguiRound) => r.gameNumber === roundNum
+          (r: KyoruguiRound) => r.gameNumber === roundNum,
         );
         return {
           roundNumber: roundNum,
@@ -54,17 +57,18 @@ export const KyoruguiRoundsModal = ({ match, isOpen, onClose }: Props) => {
     if (!registration) return `Participation #${participation.participationId}`;
     const athlete = registration.athlete;
     if (!athlete) return `Registration #${registration.registrationId}`;
-
-    return (
-      athlete.name ||
-      `Atleta #${athlete.athleteId}`
-    );
+    return athlete.name || `Atleta #${athlete.athleteId}`;
   };
+
+  const p1Name = getParticipantName(participant1);
+  const p2Name = getParticipantName(participant2);
+  const p1RegId = participant1?.registrationId ?? 0;
+  const p2RegId = participant2?.registrationId ?? 0;
 
   const handlePointChange = (
     roundIndex: number,
     participant: "p1" | "p2",
-    value: number
+    value: number,
   ) => {
     const newRounds = [...rounds];
     if (participant === "p1") {
@@ -75,26 +79,27 @@ export const KyoruguiRoundsModal = ({ match, isOpen, onClose }: Props) => {
     setRounds(newRounds);
   };
 
-  // Calcular rounds ganados
   const participant1Rounds = rounds.filter(
-    (r) => r.participant1Points > r.participant2Points && (r.participant1Points > 0 || r.participant2Points > 0)
+    (r) =>
+      r.participant1Points > r.participant2Points &&
+      (r.participant1Points > 0 || r.participant2Points > 0),
   ).length;
   const participant2Rounds = rounds.filter(
-    (r) => r.participant2Points > r.participant1Points && (r.participant1Points > 0 || r.participant2Points > 0)
+    (r) =>
+      r.participant2Points > r.participant1Points &&
+      (r.participant1Points > 0 || r.participant2Points > 0),
   ).length;
 
   const matchFinished = participant1Rounds >= 2 || participant2Rounds >= 2;
 
-  // Validar que no haya empates en rounds jugados
   const hasInvalidRounds = rounds.some(
     (r) =>
       (r.participant1Points > 0 || r.participant2Points > 0) &&
-      r.participant1Points === r.participant2Points
+      r.participant1Points === r.participant2Points,
   );
 
-  // Validar que al menos un round tenga puntos
   const hasAnyRound = rounds.some(
-    (r) => r.participant1Points > 0 || r.participant2Points > 0
+    (r) => r.participant1Points > 0 || r.participant2Points > 0,
   );
 
   const handleSaveAll = async () => {
@@ -102,32 +107,47 @@ export const KyoruguiRoundsModal = ({ match, isOpen, onClose }: Props) => {
       toast.error("Debes registrar al menos un round");
       return;
     }
-
     if (hasInvalidRounds) {
       toast.error("No puede haber empate en ningún round");
       return;
     }
-
-    // Filtrar solo los rounds que tienen puntos
     const roundsToSave = rounds.filter(
-      (r) => r.participant1Points > 0 || r.participant2Points > 0
+      (r) => r.participant1Points > 0 || r.participant2Points > 0,
     );
-
     updateMutation.mutate(
-      {
-        matchId: match.matchId,
-        rounds: roundsToSave,
-      },
+      { matchId: match.matchId, rounds: roundsToSave },
       {
         onSuccess: () => {
           toast.success(
             matchFinished
               ? "¡Match finalizado exitosamente!"
-              : "Rounds guardados correctamente"
+              : "Rounds guardados correctamente",
           );
           onClose();
         },
-      }
+      },
+    );
+  };
+
+  // Guarda is_walkover=true y walkover_reason en la BD
+  const handleWalkoverConfirm = (
+    winnerRegistrationId: number,
+    reason: string,
+  ) => {
+    setWalkoverMutation.mutate(
+      { matchId: match.matchId, winnerRegistrationId, reason },
+      {
+        onSuccess: () => {
+          toast.success("Walkover registrado correctamente");
+          setShowWalkoverDialog(false);
+          onClose();
+        },
+        onError: (error: any) => {
+          toast.error(
+            error.response?.data?.message || "Error al registrar walkover",
+          );
+        },
+      },
     );
   };
 
@@ -151,164 +171,179 @@ export const KyoruguiRoundsModal = ({ match, isOpen, onClose }: Props) => {
     );
   }
 
+  const isBusy = updateMutation.isPending || setWalkoverMutation.isPending;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div>
-            <h2 className="text-2xl font-bold">
-              Match {match.matchNumber} - Rounds
-            </h2>
-            <p className="text-sm text-gray-500">
-              Kyorugui • Mejor de 3 Rounds
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Score Summary */}
-        <div className="px-6 py-4 bg-gray-50 border-b">
-          <div className="flex items-center justify-between max-w-md mx-auto">
-            <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Circle className="w-6 h-6 fill-blue-500 text-blue-500" />
-                <span className="font-bold text-lg">{participant1Rounds}</span>
-              </div>
-              <p className="text-xs text-gray-600 truncate">
-                {getParticipantName(participant1)}
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+            <div>
+              <h2 className="text-2xl font-bold">
+                Match {match.matchNumber} - Rounds
+              </h2>
+              <p className="text-sm text-gray-500">
+                Kyorugui • Mejor de 3 Rounds
               </p>
             </div>
-
-            <div className="px-4">
-              <div className="text-2xl font-bold text-gray-400">-</div>
-            </div>
-
-            <div className="text-center flex-1">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <span className="font-bold text-lg">{participant2Rounds}</span>
-                <Circle className="w-6 h-6 fill-red-500 text-red-500" />
-              </div>
-              <p className="text-xs text-gray-600 truncate">
-                {getParticipantName(participant2)}
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          
-        </div>
-
-        {/* Rounds */}
-        <div className="p-6 space-y-4">
-          {rounds.map((round, index) => {
-            const isRoundComplete =
-              round.participant1Points > 0 || round.participant2Points > 0;
-            const roundWinner =
-              round.participant1Points > round.participant2Points && isRoundComplete
-                ? "p1"
-                : round.participant2Points > round.participant1Points && isRoundComplete
-                ? "p2"
-                : null;
-
-            return (
-              <div
-                key={round.roundNumber}
-                className={`border-2 rounded-lg overflow-hidden ${
-                  roundWinner === "p1"
-                    ? "border-blue-500 bg-blue-50"
-                    : roundWinner === "p2"
-                    ? "border-red-500 bg-red-50"
-                    : "border-gray-200 bg-white"
-                }`}
-              >
-                {/* Round Header */}
-                <div className="bg-gray-100 px-4 py-2 flex items-center justify-between">
-                  <span className="font-bold text-gray-700">
-                    Round {round.roundNumber}
-                  </span>
-                  
+          {/* Score Summary */}
+          <div className="px-6 py-4 bg-gray-50 border-b">
+            <div className="flex items-center justify-between max-w-md mx-auto">
+              <div className="text-center flex-1">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Circle className="w-6 h-6 fill-blue-500 text-blue-500" />
+                  <span className="font-bold text-lg">{participant1Rounds}</span>
                 </div>
+                <p className="text-xs text-gray-600 truncate">{p1Name}</p>
+              </div>
+              <div className="px-4">
+                <div className="text-2xl font-bold text-gray-400">-</div>
+              </div>
+              <div className="text-center flex-1">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <span className="font-bold text-lg">{participant2Rounds}</span>
+                  <Circle className="w-6 h-6 fill-red-500 text-red-500" />
+                </div>
+                <p className="text-xs text-gray-600 truncate">{p2Name}</p>
+              </div>
+            </div>
+          </div>
 
-                {/* Scores */}
-                <div className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Participant 1 - Azul */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Circle className="w-4 h-4 fill-blue-500 text-blue-500 flex-shrink-0" />
-                        <span className="text-sm font-medium text-gray-700 truncate">
-                          {getParticipantName(participant1)}
-                        </span>
-                      </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={round.participant1Points}
-                        onChange={(e) =>
-                          handlePointChange(index, "p1", Number(e.target.value))
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="0"
-                      />
-                    </div>
+          {/* Rounds */}
+          <div className="p-6 space-y-4">
+            {rounds.map((round, index) => {
+              const isRoundComplete =
+                round.participant1Points > 0 || round.participant2Points > 0;
+              const roundWinner =
+                round.participant1Points > round.participant2Points &&
+                isRoundComplete
+                  ? "p1"
+                  : round.participant2Points > round.participant1Points &&
+                      isRoundComplete
+                    ? "p2"
+                    : null;
 
-                    {/* Participant 2 - Rojo */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Circle className="w-4 h-4 fill-red-500 text-red-500 flex-shrink-0" />
-                        <span className="text-sm font-medium text-gray-700 truncate">
-                          {getParticipantName(participant2)}
-                        </span>
+              return (
+                <div
+                  key={round.roundNumber}
+                  className={`border-2 rounded-lg overflow-hidden ${
+                    roundWinner === "p1"
+                      ? "border-blue-500 bg-blue-50"
+                      : roundWinner === "p2"
+                        ? "border-red-500 bg-red-50"
+                        : "border-gray-200 bg-white"
+                  }`}
+                >
+                  <div className="bg-gray-100 px-4 py-2 flex items-center justify-between">
+                    <span className="font-bold text-gray-700">
+                      Round {round.roundNumber}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Participant 1 - Azul */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Circle className="w-4 h-4 fill-blue-500 text-blue-500 flex-shrink-0" />
+                          <span className="text-sm font-medium text-gray-700 truncate">
+                            {p1Name}
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={round.participant1Points}
+                          onChange={(e) =>
+                            handlePointChange(index, "p1", Number(e.target.value))
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="0"
+                        />
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        value={round.participant2Points}
-                        onChange={(e) =>
-                          handlePointChange(index, "p2", Number(e.target.value))
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-red-500"
-                        placeholder="0"
-                      />
+                      {/* Participant 2 - Rojo */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Circle className="w-4 h-4 fill-red-500 text-red-500 flex-shrink-0" />
+                          <span className="text-sm font-medium text-gray-700 truncate">
+                            {p2Name}
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          value={round.participant2Points}
+                          onChange={(e) =>
+                            handlePointChange(index, "p2", Number(e.target.value))
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-red-500"
+                          placeholder="0"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        {/* Footer con botón de guardar */}
-        <div className="sticky bottom-0 bg-white border-t px-6 py-4 space-y-3">
-          {/* Botón principal de confirmar */}
-          <button
-            onClick={handleSaveAll}
-            disabled={updateMutation.isPending || !hasAnyRound || hasInvalidRounds}
-            className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 font-bold text-lg flex items-center justify-center gap-2"
-          >
-            
-            {updateMutation.isPending
-              ? "Guardando..."
-              : matchFinished
-              ? "Confirmar y Finalizar Match"
-              : "Guardar Rounds"}
-          </button>
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-white border-t px-6 py-4 space-y-3">
+            {/* Walkover */}
+            <button
+              onClick={() => setShowWalkoverDialog(true)}
+              disabled={isBusy}
+              className="w-full px-4 py-2 border-2 border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              
+              Registrar Walkover
+            </button>
 
-          {/* Botón secundario de cancelar */}
-          <button
-            onClick={onClose}
-            disabled={updateMutation.isPending}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors font-medium"
-          >
-            Cancelar
-          </button>
+            {/* Guardar rounds */}
+            <button
+              onClick={handleSaveAll}
+              disabled={isBusy || !hasAnyRound || hasInvalidRounds}
+              className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 font-bold text-lg flex items-center justify-center gap-2"
+            >
+              {updateMutation.isPending
+                ? "Guardando..."
+                : matchFinished
+                  ? "Confirmar y Finalizar Match"
+                  : "Guardar Rounds"}
+            </button>
+
+            {/* Cancelar */}
+            <button
+              onClick={onClose}
+              disabled={isBusy}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* WalkoverDialog fuera del modal para evitar conflictos de z-index */}
+      {showWalkoverDialog && (
+        <WalkoverDialog
+          participant1Name={p1Name}
+          participant2Name={p2Name}
+          participant1RegistrationId={p1RegId}
+          participant2RegistrationId={p2RegId}
+          onConfirm={handleWalkoverConfirm}
+          onCancel={() => setShowWalkoverDialog(false)}
+          isLoading={setWalkoverMutation.isPending}
+        />
+      )}
+    </>
   );
 };

@@ -112,6 +112,7 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
       {selectedMatchId && !isKyorugui && !isPoomsae && (
         <MatchDetailsModal
           matchId={selectedMatchId}
+          match={selectedMatch}
           sportConfig={sportConfig}
           onClose={() => setSelectedMatchId(null)}
         />

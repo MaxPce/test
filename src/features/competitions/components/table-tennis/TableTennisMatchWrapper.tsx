@@ -30,8 +30,6 @@ export function TableTennisMatchWrapper({
   }
 
   const resolvedEventCategory = eventCategory ?? match.phase?.eventCategory;
-  const categoryType =
-    resolvedEventCategory?.category?.type?.toLowerCase() || "";
 
   const enrichedMatch: Match = {
     ...match,
@@ -50,6 +48,7 @@ export function TableTennisMatchWrapper({
 
   const participations: any[] = match.participations ?? [];
 
+  // Solo bloquear si genuinamente no hay participantes
   if (participations.length < 2) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -59,35 +58,8 @@ export function TableTennisMatchWrapper({
     );
   }
 
-  if (categoryType === "equipo" || categoryType === "equipos") {
-    const teamsWithMembers = participations.filter(
-      (p) =>
-        p.registration?.team?.members &&
-        p.registration.team.members.length >= 2,
-    );
-
-    if (teamsWithMembers.length < 2) {
-      return (
-        <div className="text-center py-8 text-gray-500">
-          <p className="mb-2 font-semibold">
-            Los equipos no tienen miembros registrados.
-          </p>
-          <p className="text-sm">Cada equipo debe tener al menos 2 atletas.</p>
-          <p className="text-sm mt-2">
-            • <strong>Dobles:</strong> 2 jugadores (juegan ambos directamente)
-          </p>
-          <p className="text-sm">
-            • <strong>Equipos:</strong> 4 jugadores (3 titulares + 1 suplente)
-          </p>
-          <p className="text-sm mt-3 text-orange-600">
-            Ve a <strong>Instituciones → Equipos</strong> y agrega los miembros
-            del equipo.
-          </p>
-        </div>
-      );
-    }
-  }
-
+  // ✅ No validar members aquí — TableTennisMatchManager
+  // fetches sus propios lineups y maneja todos los estados internamente
   return (
     <TableTennisMatchManager
       match={enrichedMatch}

@@ -6,7 +6,7 @@ export function useGenerateBracket() {
 
   return useMutation({
     mutationFn: bracketApi.generateCompleteBracket,
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matches"] });
       queryClient.invalidateQueries({ queryKey: ["phases"] });
     },
@@ -18,9 +18,30 @@ export function useAdvanceWinner() {
 
   return useMutation({
     mutationFn: bracketApi.advanceWinner,
-    onSuccess: (data) => {
-      // Invalidar todas las queries relacionadas
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({ queryKey: ["bracket"] });
+    },
+  });
+}
+
+// ← nuevo: walkover genérico para todos los deportes
+export interface SetWalkoverGenericPayload {
+  matchId: number;
+  winnerRegistrationId: number;
+  reason: string;
+}
+
+export function useSetWalkoverGeneric() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: SetWalkoverGenericPayload) =>
+      bracketApi.setWalkover(payload),
+    onSuccess: (_, { matchId }) => {
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({ queryKey: ["match", matchId] });
+      queryClient.invalidateQueries({ queryKey: ["match-details", matchId] });
       queryClient.invalidateQueries({ queryKey: ["bracket"] });
     },
   });

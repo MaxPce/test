@@ -30,6 +30,20 @@ export const bracketApi = {
     return response.data;
   },
 
+  // ← nuevo: walkover genérico para todos los deportes
+  setWalkover: async (data: {
+    matchId: number;
+    winnerRegistrationId: number;
+    reason: string;
+  }) => {
+    const { matchId, ...body } = data;
+    const response = await apiClient.patch(
+      `/competitions/matches/${matchId}/walkover`,
+      body,
+    );
+    return response.data;
+  },
+
   getBracketStructure: async (phaseId: number) => {
     const response = await apiClient.get(
       `/competitions/brackets/${phaseId}/structure`,
