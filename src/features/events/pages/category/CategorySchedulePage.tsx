@@ -396,8 +396,10 @@ export function CategorySchedulePage() {
 
           {/* Detalle de Fase Seleccionada */}
           {selectedPhase && (
+            
             <Card variant="elevated">
               <CardHeader>
+                
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Info de la fase */}
                   <div className="flex items-center gap-4">
@@ -486,28 +488,33 @@ export function CategorySchedulePage() {
               <CardBody>
                 {matchesLoading ? (
                   <div className="text-center py-12">
-                    <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
                     <p className="text-slate-600">Cargando partidos...</p>
                   </div>
-                ) : getTaekwondoType() === "poomsae" &&
-                  selectedPhase.type !== "eliminacion" ? (
+
+                ) : getTaekwondoType() === 'poomsae'
+                    && selectedPhase.type !== 'eliminacion'
+                    && selectedPhase.type !== 'mejor_de_3' ? (
                   <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
+
+                ) : selectedPhase.type === 'mejor_de_3' ? ( 
+                  <BestOf3View
+                    matches={matches}
+                    phase={selectedPhase}
+                    eventCategory={eventCategory}
+                  />
+
                 ) : matches.length === 0 ? (
                   <EmptyState
                     icon={Trophy}
                     title="No hay partidos en esta fase"
                     description="Agrega partidos manualmente o genera automáticamente"
                     action={{
-                      label: "Crear Primer Partido",
+                      label: 'Crear Primer Partido',
                       onClick: () => setIsMatchModalOpen(true),
                     }}
                   />
-                ) : selectedPhase.type === "mejor_de_3" ? (
-                  <BestOf3View
-                    matches={matches}
-                    phase={selectedPhase}
-                    eventCategory={eventCategory}
-                  />
+
                 ) : (
                   <div className="space-y-4">
                     {matches.map((match) => {
@@ -827,7 +834,9 @@ export function CategorySchedulePage() {
               </CardBody>
             </Card>
           )}
+          
         </>
+        
       )}
 
       {/* MODALES - Mantener todos sin cambios */}

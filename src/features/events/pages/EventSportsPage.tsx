@@ -11,7 +11,6 @@ import { useEventCategories, useSismasterEventCategories } from "../api/eventCat
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 export function EventSportsPage() {
-  // ✅ Detectar si es evento local o de Sismaster
   const { eventId, externalEventId } = useParams<{ eventId?: string; externalEventId?: string }>();
   const navigate = useNavigate();
   

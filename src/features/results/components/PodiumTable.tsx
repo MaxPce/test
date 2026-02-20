@@ -1,9 +1,9 @@
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Trophy, Medal, User, Users, AlertTriangle } from "lucide-react";
+import { Trophy, Medal, User, Users } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMatches } from "@/features/competitions/api/matches.queries";
-import { useStandings } from "@/features/competitions/api/standings.queries";
+import { useManualRanks } from "@/features/competitions/api/standings.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface PodiumTableProps {
@@ -11,12 +11,10 @@ interface PodiumTableProps {
 }
 
 export function PodiumTable({ phaseId }: PodiumTableProps) {
-  const { data: matches = [], isLoading: matchesLoading } =
-    useMatches(phaseId);
-  const { data: standings = [], isLoading: standingsLoading } =
-    useStandings(phaseId);
+  const { data: matches = [], isLoading: matchesLoading } = useMatches(phaseId);
+  const { data: manualRanks = [], isLoading: manualLoading } = useManualRanks(phaseId);
 
-  const isLoading = matchesLoading || standingsLoading;
+  const isLoading = matchesLoading || manualLoading;
 
   if (isLoading) {
     return (
@@ -28,18 +26,15 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     );
   }
 
-  // ── Prioridad 1: puestos manuales ────────────────────────────────────
-  const manualTop3 = (standings as any[])
-    .filter(
-      (s) => s.manualRankPosition != null && s.manualRankPosition <= 3
-    )
-    .sort((a, b) => a.manualRankPosition - b.manualRankPosition);
+  // ── Prioridad 1: todos los puestos manuales (sin límite, con empates) ──
+  const manualSorted = manualRanks
+    .filter((r) => r.manualRankPosition != null)
+    .sort((a, b) => (a.manualRankPosition ?? 0) - (b.manualRankPosition ?? 0));
 
-  const hasManual = manualTop3.length > 0;
-  const manualIncomplete = hasManual && manualTop3.length < 3;
+  const hasManual = manualSorted.length > 0;
 
-  // ── Construir podiumData ─────────────────────────────────────────────
   let podiumData: {
+    registrationId: number;   // ✅ clave única para empates
     position: number;
     name: string;
     institution: any;
@@ -50,22 +45,22 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
   let isTeamCompetition = false;
 
   if (hasManual) {
-    // Fuente manual
-    isTeamCompetition = manualTop3.some(
-      (s: any) => !!s.registration?.team
-    );
-    podiumData = manualTop3.map((s: any) => {
-      const reg = s.registration;
-      return {
-        position: s.manualRankPosition,
-        name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
-        institution: reg?.athlete?.institution || reg?.team?.institution,
-        photoUrl: reg?.athlete?.photoUrl,
-        isAthlete: !!reg?.athlete,
-      };
-    });
+    isTeamCompetition = manualSorted.some((r) => !!r.registration?.team);
+    podiumData = manualSorted.map((r) => ({
+      registrationId: r.registrationId,
+      position: r.manualRankPosition!,
+      name:
+        r.registration?.athlete?.name ||
+        r.registration?.team?.name ||
+        "Sin nombre",
+      institution:
+        r.registration?.athlete?.institution ||
+        r.registration?.team?.institution,
+      photoUrl: r.registration?.athlete?.photoUrl,
+      isAthlete: !!r.registration?.athlete,
+    }));
   } else {
-    // Fuente automática: buscar por matches (lógica original)
+    // ── Fuente automática: matches (lógica original) ──────────────────────
     const finalMatch = (matches as any[]).find(
       (m) =>
         m.round?.toLowerCase().includes("final") &&
@@ -94,18 +89,16 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     }
 
     isTeamCompetition = finalMatch.participations?.some(
-      (p: any) =>
-        p.registration?.team !== undefined &&
-        p.registration?.team !== null
+      (p: any) => p.registration?.team !== undefined && p.registration?.team !== null
     );
 
     const winner = finalMatch.participations?.find(
-      (p: any) =>
-        p.registration?.registrationId === finalMatch.winnerRegistrationId
+      (p: any) => p.registration?.registrationId === finalMatch.winnerRegistrationId
     );
     if (winner) {
       const reg = winner.registration;
       podiumData.push({
+        registrationId: reg.registrationId,
         position: 1,
         name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
         institution: reg?.athlete?.institution || reg?.team?.institution,
@@ -115,12 +108,12 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     }
 
     const runnerUp = finalMatch.participations?.find(
-      (p: any) =>
-        p.registration?.registrationId !== finalMatch.winnerRegistrationId
+      (p: any) => p.registration?.registrationId !== finalMatch.winnerRegistrationId
     );
     if (runnerUp) {
       const reg = runnerUp.registration;
       podiumData.push({
+        registrationId: reg.registrationId,
         position: 2,
         name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
         institution: reg?.athlete?.institution || reg?.team?.institution,
@@ -136,16 +129,15 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     ) {
       const thirdPlace = thirdPlaceMatch.participations?.find(
         (p: any) =>
-          p.registration?.registrationId ===
-          thirdPlaceMatch.winnerRegistrationId
+          p.registration?.registrationId === thirdPlaceMatch.winnerRegistrationId
       );
       if (thirdPlace) {
         const reg = thirdPlace.registration;
         podiumData.push({
+          registrationId: reg.registrationId,
           position: 3,
           name: reg?.athlete?.name || reg?.team?.name || "Sin nombre",
-          institution:
-            reg?.athlete?.institution || reg?.team?.institution,
+          institution: reg?.athlete?.institution || reg?.team?.institution,
           photoUrl: reg?.athlete?.photoUrl,
           isAthlete: !!reg?.athlete,
         });
@@ -153,42 +145,28 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     }
   }
 
+  // ── Helpers de ícono y color por posición ─────────────────────────────
   const getMedalIcon = (position: number) => {
     if (position === 1) return <Trophy className="h-6 w-6 text-yellow-500" />;
     if (position === 2) return <Medal className="h-6 w-6 text-gray-400" />;
     if (position === 3) return <Medal className="h-6 w-6 text-amber-600" />;
-    return null;
+    return null; // 4°, 5°, etc. sin ícono
   };
 
   const getMedalColor = (position: number) => {
     if (position === 1) return "from-yellow-50 to-amber-50 border-yellow-300";
     if (position === 2) return "from-gray-50 to-slate-50 border-gray-300";
-    if (position === 3)
-      return "from-orange-50 to-amber-50 border-orange-300";
-    return "from-gray-50 to-gray-100 border-gray-300";
+    if (position === 3) return "from-orange-50 to-amber-50 border-orange-300";
+    return "from-white to-gray-50 border-gray-200"; // 4°+ neutro
+  };
+
+  const getBadgeVariant = (position: number) => {
+    if (position === 1) return "warning";
+    return "default";
   };
 
   return (
     <div className="space-y-4">
-      {/* Badge de advertencia si el manual está incompleto */}
-      {manualIncomplete && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm font-medium">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-500" />
-          <span>
-            Podio manual incompleto (faltan puestos). Complétalo en la
-            vista Manual.
-          </span>
-        </div>
-      )}
-
-      {hasManual && !manualIncomplete && (
-        <div className="flex items-center gap-2 text-xs text-purple-600 font-medium px-1">
-          <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
-          Mostrando clasificación manual
-        </div>
-      )}
-
-      {/* Tabla del Podio — render idéntico al original */}
       <Card>
         <CardBody className="p-0">
           <div className="overflow-x-auto">
@@ -211,22 +189,23 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
               <tbody className="bg-white divide-y divide-gray-200">
                 {podiumData.map((item) => (
                   <tr
-                    key={item.position}
+                    key={item.registrationId}
                     className={`bg-gradient-to-r ${getMedalColor(item.position)} border-l-4 transition-all hover:shadow-md`}
                   >
+                    {/* Posición */}
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-3">
                         {getMedalIcon(item.position)}
                         <Badge
-                          variant={
-                            item.position === 1 ? "warning" : "default"
-                          }
+                          variant={getBadgeVariant(item.position)}
                           className="text-base px-3 py-1"
                         >
                           {item.position}° Lugar
                         </Badge>
                       </div>
                     </td>
+
+                    {/* Participante */}
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
                         {isTeamCompetition ? (
@@ -234,13 +213,11 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                             <img
                               src={getImageUrl(item.institution.logoUrl)}
                               alt={item.institution.name}
-                              className="w-14 h-14 rounded-full object-contain bg-white p-2 border-3 border-white shadow-lg"
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                              }}
+                              className="w-14 h-14 rounded-full object-contain bg-white p-2 border-2 border-white shadow-lg"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
                             />
                           ) : (
-                            <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg">
+                            <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-2 border-white shadow-lg">
                               <Users className="h-7 w-7 text-white" />
                             </div>
                           )
@@ -248,20 +225,16 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                           <img
                             src={getImageUrl(item.photoUrl)}
                             alt={item.name}
-                            className="w-14 h-14 rounded-full object-cover border-3 border-white shadow-lg"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
+                            className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-lg"
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
                           />
                         ) : (
-                          <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-3 border-white shadow-lg">
+                          <div className="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center border-2 border-white shadow-lg">
                             <User className="h-7 w-7 text-white" />
                           </div>
                         )}
                         <div>
-                          <p className="text-base font-bold text-gray-900">
-                            {item.name}
-                          </p>
+                          <p className="text-base font-bold text-gray-900">{item.name}</p>
                           {isTeamCompetition && item.institution && (
                             <p className="text-sm text-gray-600 mt-1">
                               {item.institution.name}
@@ -270,6 +243,8 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                         </div>
                       </div>
                     </td>
+
+                    {/* Institución (solo individual) */}
                     {!isTeamCompetition && (
                       <td className="px-6 py-5">
                         {item.institution && (
@@ -279,9 +254,7 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
                                 src={getImageUrl(item.institution.logoUrl)}
                                 alt={item.institution.name}
                                 className="h-8 w-8 object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = "none";
-                                }}
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
                               />
                             )}
                             <div>

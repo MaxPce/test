@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Card, CardBody } from "@/components/ui/Card";
 import { JudoScoreModal } from "./judo/JudoScoreModal";
-import { KyoruguiScoreModal } from "./taekwondo/KyoruguiScoreModal";
+import { KyoruguiRoundsModal } from "./taekwondo/KyoruguiRoundsModal"; 
+import { PoomsaeScoreModal } from "./taekwondo/PoomsaeScoreModal";      
 import { TableTennisMatchWrapper } from "./table-tennis/TableTennisMatchWrapper";
 import { ResultModal } from "./ResultModal";
 import { useUpdateMatch } from "../api/matches.mutations";
@@ -29,11 +30,7 @@ interface BestOf3ViewProps {
   eventCategory?: any;
 }
 
-export function BestOf3View({
-  matches,
-  phase,
-  eventCategory,
-}: BestOf3ViewProps) {
+export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps) {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const updateMatchMutation = useUpdateMatch();
@@ -41,10 +38,9 @@ export function BestOf3View({
   const sortedMatches = [...matches].sort(
     (a, b) => (a.matchNumber || 0) - (b.matchNumber || 0),
   );
+  
 
-  const allParticipations = sortedMatches.flatMap(
-    (m) => m.participations || [],
-  );
+  const allParticipations = sortedMatches.flatMap((m) => m.participations || []);
   const uniqueRegistrations = Array.from(
     new Map(
       allParticipations.map((p) => [p.registrationId, p.registration]),
@@ -67,13 +63,26 @@ export function BestOf3View({
 
   const getSportType = () => {
     if (!eventCategory) return "generic";
-
     const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
     const categoryName = eventCategory.category?.name?.toLowerCase() || "";
 
     if (sportName.includes("judo")) return "judo";
-    if (sportName.includes("taekwondo") && categoryName.includes("kyorugi"))
-      return "kyorugi";
+
+    if (sportName.includes("taekwondo")) {
+      if (
+        categoryName.includes("poomsae") ||
+        categoryName.includes("formas") ||
+        categoryName.includes("forma")
+      )
+        return "poomsae";
+      if (
+        categoryName.includes("kyorugi") ||
+        categoryName.includes("combate") ||
+        categoryName.includes("pelea")
+      )
+        return "kyorugi";
+    }
+
     if (
       sportName.includes("tenis de mesa") ||
       sportName.includes("table tennis") ||
@@ -123,8 +132,6 @@ export function BestOf3View({
   return (
     <>
       <div className="space-y-6">
-        
-
         {/* Partidos */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -223,7 +230,8 @@ export function BestOf3View({
                         const logoUrl = institution?.logoUrl;
                         const isWinner =
                           match.winnerRegistrationId === participation.registrationId;
-                        const isBlue = participation.corner === "blue" || participation.corner === "A";
+                        const isBlue =
+                          participation.corner === "blue" || participation.corner === "A";
 
                         return (
                           <div
@@ -245,15 +253,12 @@ export function BestOf3View({
                             )}
 
                             <div className="flex items-center gap-4">
-                              {/* Logo */}
                               {logoUrl ? (
                                 <img
                                   src={getImageUrl(logoUrl)}
                                   alt={institution?.name}
                                   className="h-10 w-10 rounded-lg object-contain bg-white p-1.5 border border-slate-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                                 />
                               ) : (
                                 <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -261,7 +266,6 @@ export function BestOf3View({
                                 </div>
                               )}
 
-                              {/* Info */}
                               <div className="flex-1 min-w-0">
                                 <p className={`font-bold text-base line-clamp-1 ${isWinner ? "text-green-900" : "text-slate-900"}`}>
                                   {name}
@@ -273,7 +277,6 @@ export function BestOf3View({
                                 )}
                               </div>
 
-                              {/* Badge de esquina */}
                               <Badge
                                 variant={isBlue ? "primary" : "default"}
                                 size="lg"
@@ -331,33 +334,9 @@ export function BestOf3View({
           </div>
         </div>
 
-        {/* Mensaje informativo */}
-        {sortedMatches.every((m) => m.status === "programado") && (
-          <Card className="bg-blue-50 border-2 border-blue-200">
-            <CardBody className="p-4">
-              <div className="flex gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Trophy className="h-4 w-4 text-blue-600" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-blue-900 mb-1">
-                    Información de la Serie
-                  </p>
-                  <p className="text-sm text-blue-800">
-                    La serie comenzará cuando se registre el resultado del primer partido. Si un
-                    participante gana los 2 primeros partidos, el tercero será marcado como "No
-                    necesario".
-                  </p>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        )}
+        
       </div>
 
-      {/* Modales */}
       {selectedMatch && (
         <>
           {sportType === "judo" ? (
@@ -367,10 +346,18 @@ export function BestOf3View({
               match={selectedMatch}
             />
           ) : sportType === "kyorugi" ? (
-            <KyoruguiScoreModal
+            <KyoruguiRoundsModal
               isOpen={isModalOpen}
               onClose={handleCloseModal}
-              match={selectedMatch}
+              match={selectedMatch as any}
+            />
+          ) : sportType === "poomsae" ? (
+            // ✅ NUEVO — Poomsae en mejor_de_3
+            <PoomsaeScoreModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              match={selectedMatch as any}
+              phase={phase}
             />
           ) : sportType === "table-tennis" ? (
             <Modal
@@ -379,7 +366,10 @@ export function BestOf3View({
               title="Gestionar Match - Tenis de Mesa"
               size="full"
             >
-              <TableTennisMatchWrapper match={selectedMatch} eventCategory={eventCategory} />
+              <TableTennisMatchWrapper
+                match={selectedMatch}
+                eventCategory={eventCategory}
+              />
             </Modal>
           ) : (
             <ResultModal

@@ -11,7 +11,6 @@ export function useUpdateStandings() {
   });
 }
 
-
 export function useSetManualStandingRanks() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -21,7 +20,7 @@ export function useSetManualStandingRanks() {
     }) => standingsApi.setManualRanks(data.phaseId, data.ranks),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["matches", variables.phaseId],
+        queryKey: ["manual-ranks", variables.phaseId],
       });
     },
   });
@@ -32,7 +31,7 @@ export function useClearManualStandingRanks() {
   return useMutation({
     mutationFn: (phaseId: number) => standingsApi.clearManualRanks(phaseId),
     onSuccess: (_, phaseId) => {
-      queryClient.invalidateQueries({ queryKey: ["matches", phaseId] });
+      queryClient.invalidateQueries({ queryKey: ["manual-ranks", phaseId] });
     },
   });
 }

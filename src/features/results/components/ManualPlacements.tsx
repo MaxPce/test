@@ -4,6 +4,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMatches } from "@/features/competitions/api/matches.queries";
+import { useManualRanks } from "@/features/competitions/api/standings.queries"; 
 import {
   useSetManualStandingRanks,
   useClearManualStandingRanks,
@@ -15,13 +16,19 @@ interface ManualPlacementsProps {
 }
 
 export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
-  const { data: matches = [], isLoading } = useMatches(phaseId);
+  const { data: matches = [], isLoading: matchesLoading } = useMatches(phaseId);
+  const { data: savedRanks = [], isLoading: ranksLoading } = useManualRanks(phaseId);
   const setManualRanksMutation = useSetManualStandingRanks();
   const clearManualRanksMutation = useClearManualStandingRanks();
 
   const [localRanks, setLocalRanks] = useState<Record<number, number | null>>({});
 
-  // Participantes únicos extraídos de todos los matches de la fase
+  const savedRanksMap = useMemo(() => {
+    const map = new Map<number, number | null>();
+    savedRanks.forEach((r) => map.set(r.registrationId, r.manualRankPosition));
+    return map;
+  }, [savedRanks]);
+
   const participants = useMemo(() => {
     const seen = new Set<number>();
     const result: any[] = [];
@@ -34,34 +41,25 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
           result.push({
             registrationId: regId,
             registration: p.registration,
-            // manualRankPosition vendrá del back una vez implementado
-            manualRankPosition: p.registration?.manualRankPosition ?? null,
+            manualRankPosition: savedRanksMap.get(regId) ?? null,
           });
         }
       });
     });
 
-    // Ordenar: los que ya tienen puesto manual primero (asc), luego sin asignar
-    return result.sort((a, b) => {
-      if (a.manualRankPosition && b.manualRankPosition)
-        return a.manualRankPosition - b.manualRankPosition;
-      if (a.manualRankPosition) return -1;
-      if (b.manualRankPosition) return 1;
-      return 0;
-    });
-  }, [matches]);
+    return result;
+  }, [matches, savedRanksMap]); 
 
   const getRankValue = (
     registrationId: number,
-    serverValue: number | null | undefined
+    serverValue: number | null
   ): number | null => {
     if (registrationId in localRanks) return localRanks[registrationId];
-    return serverValue ?? null;
+    return serverValue;
   };
 
-  const hasAnyManualSaved = participants.some(
-    (p) => p.manualRankPosition != null
-  );
+  
+  const hasAnyManualSaved = savedRanks.some((r) => r.manualRankPosition != null);
   const hasLocalChanges = Object.keys(localRanks).length > 0;
 
   const handleSave = async () => {
@@ -78,7 +76,7 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
     setLocalRanks({});
   };
 
-  if (isLoading) {
+  if (matchesLoading || ranksLoading) {
     return (
       <Card>
         <CardBody className="flex justify-center items-center py-12">
@@ -90,7 +88,6 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
 
   return (
     <div className="space-y-4">
-      {/* Aviso: sin clasificación guardada ni cambios locales */}
       {!hasAnyManualSaved && !hasLocalChanges && (
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm font-medium">
           <AlertCircle className="h-4 w-4 flex-shrink-0 text-amber-500" />
@@ -116,13 +113,9 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {/* Estado vacío: fase sin matches/participantes aún */}
                 {participants.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={3}
-                      className="px-4 py-14 text-center text-gray-400"
-                    >
+                    <td colSpan={3} className="px-4 py-14 text-center text-gray-400">
                       <User className="h-10 w-10 mx-auto mb-3 text-gray-300" />
                       <p className="text-sm font-medium text-gray-500">
                         No hay participantes en esta fase
@@ -136,10 +129,8 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                   participants.map((participant) => {
                     const reg = participant.registration;
                     const isAthlete = !!reg?.athlete;
-                    const name =
-                      reg?.athlete?.name || reg?.team?.name || "Sin nombre";
-                    const institution =
-                      reg?.athlete?.institution || reg?.team?.institution;
+                    const name = reg?.athlete?.name || reg?.team?.name || "Sin nombre";
+                    const institution = reg?.athlete?.institution || reg?.team?.institution;
                     const photoUrl = reg?.athlete?.photoUrl;
                     const currentRank = getRankValue(
                       participant.registrationId,
@@ -154,7 +145,6 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                           isModified ? "bg-purple-50" : "hover:bg-gray-50"
                         }`}
                       >
-                        {/* Participante */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             {isAthlete && photoUrl ? (
@@ -162,9 +152,7 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                                 src={getImageUrl(photoUrl)}
                                 alt={name}
                                 className="w-9 h-9 rounded-full object-cover border-2 border-white shadow"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = "none";
-                                }}
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
                               />
                             ) : isAthlete ? (
                               <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center border-2 border-white shadow">
@@ -176,20 +164,16 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                               </div>
                             )}
                             <div>
-                              <p className="font-semibold text-gray-900 text-sm">
-                                {name}
-                              </p>
-                              {participant.manualRankPosition != null &&
-                                !isModified && (
-                                  <span className="text-xs text-purple-600 font-medium">
-                                    Guardado: {participant.manualRankPosition}°
-                                  </span>
-                                )}
+                              <p className="font-semibold text-gray-900 text-sm">{name}</p>
+                              {participant.manualRankPosition != null && !isModified && (
+                                <span className="text-xs text-purple-600 font-medium">
+                                  Guardado: {participant.manualRankPosition}°
+                                </span>
+                              )}
                             </div>
                           </div>
                         </td>
 
-                        {/* Institución */}
                         <td className="px-4 py-3">
                           {institution && (
                             <div className="flex items-center gap-2">
@@ -198,9 +182,7 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                                   src={getImageUrl(institution.logoUrl)}
                                   alt={institution.name}
                                   className="h-5 w-5 object-contain flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                                 />
                               )}
                               <span className="text-xs text-gray-600 font-medium">
@@ -210,7 +192,6 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                           )}
                         </td>
 
-                        {/* Input puesto */}
                         <td className="px-4 py-3 text-center">
                           <input
                             type="number"
@@ -238,7 +219,6 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
         </CardBody>
       </Card>
 
-      {/* Acciones */}
       <div className="flex gap-3 justify-end">
         {hasAnyManualSaved && (
           <Button
@@ -253,9 +233,7 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
         )}
         <Button
           onClick={handleSave}
-          disabled={
-            setManualRanksMutation.isPending || participants.length === 0
-          }
+          disabled={setManualRanksMutation.isPending || participants.length === 0}
           className="flex items-center gap-2"
         >
           <Save className="h-4 w-4" />
