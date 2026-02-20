@@ -66,6 +66,14 @@ export function BestOf3ResultsTable({
 
   const sportType = getSportType();
 
+  const formatScore = (score: number | null | undefined): string => {
+    if (score === null || score === undefined) return "-";
+    const num = Number(score);
+    return num % 1 !== 0 ? num.toFixed(2) : num.toString();
+  };
+
+  
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -443,33 +451,18 @@ export function BestOf3ResultsTable({
                           </p>
                         </div>
 
-                        {/* Marcador - NÚMEROS ENTEROS */}
+                        {/* Marcador — reemplaza los Math.floor */}
                         <div className="bg-gradient-to-r from-slate-100 to-blue-100 rounded-2xl py-4 px-6 border-2 border-slate-200 shadow-inner">
                           <div className="flex items-center justify-center gap-3">
-                            <span
-                              className={`text-4xl font-black ${
-                                isP1Winner ? "text-green-600" : "text-slate-700"
-                              }`}
-                            >
-                              {match.participant1Score != null
-                                ? Math.floor(match.participant1Score)
-                                : "-"}
+                            <span className={`text-4xl font-black ${isP1Winner ? "text-green-600" : "text-slate-700"}`}>
+                              {formatScore(match.participant1Score)}  
                             </span>
-                            <span className="text-slate-400 text-3xl font-bold">
-                              :
-                            </span>
-                            <span
-                              className={`text-4xl font-black ${
-                                isP2Winner ? "text-green-600" : "text-slate-700"
-                              }`}
-                            >
-                              {match.participant2Score != null
-                                ? Math.floor(match.participant2Score)
-                                : "-"}
+                            <span className="text-slate-400 text-3xl font-bold">:</span>
+                            <span className={`text-4xl font-black ${isP2Winner ? "text-green-600" : "text-slate-700"}`}>
+                              {formatScore(match.participant2Score)} 
                             </span>
                           </div>
                         </div>
-
                         {/* Participante 2 */}
                         <div className="text-left">
                           <p

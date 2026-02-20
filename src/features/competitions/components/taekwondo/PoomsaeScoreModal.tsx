@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import type { Match } from "../../types";
 import type { Phase } from "../../types";
 import { useAdvanceWinner, useSetWalkoverGeneric } from "../../api/bracket.mutations";
+import { useUpdateMatch } from "../../api/matches.mutations"; // ← AÑADIR
 import { WalkoverDialog } from "@/features/competitions/components/table-tennis/WalkoverDialog";
 import { toast } from "sonner";
 
@@ -21,10 +22,9 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
   const [presentation2, setPresentation2] = useState(0);
   const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
 
-  // useAdvanceWinner → submit normal de puntajes
   const advanceWinnerMutation = useAdvanceWinner();
-  // useSetWalkoverGeneric → PATCH /matches/:id/walkover, guarda is_walkover + reason
   const setWalkoverMutation = useSetWalkoverGeneric();
+  const updateMatchMutation = useUpdateMatch(); // ← AÑADIR
 
   const isEditMode = !!(
     match.participant1Score ||
@@ -69,17 +69,22 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
       toast.error("No se pudo determinar el ganador");
       return;
     }
+
+    const scorePayload = {
+      participant1Score: total1,
+      participant2Score: total2,
+      participant1Accuracy: accuracy1,
+      participant1Presentation: presentation1,
+      participant2Accuracy: accuracy2,
+      participant2Presentation: presentation2,
+    };
+
     if (!phase || phase.type === "eliminacion") {
       advanceWinnerMutation.mutate(
         {
           matchId: match.matchId,
           winnerRegistrationId: currentWinnerId,
-          participant1Score: total1,
-          participant2Score: total2,
-          participant1Accuracy: accuracy1,
-          participant1Presentation: presentation1,
-          participant2Accuracy: accuracy2,
-          participant2Presentation: presentation2,
+          ...scorePayload,
         },
         {
           onSuccess: () => {
@@ -97,7 +102,30 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
         },
       );
     } else {
-      toast.warning(`Tipo de fase "${phase.type}" no soportado aún`);
+      updateMatchMutation.mutate(
+        {
+          id: match.matchId,
+          data: {
+            status: "finalizado",
+            winnerRegistrationId: currentWinnerId,
+            ...scorePayload,
+          },
+        },
+        {
+          onSuccess: () => {
+            toast.success(
+              isEditMode
+                ? "Puntaje actualizado correctamente"
+                : "Puntaje registrado correctamente",
+            );
+            onClose();
+          },
+          onError: (error: any) => {
+            console.error("Error al guardar:", error);
+            toast.error("Error al actualizar puntaje");
+          },
+        },
+      );
     }
   };
 
@@ -164,7 +192,11 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
   const p2Name = getParticipantName(participant2);
   const p1RegId = participant1?.registrationId ?? 0;
   const p2RegId = participant2?.registrationId ?? 0;
-  const isBusy = advanceWinnerMutation.isPending || setWalkoverMutation.isPending;
+  // ← isBusy ahora incluye updateMatchMutation
+  const isBusy =
+    advanceWinnerMutation.isPending ||
+    setWalkoverMutation.isPending ||
+    updateMatchMutation.isPending;
 
   return (
     <>
@@ -299,7 +331,6 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
               disabled={isBusy}
               className="w-full px-4 py-2 border-2 border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              
               Registrar Walkover
             </button>
           </div>
@@ -322,7 +353,7 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
               }
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
             >
-              {advanceWinnerMutation.isPending
+              {isBusy
                 ? "Guardando..."
                 : isEditMode
                   ? "Actualizar Puntaje"
@@ -332,7 +363,6 @@ export const PoomsaeScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
         </div>
       </div>
 
-      {/* WalkoverDialog fuera del modal para evitar conflictos de z-index */}
       {showWalkoverDialog && (
         <WalkoverDialog
           participant1Name={p1Name}

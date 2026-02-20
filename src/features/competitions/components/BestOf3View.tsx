@@ -11,14 +11,16 @@ import {
   Users,
   Target,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Card, CardBody } from "@/components/ui/Card";
 import { JudoScoreModal } from "./judo/JudoScoreModal";
-import { KyoruguiRoundsModal } from "./taekwondo/KyoruguiRoundsModal"; 
-import { PoomsaeScoreModal } from "./taekwondo/PoomsaeScoreModal";      
+import { KyoruguiRoundsModal } from "./taekwondo/KyoruguiRoundsModal";
+import { PoomsaeScoreModal } from "./taekwondo/PoomsaeScoreModal";
 import { TableTennisMatchWrapper } from "./table-tennis/TableTennisMatchWrapper";
+import { WalkoverDialog } from "./table-tennis/WalkoverDialog";
 import { ResultModal } from "./ResultModal";
 import { useUpdateMatch } from "../api/matches.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
@@ -33,12 +35,16 @@ interface BestOf3ViewProps {
 export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps) {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // ── Walkover ──────────────────────────────────────────────────────────────
+  const [walkoverMatch, setWalkoverMatch] = useState<Match | null>(null);
+  const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
+
   const updateMatchMutation = useUpdateMatch();
 
   const sortedMatches = [...matches].sort(
     (a, b) => (a.matchNumber || 0) - (b.matchNumber || 0),
   );
-  
 
   const allParticipations = sortedMatches.flatMap((m) => m.participations || []);
   const uniqueRegistrations = Array.from(
@@ -112,6 +118,33 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
       },
     });
     handleCloseModal();
+  };
+
+  
+  const handleWalkoverConfirm = async (
+    winnerRegistrationId: number,
+    reason: string,
+  ) => {
+    if (!walkoverMatch) return;
+    try {
+      await updateMatchMutation.mutateAsync({
+        id: walkoverMatch.matchId,
+        data: {
+          status: "finalizado",
+          winnerRegistrationId,
+          isWalkover: true,
+          walkoverReason: reason,
+        },
+      });
+      toast.success("Walkover registrado correctamente");
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message || "Error al registrar walkover",
+      );
+    } finally {
+      setShowWalkoverDialog(false);
+      setWalkoverMatch(null);
+    }
   };
 
   const getMatchIcon = (match: Match) => {
@@ -210,7 +243,10 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                                 : "warning"
                         }
                         size="lg"
-                        dot={match.status !== "finalizado" && match.status !== "cancelado"}
+                        dot={
+                          match.status !== "finalizado" &&
+                          match.status !== "cancelado"
+                        }
                       >
                         {match.status === "programado" && "Programado"}
                         {match.status === "en_curso" && "En Curso"}
@@ -225,13 +261,16 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                     <div className="p-5 space-y-3 bg-white">
                       {participants.map((participation) => {
                         const reg = participation.registration;
-                        const name = reg?.athlete?.name || reg?.team?.name || "Sin nombre";
-                        const institution = reg?.athlete?.institution || reg?.team?.institution;
+                        const name =
+                          reg?.athlete?.name || reg?.team?.name || "Sin nombre";
+                        const institution =
+                          reg?.athlete?.institution || reg?.team?.institution;
                         const logoUrl = institution?.logoUrl;
                         const isWinner =
                           match.winnerRegistrationId === participation.registrationId;
                         const isBlue =
-                          participation.corner === "blue" || participation.corner === "A";
+                          participation.corner === "blue" ||
+                          participation.corner === "A";
 
                         return (
                           <div
@@ -258,7 +297,9 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                                   src={getImageUrl(logoUrl)}
                                   alt={institution?.name}
                                   className="h-10 w-10 rounded-lg object-contain bg-white p-1.5 border border-slate-200 flex-shrink-0"
-                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                  }}
                                 />
                               ) : (
                                 <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -267,7 +308,11 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                               )}
 
                               <div className="flex-1 min-w-0">
-                                <p className={`font-bold text-base line-clamp-1 ${isWinner ? "text-green-900" : "text-slate-900"}`}>
+                                <p
+                                  className={`font-bold text-base line-clamp-1 ${
+                                    isWinner ? "text-green-900" : "text-slate-900"
+                                  }`}
+                                >
                                   {name}
                                 </p>
                                 {institution && (
@@ -303,9 +348,10 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                     </div>
                   )}
 
-                  {/* Footer con botón */}
+                  {/* Footer con botones */}
                   {participants.length === 2 && match.status !== "cancelado" && (
-                    <div className="p-4 bg-slate-50 border-t border-slate-200">
+                    <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-2">
+                      {/* Botón principal — registrar / editar resultado */}
                       <Button
                         variant={match.status === "finalizado" ? "outline" : "primary"}
                         size="md"
@@ -317,6 +363,20 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                           ? "Editar Resultado"
                           : "Registrar Resultado"}
                       </Button>
+
+                      {/* Botón walkover — solo si aún no está finalizado */}
+                      {match.status !== "finalizado" && (
+                        <button
+                          onClick={() => {
+                            setWalkoverMatch(match);
+                            setShowWalkoverDialog(true);
+                          }}
+                          disabled={updateMatchMutation.isPending}
+                          className="w-full px-4 py-2 border-2 border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          Registrar Walkover
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -333,10 +393,9 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
             })}
           </div>
         </div>
-
-        
       </div>
 
+      {/* ── Modales de resultado ────────────────────────────────────────────── */}
       {selectedMatch && (
         <>
           {sportType === "judo" ? (
@@ -352,7 +411,6 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
               match={selectedMatch as any}
             />
           ) : sportType === "poomsae" ? (
-            // ✅ NUEVO — Poomsae en mejor_de_3
             <PoomsaeScoreModal
               isOpen={isModalOpen}
               onClose={handleCloseModal}
@@ -382,6 +440,35 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
           )}
         </>
       )}
+
+      {/* ── Walkover Dialog ─────────────────────────────────────────────────── */}
+      {showWalkoverDialog && walkoverMatch && (() => {
+        const wP1 = walkoverMatch.participations?.[0];
+        const wP2 = walkoverMatch.participations?.[1];
+        const wP1Name =
+          wP1?.registration?.athlete?.name ||
+          wP1?.registration?.team?.name ||
+          "Participante A";
+        const wP2Name =
+          wP2?.registration?.athlete?.name ||
+          wP2?.registration?.team?.name ||
+          "Participante B";
+
+        return (
+          <WalkoverDialog
+            participant1Name={wP1Name}
+            participant2Name={wP2Name}
+            participant1RegistrationId={wP1?.registrationId ?? 0}
+            participant2RegistrationId={wP2?.registrationId ?? 0}
+            onConfirm={handleWalkoverConfirm}
+            onCancel={() => {
+              setShowWalkoverDialog(false);
+              setWalkoverMatch(null);
+            }}
+            isLoading={updateMatchMutation.isPending}
+          />
+        );
+      })()}
     </>
   );
 }

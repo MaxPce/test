@@ -440,34 +440,30 @@ export function CategorySchedulePage() {
                         </Button>
                       )}
 
-                    {getTaekwondoType() !== "poomsae" && (
-                      <>
-                        {selectedPhase.type === "grupo" &&
-                          matches.length === 0 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setIsGenerateModalOpen(true)}
-                              icon={<Zap className="h-4 w-4" />}
-                            >
-                              Generar Partidos
-                            </Button>
-                          )}
-                        {selectedPhase.type === "mejor_de_3" &&
-                          matches.length === 0 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setIsGenerateBestOf3ModalOpen(true)
-                              }
-                              icon={<Zap className="h-4 w-4" />}
-                            >
-                              Generar Serie
-                            </Button>
-                          )}
-                      </>
-                    )}
+                    {getTaekwondoType() !== "poomsae" &&
+                      selectedPhase.type === "grupo" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsGenerateModalOpen(true)}
+                          icon={<Zap className="h-4 w-4" />}
+                        >
+                          Generar Partidos
+                        </Button>
+                      )}
+
+                    {selectedPhase.type === "mejor_de_3" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsGenerateBestOf3ModalOpen(true)}
+                          icon={<Zap className="h-4 w-4" />}
+                        >
+                          Generar Serie
+                        </Button>
+                      )}
 
                     {!(
                       getTaekwondoType() === "poomsae" &&
