@@ -364,19 +364,7 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                           : "Registrar Resultado"}
                       </Button>
 
-                      {/* Botón walkover — solo si aún no está finalizado */}
-                      {match.status !== "finalizado" && (
-                        <button
-                          onClick={() => {
-                            setWalkoverMatch(match);
-                            setShowWalkoverDialog(true);
-                          }}
-                          disabled={updateMatchMutation.isPending}
-                          className="w-full px-4 py-2 border-2 border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                          Registrar Walkover
-                        </button>
-                      )}
+                          
                     </div>
                   )}
 

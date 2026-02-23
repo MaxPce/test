@@ -12,13 +12,10 @@ interface PoomsaeResultsTableProps {
   eventCategoryId: number;
 }
 
-export function PoomsaeResultsTable({
-  eventCategoryId,
-}: PoomsaeResultsTableProps) {
+export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
 
-  const { data: phases = [], isLoading: phasesLoading } =
-    usePhases(eventCategoryId);
+  const { data: phases = [], isLoading: phasesLoading } = usePhases(eventCategoryId);
 
   const groupPhases = phases.filter((p) => p.type === "grupo");
   const effectivePhaseId =
@@ -34,8 +31,15 @@ export function PoomsaeResultsTable({
       presentation: parseFloat(s.presentation) || 0,
       total: parseFloat(s.total) || 0,
     }))
-    .filter((s: any) => s.total > 0)
-    .sort((a: any, b: any) => b.total - a.total);
+    .sort((a: any, b: any) => {
+      if (b.total === 0 && a.total === 0) return 0;
+      if (a.total === 0) return 1;
+      if (b.total === 0) return -1;
+      return b.total - a.total;
+    });
+
+  const allScoresRegistered =
+    standings.length > 0 && standings.every((s: any) => s.total > 0);
 
   if (phasesLoading) {
     return (
@@ -57,7 +61,6 @@ export function PoomsaeResultsTable({
 
   const selectedPhase = phases.find((p) => p.phaseId === effectivePhaseId);
 
-  // Función para obtener el color de medalla
   const getMedalColor = (position: number) => {
     switch (position) {
       case 1:
@@ -73,7 +76,6 @@ export function PoomsaeResultsTable({
 
   return (
     <div className="space-y-6">
-      {/* Header profesional */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
@@ -88,7 +90,6 @@ export function PoomsaeResultsTable({
         </div>
       </div>
 
-      {/* Selector de fase */}
       {groupPhases.length > 1 && (
         <Card>
           <CardBody>
@@ -106,7 +107,6 @@ export function PoomsaeResultsTable({
         </Card>
       )}
 
-      {/* Tabla de resultados */}
       {effectivePhaseId > 0 ? (
         <Card>
           {selectedPhase && (
@@ -122,15 +122,15 @@ export function PoomsaeResultsTable({
           <CardBody className="p-0">
             {scoresLoading ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
                 <p className="text-gray-600">Cargando resultados...</p>
               </div>
-            ) : standings.length === 0 ? (
+            ) : scores.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Award className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                <p className="font-medium">No hay resultados registrados</p>
+                <p className="font-medium">No hay participantes en esta fase</p>
                 <p className="text-sm mt-1">
-                  Los resultados aparecerán cuando se completen las evaluaciones
+                  Los participantes aparecerán cuando se inscriban en la categoría
                 </p>
               </div>
             ) : (
@@ -147,13 +147,11 @@ export function PoomsaeResultsTable({
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                           <div className="flex items-center justify-center gap-1">
-                            
                             Accuracy
                           </div>
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                           <div className="flex items-center justify-center gap-1">
-                            
                             Presentation
                           </div>
                         </th>
@@ -165,16 +163,17 @@ export function PoomsaeResultsTable({
                     <tbody className="divide-y divide-gray-200">
                       {standings.map((score: any, index: number) => {
                         const position = index + 1;
-                        const medalColor = getMedalColor(position);
-                        const isMedalist = position <= 3;
+                        const isMedalist = allScoresRegistered && position <= 3;
+                        const medalColor = isMedalist ? getMedalColor(position) : null;
 
                         return (
                           <tr
                             key={score.participationId}
-                            className={`
-                              transition-colors
-                              ${isMedalist ? `${medalColor?.bg} border-l-4 ${medalColor?.border}` : "hover:bg-gray-50"}
-                            `}
+                            className={`transition-colors ${
+                              isMedalist
+                                ? `${medalColor?.bg} border-l-4 ${medalColor?.border}`
+                                : "hover:bg-gray-50"
+                            }`}
                           >
                             <td className="px-4 py-4">
                               <div className="flex items-center gap-2">
@@ -202,8 +201,10 @@ export function PoomsaeResultsTable({
                                       const parent = e.currentTarget.parentElement;
                                       if (parent) {
                                         const placeholder = document.createElement("div");
-                                        placeholder.className = "w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold border-2 border-white shadow";
-                                        placeholder.textContent = score.participantName.charAt(0);
+                                        placeholder.className =
+                                          "w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold border-2 border-white shadow";
+                                        placeholder.textContent =
+                                          score.participantName.charAt(0);
                                         parent.appendChild(placeholder);
                                       }
                                     }}
@@ -213,12 +214,13 @@ export function PoomsaeResultsTable({
                                     {score.participantName.charAt(0)}
                                   </div>
                                 )}
-
                                 <div className="flex-1">
                                   <p className="font-semibold text-gray-900">
                                     {score.participantName}
                                     {score.isTeam && (
-                                      <span className="ml-2 text-xs text-blue-600 font-normal">(Equipo)</span>
+                                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                                        (Equipo)
+                                      </span>
                                     )}
                                   </p>
                                   {score.institution && (
@@ -242,26 +244,32 @@ export function PoomsaeResultsTable({
                               </div>
                             </td>
                             <td className="px-4 py-4 text-center">
-                              <div className="inline-flex items-center gap-2">
-                                <span className="text-sm font-semibold text-purple-700">
-                                  {score.accuracy.toFixed(2)}
-                                </span>
-                              </div>
+                              <span className="text-sm font-semibold text-purple-700">
+                                {score.accuracy > 0 ? score.accuracy.toFixed(2) : "—"}
+                              </span>
                             </td>
                             <td className="px-4 py-4 text-center">
-                              <div className="inline-flex items-center gap-2">
-                                <span className="text-sm font-semibold text-pink-700">
-                                  {score.presentation.toFixed(2)}
-                                </span>
-                              </div>
+                              <span className="text-sm font-semibold text-pink-700">
+                                {score.presentation > 0
+                                  ? score.presentation.toFixed(2)
+                                  : "—"}
+                              </span>
                             </td>
                             <td className="px-4 py-4 text-center">
-                              <Badge
-                                variant="primary"
-                                className={`font-bold text-base px-3 ${isMedalist ? medalColor?.text : ""}`}
-                              >
-                                {score.total.toFixed(2)}
-                              </Badge>
+                              {score.total > 0 ? (
+                                <Badge
+                                  variant="primary"
+                                  className={`font-bold text-base px-3 ${
+                                    isMedalist ? medalColor?.text : ""
+                                  }`}
+                                >
+                                  {score.total.toFixed(2)}
+                                </Badge>
+                              ) : (
+                                <span className="text-gray-400 text-sm font-medium">
+                                  Pendiente
+                                </span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -270,7 +278,6 @@ export function PoomsaeResultsTable({
                   </table>
                 </div>
 
-                {/* Leyenda */}
                 <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
                   <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-600">
                     <span>
