@@ -28,6 +28,8 @@ import { PoomsaeScoreModal } from "@/features/competitions/components/taekwondo/
 import { PoomsaeScoreTable } from "@/features/competitions/components/taekwondo/PoomsaeScoreTable";
 import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwondo/KyoruguiRoundsModal";
 import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
+import { KarateScoreModal } from "@/features/competitions/components/karate/KarateScoreModal";
+import { WushuScoreModal } from "@/features/competitions/components/wushu/WushuScoreModal";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import {
@@ -113,6 +115,16 @@ export function CategorySchedulePage() {
     return sportName.includes("judo");
   };
 
+  const isKarate = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return sportName.includes("karate");
+  };
+
+  const isWushu = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return sportName.includes("wushu");
+  };
+
   const getTaekwondoType = () => {
     const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
     if (!sportName.includes("taekwondo")) return null;
@@ -127,8 +139,8 @@ export function CategorySchedulePage() {
     }
 
     if (
-      categoryName.includes("kyorugi") ||   
-      categoryName.includes("kyorugui") ||  
+      categoryName.includes("kyorugi") ||
+      categoryName.includes("kyorugui") ||
       categoryName.includes("combate") ||
       categoryName.includes("pelea") ||
       categoryName.includes("lucha")
@@ -260,7 +272,6 @@ export function CategorySchedulePage() {
     setIsGenerateModalOpen(false);
   };
 
-  // Calcular estadísticas
   const totalMatches = phases.reduce(
     (sum, phase) => sum + (phase.matches?.length || 0),
     0,
@@ -280,7 +291,7 @@ export function CategorySchedulePage() {
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Header profesional */}
+      {/* Header */}
       <PageHeader
         title="Programación & Competencia"
         actions={
@@ -330,20 +341,15 @@ export function CategorySchedulePage() {
                       : ""
                   }`}
                 >
-                  {/* Header con gradiente */}
                   <div
                     className={`relative h-24 bg-gradient-to-br from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 overflow-hidden`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-
-                    {/* Icono */}
                     <div className="absolute top-4 left-4">
                       <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Icon className="h-6 w-6 text-white" />
                       </div>
                     </div>
-
-                    {/* Botón eliminar */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -355,17 +361,13 @@ export function CategorySchedulePage() {
                     </button>
                   </div>
 
-                  {/* Contenido */}
                   <CardBody>
                     <h4 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
                       {phase.name}
                     </h4>
-
                     <Badge variant="primary" size="sm" className="mb-4">
                       {phaseTypeConfig.label}
                     </Badge>
-
-                    {/* Stats de la fase */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-blue-50 rounded-lg p-2 text-center">
                         <p className="text-xl font-bold text-blue-900">
@@ -386,7 +388,6 @@ export function CategorySchedulePage() {
                     </div>
                   </CardBody>
 
-                  {/* Bottom accent */}
                   <div
                     className={`h-1 bg-gradient-to-r from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
                   />
@@ -397,18 +398,14 @@ export function CategorySchedulePage() {
 
           {/* Detalle de Fase Seleccionada */}
           {selectedPhase && (
-            
             <Card variant="elevated">
               <CardHeader>
-                
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Info de la fase */}
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-strong">
                       {(() => {
-                        const Icon = getPhaseTypeConfig(
-                          selectedPhase.type,
-                        ).icon;
+                        const Icon = getPhaseTypeConfig(selectedPhase.type).icon;
                         return <Icon className="h-7 w-7 text-white" />;
                       })()}
                     </div>
@@ -482,6 +479,7 @@ export function CategorySchedulePage() {
                   </div>
                 </div>
               </CardHeader>
+
               <CardBody>
                 {matchesLoading ? (
                   <div className="text-center py-12">
@@ -489,12 +487,12 @@ export function CategorySchedulePage() {
                     <p className="text-slate-600">Cargando partidos...</p>
                   </div>
 
-                ) : getTaekwondoType() === 'poomsae'
-                    && selectedPhase.type !== 'eliminacion'
-                    && selectedPhase.type !== 'mejor_de_3' ? (
+                ) : getTaekwondoType() === "poomsae" &&
+                  selectedPhase.type !== "eliminacion" &&
+                  selectedPhase.type !== "mejor_de_3" ? (
                   <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
 
-                ) : selectedPhase.type === 'mejor_de_3' ? ( 
+                ) : selectedPhase.type === "mejor_de_3" ? (
                   <BestOf3View
                     matches={matches}
                     phase={selectedPhase}
@@ -507,7 +505,7 @@ export function CategorySchedulePage() {
                     title="No hay partidos en esta fase"
                     description="Agrega partidos manualmente o genera automáticamente"
                     action={{
-                      label: 'Crear Primer Partido',
+                      label: "Crear Primer Partido",
                       onClick: () => setIsMatchModalOpen(true),
                     }}
                   />
@@ -517,9 +515,10 @@ export function CategorySchedulePage() {
                     {matches.map((match) => {
                       const participants = match.participations || [];
                       const hasParticipants = participants.length > 0;
-                      const isTaekwondoKyorugui =
-                        getTaekwondoType() === "kyorugui";
-                      const isJudoMatch = isJudo();
+                      const isTaekwondoKyorugui = getTaekwondoType() === "kyorugui";
+                      const isJudoMatch    = isJudo();
+                      const isKarateMatch  = isKarate();
+                      const isWushuMatch   = isWushu();
                       const statusConfig = getStatusConfig(match.status);
 
                       return (
@@ -578,7 +577,9 @@ export function CategorySchedulePage() {
                               {/* Puntajes */}
                               {(getTaekwondoType() === "poomsae" ||
                                 getTaekwondoType() === "kyorugui" ||
-                                isJudoMatch) &&
+                                isJudoMatch ||
+                                isKarateMatch ||
+                                isWushuMatch) &&
                                 match.participant1Score !== null &&
                                 match.participant2Score !== null && (
                                   <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
@@ -593,21 +594,13 @@ export function CategorySchedulePage() {
                                     {getTaekwondoType() === "poomsae" &&
                                       match.participant1Accuracy !== null && (
                                         <p className="text-xs text-slate-600 mt-1">
-                                          {Number(
-                                            match.participant1Accuracy,
-                                          ).toFixed(2)}{" "}
+                                          {Number(match.participant1Accuracy).toFixed(2)}{" "}
                                           +{" "}
-                                          {Number(
-                                            match.participant1Presentation,
-                                          ).toFixed(2)}{" "}
+                                          {Number(match.participant1Presentation).toFixed(2)}{" "}
                                           -{" "}
-                                          {Number(
-                                            match.participant2Accuracy,
-                                          ).toFixed(2)}{" "}
+                                          {Number(match.participant2Accuracy).toFixed(2)}{" "}
                                           +{" "}
-                                          {Number(
-                                            match.participant2Presentation,
-                                          ).toFixed(2)}
+                                          {Number(match.participant2Presentation).toFixed(2)}
                                         </p>
                                       )}
                                   </div>
@@ -692,14 +685,10 @@ export function CategorySchedulePage() {
                                       }
                                       size="sm"
                                     >
-                                      {participation.corner === "blue" &&
-                                        "Azul"}
-                                      {participation.corner === "white" &&
-                                        "Blanco"}
-                                      {participation.corner === "A" &&
-                                        "Equipo A"}
-                                      {participation.corner === "B" &&
-                                        "Equipo B"}
+                                      {participation.corner === "blue" && "Azul"}
+                                      {participation.corner === "white" && "Blanco"}
+                                      {participation.corner === "A" && "Equipo A"}
+                                      {participation.corner === "B" && "Equipo B"}
                                     </Badge>
                                   </div>
                                 );
@@ -773,9 +762,12 @@ export function CategorySchedulePage() {
 
                             {participants.length === 2 && (
                               <>
+                                {/* ── Taekwondo, Judo, Karate, Wushu → modal de puntaje propio ── */}
                                 {getTaekwondoType() === "poomsae" ||
                                 getTaekwondoType() === "kyorugui" ||
-                                isJudoMatch ? (
+                                isJudoMatch ||
+                                isKarateMatch ||
+                                isWushuMatch ? (
                                   <Button
                                     variant="gradient"
                                     size="sm"
@@ -793,6 +785,7 @@ export function CategorySchedulePage() {
                                       ? "Editar Puntaje"
                                       : "Registrar Puntaje"}
                                   </Button>
+
                                 ) : isTableTennis() ? (
                                   <Button
                                     variant="gradient"
@@ -806,6 +799,7 @@ export function CategorySchedulePage() {
                                       ? "Ver/Editar Match"
                                       : "Gestionar Match"}
                                   </Button>
+
                                 ) : (
                                   match.status !== "finalizado" && (
                                     <Button
@@ -831,12 +825,12 @@ export function CategorySchedulePage() {
               </CardBody>
             </Card>
           )}
-          
         </>
-        
       )}
 
-      {/* MODALES - Mantener todos sin cambios */}
+      {/* ═══════════════════════════════════════
+          MODALES
+      ═══════════════════════════════════════ */}
       <Modal
         isOpen={isPhaseModalOpen}
         onClose={() => setIsPhaseModalOpen(false)}
@@ -939,18 +933,44 @@ export function CategorySchedulePage() {
                   match={fullMatch || (selectedMatch as any)}
                 />
               ) : isJudo() ? (
-                  <JudoScoreModal
-                    isOpen={isResultModalOpen}
-                    onClose={async () => {
-                      setIsResultModalOpen(false);
-                      setSelectedMatch(null); 
-                      if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
-                        await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
-                      }
-                    }}
-                    match={selectedMatch}
-                    phase={selectedPhase}
-                  />
+                <JudoScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : isKarate() ? (
+                <KarateScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : isWushu() ? (
+                <WushuScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
               ) : isTableTennis() ? (
                 <Modal
                   isOpen={isResultModalOpen}
@@ -961,7 +981,7 @@ export function CategorySchedulePage() {
                       await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
                     }
                   }}
-                  title="Gestionar Match - Tenis de Mesa" 
+                  title="Gestionar Match - Tenis de Mesa"
                   size="full"
                 >
                   <TableTennisMatchWrapper

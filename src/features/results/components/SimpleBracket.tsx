@@ -7,6 +7,8 @@ import { MatchDetailsModal } from "./MatchDetailsModal";
 import { KyoruguiMatchDetailsModal } from "@/features/competitions/components/taekwondo/KyoruguiMatchDetailsModal";
 import { PoomsaeMatchDetailsModal } from "@/features/competitions/components/taekwondo/PoomsaeMatchDetailsModal";
 import { JudoMatchDetailsModal } from "@/features/competitions/components/judo/JudoMatchDetailsModal";
+import { KarateMatchDetailsModal } from "@/features/competitions/components/karate/KarateMatchDetailsModal";
+import { WushuMatchDetailsModal } from "@/features/competitions/components/wushu/WushuMatchDetailsModal";
 
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
@@ -95,6 +97,8 @@ export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProp
   const isKyorugui = sportConfig?.sportType === "kyorugi";
   const isPoomsae  = sportConfig?.sportType === "poomsae";
   const isJudo     = sportConfig?.sportType === "judo";
+  const isKarate   = sportConfig?.sportType === "karate";  
+  const isWushu    = sportConfig?.sportType === "wushu";
 
   return (
     <>
@@ -123,14 +127,33 @@ export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProp
         />
       )}
 
-      {selectedMatchId && !isKyorugui && !isPoomsae && !isJudo && (
+      {selectedMatchId && isKarate && resolvedMatch && phase && (
+        <KarateMatchDetailsModal
+          match={resolvedMatch as any}
+          phase={phase}
+          isOpen={true}
+          onClose={() => setSelectedMatchId(null)}
+        />
+      )}
+
+      {selectedMatchId && isWushu && resolvedMatch && phase && (
+        <WushuMatchDetailsModal
+          match={resolvedMatch as any}
+          phase={phase}
+          isOpen={true}
+          onClose={() => setSelectedMatchId(null)}
+        />
+      )}
+
+      {/* {selectedMatchId && !isKyorugui && !isPoomsae && !isJudo && (
         <MatchDetailsModal
           matchId={selectedMatchId}
           match={resolvedMatch}
           sportConfig={sportConfig}
           onClose={() => setSelectedMatchId(null)}
         />
-      )}
+      )} */}
+      
 
       <div className="space-y-6">
         {hasBracketLayout ? (
