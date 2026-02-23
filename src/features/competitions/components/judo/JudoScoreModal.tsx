@@ -8,25 +8,25 @@ import { toast } from "sonner";
 
 interface Props {
   match: JudoMatch;
-  phase: Phase;
+  phase?: Phase;
   isOpen: boolean;
   onClose: () => void;
 }
 
+
 export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
-  const [score1, setScore1] = useState(match.participant1Score || 0);
-  const [score2, setScore2] = useState(match.participant2Score || 0);
+  const [score1, setScore1] = useState<number>(Number(match.participant1Score) || 0);
+  const [score2, setScore2] = useState<number>(Number(match.participant2Score) || 0);
 
   const updateMutation = useUpdateJudoScore();
   const advanceWinnerMutation = useAdvanceWinner();
 
   useEffect(() => {
-    setScore1(match.participant1Score || 0);
-    setScore2(match.participant2Score || 0);
+    setScore1(Number(match.participant1Score) || 0);
+    setScore2(Number(match.participant2Score) || 0);
   }, [match]);
 
   const handleSubmit = () => {
-    // Determinar ganador
     const winnerId =
       score1 > score2
         ? match.participations?.[0]?.registrationId
@@ -37,33 +37,47 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
       return;
     }
 
-    // Si es eliminación, usar avance automático
-    if (phase.type === "eliminacion") {
-      advanceWinnerMutation.mutate(
-        {
-          matchId: match.matchId,
-          winnerRegistrationId: winnerId,
-          participant1Score: score1,
-          participant2Score: score2,
-        },
-        {
-          onSuccess: () => {
-            toast.success("Puntaje actualizado y ganador avanzado");
-            onClose();
-          },
-          onError: () => {
-            toast.error("Error al actualizar puntaje");
-          },
-        },
-      );
-    } else {
-      // Para otras fases, usar el método tradicional
+    if (phase?.type === "eliminacion") {
       updateMutation.mutate(
         {
           matchId: match.matchId,
           data: {
             participant1Score: score1,
             participant2Score: score2,
+            winnerRegistrationId: winnerId, 
+          },
+        },
+        {
+          onSuccess: () => {
+            advanceWinnerMutation.mutate(
+              {
+                matchId: match.matchId,
+                winnerRegistrationId: winnerId,
+              },
+              {
+                onSuccess: () => {
+                  toast.success("Puntaje actualizado y ganador avanzado");
+                  onClose();
+                },
+                onError: () => {
+                  toast.error("Error al avanzar al ganador");
+                },
+              },
+            );
+          },
+          onError: () => {
+            toast.error("Error al guardar los puntajes");
+          },
+        },
+      );
+    } else {
+      updateMutation.mutate(
+        {
+          matchId: match.matchId,
+          data: {
+            participant1Score: score1,
+            participant2Score: score2,
+            winnerRegistrationId: winnerId, 
           },
         },
         {
@@ -78,6 +92,8 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
       );
     }
   };
+
+
 
   if (!isOpen) return null;
 

@@ -127,19 +127,20 @@ export function CategorySchedulePage() {
     }
 
     if (
-      categoryName.includes("kyorugui") ||
+      categoryName.includes("kyorugi") ||   
+      categoryName.includes("kyorugui") ||  
       categoryName.includes("combate") ||
       categoryName.includes("pelea") ||
       categoryName.includes("lucha")
     ) {
       return "kyorugui";
     }
-
-    if (selectedPhase?.type === "eliminacion") {
+    if (
+      selectedPhase?.type === "eliminacion" ||
+      selectedPhase?.type === "grupo"
+    ) {
       return "kyorugui";
     }
-
-    return null;
   };
 
   const handleCreatePhase = async (data: any) => {
@@ -927,30 +928,40 @@ export function CategorySchedulePage() {
               ) : getTaekwondoType() === "kyorugui" ? (
                 <KyoruguiRoundsModal
                   isOpen={isResultModalOpen}
-                  onClose={() => {
+                  onClose={async () => {
                     setIsResultModalOpen(false);
                     setSelectedMatch(null);
+                    setSelectedMatchId(null);
+                    if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                    }
                   }}
-                  match={selectedMatch}
+                  match={fullMatch || (selectedMatch as any)}
                 />
               ) : isJudo() ? (
-                <JudoScoreModal
-                  isOpen={isResultModalOpen}
-                  onClose={() => {
-                    setIsResultModalOpen(false);
-                    setSelectedMatch(null);
-                  }}
-                  match={selectedMatch}
-                  phase={selectedPhase}
-                />
+                  <JudoScoreModal
+                    isOpen={isResultModalOpen}
+                    onClose={async () => {
+                      setIsResultModalOpen(false);
+                      setSelectedMatch(null); 
+                      if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                        await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                      }
+                    }}
+                    match={selectedMatch}
+                    phase={selectedPhase}
+                  />
               ) : isTableTennis() ? (
                 <Modal
                   isOpen={isResultModalOpen}
-                  onClose={() => {
+                  onClose={async () => {
                     setIsResultModalOpen(false);
                     setSelectedMatch(null);
+                    if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                    }
                   }}
-                  title="Gestionar Match - Tenis de Mesa"
+                  title="Gestionar Match - Tenis de Mesa" 
                   size="full"
                 >
                   <TableTennisMatchWrapper

@@ -2,14 +2,17 @@ import { useState } from "react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Trophy, Users } from "lucide-react";
-import { useMatches } from "@/features/competitions/api/matches.queries";
+import { useMatches, useMatch } from "@/features/competitions/api/matches.queries";
 import { MatchDetailsModal } from "./MatchDetailsModal";
 import { KyoruguiMatchDetailsModal } from "@/features/competitions/components/taekwondo/KyoruguiMatchDetailsModal";
 import { PoomsaeMatchDetailsModal } from "@/features/competitions/components/taekwondo/PoomsaeMatchDetailsModal";
+import { JudoMatchDetailsModal } from "@/features/competitions/components/judo/JudoMatchDetailsModal";
+
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface SimpleBracketProps {
   phaseId: number;
+  phase?: any;
   sportConfig?: {
     sportType: string;
     scoreLabel: string;
@@ -34,10 +37,11 @@ function classifyRound(rawRound?: string | null): RoundType {
   return "other";
 }
 
-export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
+export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProps) {
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
   const { data: matches = [], isLoading } = useMatches(phaseId);
+  const { data: fullMatch } = useMatch(selectedMatchId || 0);
 
   if (isLoading) {
     return (
@@ -50,9 +54,7 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
     );
   }
 
-  const realMatches = matches.filter((match) => {
-    return match.phaseId === phaseId;
-  });
+  const realMatches = matches.filter((match) => match.phaseId === phaseId);
 
   if (realMatches.length === 0) {
     return (
@@ -68,13 +70,13 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
     );
   }
 
-  const sixteenths = realMatches.filter((m) => classifyRound(m.round) === "sixteenths");
-  const eighths = realMatches.filter((m) => classifyRound(m.round) === "eighths");
-  const quarters = realMatches.filter((m) => classifyRound(m.round) === "quarters");
-  const semis = realMatches.filter((m) => classifyRound(m.round) === "semis");
-  const finals = realMatches.filter((m) => classifyRound(m.round) === "final");
-  const thirdMatches = realMatches.filter((m) => classifyRound(m.round) === "third");
-  const others = realMatches.filter((m) => classifyRound(m.round) === "other");
+  const sixteenths  = realMatches.filter((m) => classifyRound(m.round) === "sixteenths");
+  const eighths     = realMatches.filter((m) => classifyRound(m.round) === "eighths");
+  const quarters    = realMatches.filter((m) => classifyRound(m.round) === "quarters");
+  const semis       = realMatches.filter((m) => classifyRound(m.round) === "semis");
+  const finals      = realMatches.filter((m) => classifyRound(m.round) === "final");
+  const thirdMatches= realMatches.filter((m) => classifyRound(m.round) === "third");
+  const others      = realMatches.filter((m) => classifyRound(m.round) === "other");
 
   const final = finals[0] || null;
   const third = thirdMatches[0] || null;
@@ -88,31 +90,43 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
     third;
 
   const selectedMatch = realMatches.find((m) => m.matchId === selectedMatchId);
+  const resolvedMatch = fullMatch || selectedMatch;
+
   const isKyorugui = sportConfig?.sportType === "kyorugi";
-  const isPoomsae = sportConfig?.sportType === "poomsae";
+  const isPoomsae  = sportConfig?.sportType === "poomsae";
+  const isJudo     = sportConfig?.sportType === "judo";
 
   return (
     <>
-      {selectedMatchId && isKyorugui && selectedMatch && (
+      {selectedMatchId && isKyorugui && resolvedMatch && (
         <KyoruguiMatchDetailsModal
-          match={selectedMatch}
+          match={resolvedMatch}
           isOpen={true}
           onClose={() => setSelectedMatchId(null)}
         />
       )}
 
-      {selectedMatchId && isPoomsae && selectedMatch && (
+      {selectedMatchId && isPoomsae && resolvedMatch && (
         <PoomsaeMatchDetailsModal
-          match={selectedMatch}
+          match={resolvedMatch}
           isOpen={true}
           onClose={() => setSelectedMatchId(null)}
         />
       )}
 
-      {selectedMatchId && !isKyorugui && !isPoomsae && (
+      {selectedMatchId && isJudo && resolvedMatch && phase && (
+        <JudoMatchDetailsModal
+          match={resolvedMatch}
+          phase={phase}
+          isOpen={true}
+          onClose={() => setSelectedMatchId(null)}
+        />
+      )}
+
+      {selectedMatchId && !isKyorugui && !isPoomsae && !isJudo && (
         <MatchDetailsModal
           matchId={selectedMatchId}
-          match={selectedMatch}
+          match={resolvedMatch}
           sportConfig={sportConfig}
           onClose={() => setSelectedMatchId(null)}
         />
@@ -251,9 +265,7 @@ export function SimpleBracket({ phaseId, sportConfig }: SimpleBracketProps) {
         ) : (
           <Card>
             <CardHeader>
-              <h3 className="font-bold text-gray-800">
-                Combates de eliminación
-              </h3>
+              <h3 className="font-bold text-gray-800">Combates de eliminación</h3>
             </CardHeader>
             <CardBody>
               <div className="grid gap-4 md:grid-cols-2">
@@ -353,7 +365,6 @@ function MatchCard({
   const logo2 = institution2?.logoUrl;
 
   const formatScore = (score: any, _isParticipant1: boolean): string => {
-    // Tenis de mesa — los scores ya vienen como sets ganados en participant1Score / participant2Score
     if (sportConfig?.sportType === "table-tennis") {
       if (score !== null && score !== undefined) {
         return String(Math.floor(Number(score)));
@@ -361,10 +372,8 @@ function MatchCard({
       return "-";
     }
 
-    // Sin puntaje
     if (score === null || score === undefined) return "";
 
-    // Sin configuración — entero por defecto
     if (!sportConfig) {
       const numScore = parseFloat(score);
       if (isNaN(numScore)) return "-";
@@ -373,14 +382,12 @@ function MatchCard({
 
     const sportType = sportConfig.sportType;
 
-    // Poomsae — CON DECIMALES
     if (sportType === "poomsae") {
       const numScore = parseFloat(score);
       if (isNaN(numScore)) return "-";
       return numScore.toFixed(2);
     }
 
-    // Judo — Texto especial o entero
     if (sportType === "judo") {
       if (score === 10 || score === "10") return "10 (Ippon)";
       const numScore = parseFloat(score);
@@ -388,7 +395,6 @@ function MatchCard({
       return String(Math.floor(numScore));
     }
 
-    // Kyorugi y otros deportes — SOLO ENTEROS
     const numScore = parseFloat(score);
     if (isNaN(numScore)) return String(score);
     return String(Math.floor(numScore));
@@ -584,9 +590,7 @@ function MatchCard({
             </span>
           ) : (
             isEmpty && (
-              <span className="text-xs text-gray-400 italic">
-                Sin asignar
-              </span>
+              <span className="text-xs text-gray-400 italic">Sin asignar</span>
             )
           )}
         </div>

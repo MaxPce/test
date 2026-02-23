@@ -44,8 +44,6 @@ export function CategoryStandingsPage() {
   const isTableTennis =
     sportName.includes("tenis de mesa") || sportName.includes("tenis de campo");
 
-  // ─── Sport configs ────────────────────────────────────────────────────────
-
   const getSportConfig = () => {
     if (isJudo) {
       return {
@@ -61,8 +59,8 @@ export function CategoryStandingsPage() {
         title: "Tabla de Clasificación",
         subtitle: "Round Robin - Kyorugi",
         headers: { wins: "V", draws: "E", losses: "D", scoreFor: "Pts A Favor", scoreAgainst: "Pts En Contra", scoreDiff: "Dif" },
-        legend: { wins: "Victorias", draws: "Empates", losses: "Derrotas", scores: "Puntos de Combate" },
-        showScores: true,
+        legend: { wins: "Victorias", draws: "Empates", losses: "Derrotas" },
+        showScores: false, 
       };
     }
     if (isTableTennis) {
@@ -71,7 +69,7 @@ export function CategoryStandingsPage() {
         subtitle: "Round Robin - Tenis de Mesa",
         headers: { wins: "PG", draws: "E", losses: "PP", scoreFor: "Sets A Favor", scoreAgainst: "Sets En Contra", scoreDiff: "DS" },
         legend: { wins: "Partidos Ganados", draws: "Empates", losses: "Partidos Perdidos", scores: "Sets" },
-        showScores: true,
+        showScores: false,
       };
     }
     return {
@@ -79,32 +77,21 @@ export function CategoryStandingsPage() {
       subtitle: `${eventCategory?.category?.sport?.name}`,
       headers: { wins: "G", draws: "E", losses: "P", scoreFor: "GF", scoreAgainst: "GC", scoreDiff: "DG" },
       legend: { wins: "Ganados", draws: "Empatados", losses: "Perdidos", scores: "Goles/Puntos" },
-      showScores: true,
+      showScores: false,
     };
   };
 
   const getBracketConfig = () => {
-    // ✅ Poomsae ahora tiene su propia config aquí
-    if (isTaekwondoPoomsae) {
-      return { sportType: "poomsae", scoreLabel: "Puntos", showScores: true };
-    }
-    if (isJudo) {
-      return { sportType: "judo", scoreLabel: "Puntos", showScores: true };
-    }
-    if (isTaekwondoKyorugi) {
-      return { sportType: "kyorugi", scoreLabel: "Puntos", showScores: true };
-    }
-    if (isTableTennis) {
-      return { sportType: "table-tennis", scoreLabel: "Sets", showScores: true };
-    }
+    if (isTaekwondoPoomsae) return { sportType: "poomsae", scoreLabel: "Puntos", showScores: true };
+    if (isJudo) return { sportType: "judo", scoreLabel: "Puntos", showScores: true };
+    if (isTaekwondoKyorugi) return { sportType: "kyorugi", scoreLabel: "Puntos", showScores: true };
+    if (isTableTennis) return { sportType: "table-tennis", scoreLabel: "Sets", showScores: true };
     return {
       sportType: "team",
       scoreLabel: sportName.includes("fútbol") || sportName.includes("futbol") ? "Goles" : "Puntos",
       showScores: true,
     };
   };
-
-  // ─── Render helpers ───────────────────────────────────────────────────────
 
   const renderViewPills = () => (
     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
@@ -161,9 +148,8 @@ export function CategoryStandingsPage() {
             {renderViewPills()}
           </div>
         </div>
-
         {elimView === "bracket" && (
-          <SimpleBracket phaseId={eliminationPhase.phaseId} sportConfig={bracketConfig} />
+          <SimpleBracket phaseId={eliminationPhase.phaseId} sportConfig={bracketConfig} phase={eliminationPhase} />
         )}
         {elimView === "podium" && <PodiumTable phaseId={eliminationPhase.phaseId} />}
         {elimView === "manual" && <ManualPlacements phaseId={eliminationPhase.phaseId} />}
@@ -189,6 +175,14 @@ export function CategoryStandingsPage() {
 
     const selectedPhase = phases.find((p) => p.phaseId === selectedPhaseId);
     const config = getSportConfig();
+
+    const selectedPhaseData = phases.find((p) => p.phaseId === selectedPhaseId);
+    const phaseMatches = selectedPhaseData?.matches || [];
+    const allMatchesFinished =
+      phaseMatches.length > 0 &&
+      phaseMatches
+        .filter((m: any) => (m.participations?.length ?? 0) >= 2)
+        .every((m: any) => m.status === "finalizado");
 
     return (
       <div className="space-y-6">
@@ -239,7 +233,9 @@ export function CategoryStandingsPage() {
                     <div className="text-center py-12 text-gray-500">
                       <BarChart3 className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                       <p className="font-medium">No hay datos de posiciones</p>
-                      <p className="text-sm mt-1">Los partidos deben finalizarse para generar la tabla</p>
+                      <p className="text-sm mt-1">
+                        Los partidos deben finalizarse para generar la tabla
+                      </p>
                     </div>
                   ) : (
                     <>
@@ -271,17 +267,25 @@ export function CategoryStandingsPage() {
                               const institution = reg?.athlete?.institution || reg?.team?.institution;
                               const photoUrl = reg?.athlete?.photoUrl;
                               const logoUrl = institution?.logoUrl;
-                              const isQualified = index < 2;
+                              const isQualified = allMatchesFinished && index < 2;
 
                               return (
                                 <tr
                                   key={standing.standingId}
-                                  className={`${isQualified ? "bg-gradient-to-r from-green-50 to-emerald-50" : "hover:bg-gray-50"} transition-colors`}
+                                  className={`${
+                                    isQualified
+                                      ? "bg-gradient-to-r from-green-50 to-emerald-50"
+                                      : "hover:bg-gray-50"
+                                  } transition-colors`}
                                 >
                                   <td className="px-4 py-3">
                                     <div className="flex items-center gap-2">
                                       {isQualified && <Trophy className="h-4 w-4 text-green-600" />}
-                                      <Badge variant={isQualified ? "success" : "default"} size="sm" className="font-bold">
+                                      <Badge
+                                        variant={isQualified ? "success" : "default"}
+                                        size="sm"
+                                        className="font-bold"
+                                      >
                                         {standing.rankPosition || index + 1}°
                                       </Badge>
                                     </div>
@@ -299,12 +303,17 @@ export function CategoryStandingsPage() {
                                             const parent = target.parentElement;
                                             if (parent) {
                                               const placeholder = document.createElement("div");
-                                              placeholder.className = "w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center border-2 border-white shadow";
-                                              const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                                              placeholder.className =
+                                                "w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center border-2 border-white shadow";
+                                              const icon = document.createElementNS(
+                                                "http://www.w3.org/2000/svg",
+                                                "svg",
+                                              );
                                               icon.setAttribute("class", "h-5 w-5 text-white");
                                               icon.setAttribute("fill", "currentColor");
                                               icon.setAttribute("viewBox", "0 0 24 24");
-                                              icon.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
+                                              icon.innerHTML =
+                                                '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>';
                                               placeholder.appendChild(icon);
                                               parent.appendChild(placeholder);
                                             }
@@ -324,7 +333,9 @@ export function CategoryStandingsPage() {
                                                 src={getImageUrl(logoUrl)}
                                                 alt={institution.name}
                                                 className="h-4 w-4 object-contain"
-                                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                                onError={(e) => {
+                                                  e.currentTarget.style.display = "none";
+                                                }}
                                               />
                                             )}
                                             <p className="text-xs text-gray-600 font-medium">
@@ -344,8 +355,17 @@ export function CategoryStandingsPage() {
                                       <td className="px-4 py-3 text-center text-sm font-medium">{standing.scoreFor}</td>
                                       <td className="px-4 py-3 text-center text-sm font-medium">{standing.scoreAgainst}</td>
                                       <td className="px-4 py-3 text-center text-sm font-bold">
-                                        <span className={standing.scoreDiff > 0 ? "text-green-600" : standing.scoreDiff < 0 ? "text-red-600" : "text-gray-600"}>
-                                          {standing.scoreDiff > 0 && "+"}{standing.scoreDiff}
+                                        <span
+                                          className={
+                                            standing.scoreDiff > 0
+                                              ? "text-green-600"
+                                              : standing.scoreDiff < 0
+                                                ? "text-red-600"
+                                                : "text-gray-600"
+                                          }
+                                        >
+                                          {standing.scoreDiff > 0 && "+"}
+                                          {standing.scoreDiff}
                                         </span>
                                       </td>
                                     </>
@@ -369,7 +389,9 @@ export function CategoryStandingsPage() {
                           <span><strong>{config.headers.losses}:</strong> {config.legend.losses}</span>
                           {config.showScores && (
                             <span>
-                              <strong>{config.headers.scoreFor}/{config.headers.scoreAgainst}:</strong>{" "}
+                              <strong>
+                                {config.headers.scoreFor}/{config.headers.scoreAgainst}:
+                              </strong>{" "}
                               {config.legend.scores} A Favor/En Contra
                             </span>
                           )}
@@ -397,7 +419,9 @@ export function CategoryStandingsPage() {
               <div className="text-center py-12 text-gray-500">
                 <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <p className="font-medium">No hay fases de grupos creadas</p>
-                <p className="text-sm mt-1">Las tablas de posiciones se generan para fases de grupos</p>
+                <p className="text-sm mt-1">
+                  Las tablas de posiciones se generan para fases de grupos
+                </p>
               </div>
             </CardBody>
           </Card>
@@ -406,7 +430,6 @@ export function CategoryStandingsPage() {
     );
   }
 
-  // ─── Caso especial: deportes con tiempo (atletismo, natación…) ─────────────
   if (isTimedSport) {
     return (
       <div className="space-y-6">
@@ -415,12 +438,12 @@ export function CategoryStandingsPage() {
     );
   }
 
-  // ─── RENDER UNIFICADO — aplica a TODOS los demás deportes ─────────────────
   const eliminationPhase = phases.find((p) => p.type === "eliminacion");
-  const groupPhases      = phases.filter((p) => p.type === "grupo");
-  const bestOf3Phases    = phases.filter((p) => p.type === "mejor_de_3"); // ← filter, no find
+  const groupPhases = phases.filter((p) => p.type === "grupo");
+  const bestOf3Phases = phases.filter((p) => p.type === "mejor_de_3");
 
-  const hasAnyPhase = bestOf3Phases.length > 0 || !!eliminationPhase || groupPhases.length > 0;
+  const hasAnyPhase =
+    bestOf3Phases.length > 0 || !!eliminationPhase || groupPhases.length > 0;
 
   if (!hasAnyPhase) {
     return (
@@ -432,7 +455,9 @@ export function CategoryStandingsPage() {
             </div>
             <div>
               <h3 className="text-2xl font-bold">Posiciones</h3>
-              <p className="text-purple-100 mt-1">{eventCategory?.category?.sport?.name}</p>
+              <p className="text-purple-100 mt-1">
+                {eventCategory?.category?.sport?.name}
+              </p>
             </div>
           </div>
         </div>
@@ -453,12 +478,11 @@ export function CategoryStandingsPage() {
   }
 
   const multipleTypes =
-    [bestOf3Phases.length > 0, !!eliminationPhase, groupPhases.length > 0].filter(Boolean).length > 1;
+    [bestOf3Phases.length > 0, !!eliminationPhase, groupPhases.length > 0].filter(Boolean)
+      .length > 1;
 
   return (
     <div className="space-y-8">
-
-      {/* ── Todas las fases Mejor de 3 ── */}
       {bestOf3Phases.map((bestOf3Phase) => (
         <div key={bestOf3Phase.phaseId} className="space-y-6">
           <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
@@ -483,7 +507,6 @@ export function CategoryStandingsPage() {
         </div>
       ))}
 
-      {/* ── Fase de Eliminación ── */}
       {eliminationPhase && (
         <div className="space-y-6">
           {multipleTypes && bestOf3Phases.length > 0 && (
@@ -497,7 +520,6 @@ export function CategoryStandingsPage() {
         </div>
       )}
 
-      {/* ── Fases de Grupo ── */}
       {groupPhases.length > 0 && (
         <div className="space-y-6">
           {multipleTypes && (
@@ -507,7 +529,6 @@ export function CategoryStandingsPage() {
               </h3>
             </div>
           )}
-          {/* Poomsae usa su tabla específica; el resto usa la tabla de posiciones */}
           {isTaekwondoPoomsae ? (
             <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
           ) : (
@@ -515,7 +536,6 @@ export function CategoryStandingsPage() {
           )}
         </div>
       )}
-
     </div>
   );
 }
