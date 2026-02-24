@@ -9,6 +9,8 @@ import { PoomsaeMatchDetailsModal } from "@/features/competitions/components/tae
 import { JudoMatchDetailsModal } from "@/features/competitions/components/judo/JudoMatchDetailsModal";
 import { KarateMatchDetailsModal } from "@/features/competitions/components/karate/KarateMatchDetailsModal";
 import { WushuMatchDetailsModal } from "@/features/competitions/components/wushu/WushuMatchDetailsModal";
+import { WushuTaoluMatchDetailsModal } from "@/features/competitions/components/wushu/WushuTaoluMatchDetailsModal";
+
 
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
@@ -40,6 +42,7 @@ function classifyRound(rawRound?: string | null): RoundType {
 }
 
 export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProps) {
+  console.log("SimpleBracket props:", { phase: !!phase, sportType: sportConfig?.sportType });
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
   const { data: matches = [], isLoading } = useMatches(phaseId);
@@ -98,7 +101,8 @@ export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProp
   const isPoomsae  = sportConfig?.sportType === "poomsae";
   const isJudo     = sportConfig?.sportType === "judo";
   const isKarate   = sportConfig?.sportType === "karate";  
-  const isWushu    = sportConfig?.sportType === "wushu";
+  const isWushu      = sportConfig?.sportType === "wushu";      
+  const isWushuTaolu = sportConfig?.sportType === "wushu-taolu";
 
   return (
     <>
@@ -138,6 +142,15 @@ export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProp
 
       {selectedMatchId && isWushu && resolvedMatch && phase && (
         <WushuMatchDetailsModal
+          match={resolvedMatch as any}
+          phase={phase}
+          isOpen={true}
+          onClose={() => setSelectedMatchId(null)}
+        />
+      )}
+
+      {selectedMatchId && isWushuTaolu && resolvedMatch && phase && (
+        <WushuTaoluMatchDetailsModal
           match={resolvedMatch as any}
           phase={phase}
           isOpen={true}
@@ -405,12 +418,11 @@ function MatchCard({
 
     const sportType = sportConfig.sportType;
 
-    if (sportType === "poomsae") {
+    if (sportType === "poomsae" || sportType === "wushu-taolu") {
       const numScore = parseFloat(score);
       if (isNaN(numScore)) return "-";
       return numScore.toFixed(2);
     }
-
     if (sportType === "judo") {
       if (score === 10 || score === "10") return "10 (Ippon)";
       const numScore = parseFloat(score);

@@ -22,6 +22,8 @@ import { PoomsaeScoreModal } from "./taekwondo/PoomsaeScoreModal";
 import { TableTennisMatchWrapper } from "./table-tennis/TableTennisMatchWrapper";
 import { WalkoverDialog } from "./table-tennis/WalkoverDialog";
 import { ResultModal } from "./ResultModal";
+import { WushuScoreModal } from "./wushu/WushuScoreModal";           // ← NUEVO
+import { WushuTaoluScoreModal } from "./wushu/WushuTaoluScoreModal"; // ← NUEVO
 import { useUpdateMatch } from "../api/matches.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Match, Phase } from "../types";
@@ -36,7 +38,6 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // ── Walkover ──────────────────────────────────────────────────────────────
   const [walkoverMatch, setWalkoverMatch] = useState<Match | null>(null);
   const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
 
@@ -69,7 +70,7 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
 
   const getSportType = () => {
     if (!eventCategory) return "generic";
-    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    const sportName    = eventCategory.category?.sport?.name?.toLowerCase() || "";
     const categoryName = eventCategory.category?.name?.toLowerCase() || "";
 
     if (sportName.includes("judo")) return "judo";
@@ -79,22 +80,30 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
         categoryName.includes("poomsae") ||
         categoryName.includes("formas") ||
         categoryName.includes("forma")
-      )
-        return "poomsae";
+      ) return "poomsae";
       if (
         categoryName.includes("kyorugi") ||
         categoryName.includes("combate") ||
         categoryName.includes("pelea")
-      )
-        return "kyorugi";
+      ) return "kyorugi";
     }
+
+    // ── NUEVO ────────────────────────────────────────────────────────────────
+    if (sportName.includes("wushu")) {
+      if (
+        categoryName.includes("taolu") ||
+        categoryName.includes("formas") ||
+        categoryName.includes("forma")
+      ) return "wushu-taolu";
+      return "wushu";
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     if (
       sportName.includes("tenis de mesa") ||
       sportName.includes("table tennis") ||
       sportName.includes("ping pong")
-    )
-      return "table-tennis";
+    ) return "table-tennis";
 
     return "generic";
   };
@@ -120,7 +129,6 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
     handleCloseModal();
   };
 
-  
   const handleWalkoverConfirm = async (
     winnerRegistrationId: number,
     reason: string,
@@ -138,9 +146,7 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
       });
       toast.success("Walkover registrado correctamente");
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || "Error al registrar walkover",
-      );
+      toast.error(error?.response?.data?.message || "Error al registrar walkover");
     } finally {
       setShowWalkoverDialog(false);
       setWalkoverMatch(null);
@@ -149,14 +155,10 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
 
   const getMatchIcon = (match: Match) => {
     switch (match.status) {
-      case "finalizado":
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case "en_curso":
-        return <Clock className="h-5 w-5 text-blue-600 animate-pulse" />;
-      case "cancelado":
-        return <XCircle className="h-5 w-5 text-gray-400" />;
-      default:
-        return <Circle className="h-5 w-5 text-gray-300" />;
+      case "finalizado": return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case "en_curso":   return <Clock className="h-5 w-5 text-blue-600 animate-pulse" />;
+      case "cancelado":  return <XCircle className="h-5 w-5 text-gray-400" />;
+      default:           return <Circle className="h-5 w-5 text-gray-300" />;
     }
   };
 
@@ -165,7 +167,6 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
   return (
     <>
       <div className="space-y-6">
-        {/* Partidos */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Target className="h-5 w-5 text-blue-600" />
@@ -192,7 +193,6 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                           : "border-2 border-slate-200 hover:shadow-md"
                   }`}
                 >
-                  {/* Header del partido */}
                   <div
                     className={`p-4 ${
                       match.status === "finalizado"
@@ -249,14 +249,13 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                         }
                       >
                         {match.status === "programado" && "Programado"}
-                        {match.status === "en_curso" && "En Curso"}
+                        {match.status === "en_curso"   && "En Curso"}
                         {match.status === "finalizado" && "Finalizado"}
-                        {match.status === "cancelado" && "No necesario"}
+                        {match.status === "cancelado"  && "No necesario"}
                       </Badge>
                     </div>
                   </div>
 
-                  {/* Participantes */}
                   {hasParticipants ? (
                     <div className="p-5 space-y-3 bg-white">
                       {participants.map((participation) => {
@@ -297,9 +296,7 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                                   src={getImageUrl(logoUrl)}
                                   alt={institution?.name}
                                   className="h-10 w-10 rounded-lg object-contain bg-white p-1.5 border border-slate-200 flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                                 />
                               ) : (
                                 <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
@@ -308,11 +305,7 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                               )}
 
                               <div className="flex-1 min-w-0">
-                                <p
-                                  className={`font-bold text-base line-clamp-1 ${
-                                    isWinner ? "text-green-900" : "text-slate-900"
-                                  }`}
-                                >
+                                <p className={`font-bold text-base line-clamp-1 ${isWinner ? "text-green-900" : "text-slate-900"}`}>
                                   {name}
                                 </p>
                                 {institution && (
@@ -327,10 +320,10 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                                 size="lg"
                                 className="font-bold"
                               >
-                                {participation.corner === "blue" && "Azul"}
+                                {participation.corner === "blue"  && "Azul"}
                                 {participation.corner === "white" && "Blanco"}
-                                {participation.corner === "A" && "A"}
-                                {participation.corner === "B" && "B"}
+                                {participation.corner === "A"     && "A"}
+                                {participation.corner === "B"     && "B"}
                               </Badge>
                             </div>
                           </div>
@@ -348,10 +341,8 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                     </div>
                   )}
 
-                  {/* Footer con botones */}
                   {participants.length === 2 && match.status !== "cancelado" && (
                     <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-2">
-                      {/* Botón principal — registrar / editar resultado */}
                       <Button
                         variant={match.status === "finalizado" ? "outline" : "primary"}
                         size="md"
@@ -359,12 +350,8 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
                         className="w-full font-semibold"
                       >
                         <Edit className="h-4 w-4 mr-2" />
-                        {match.status === "finalizado"
-                          ? "Editar Resultado"
-                          : "Registrar Resultado"}
+                        {match.status === "finalizado" ? "Editar Resultado" : "Registrar Resultado"}
                       </Button>
-
-                          
                     </div>
                   )}
 
@@ -383,7 +370,7 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
         </div>
       </div>
 
-      {/* ── Modales de resultado ────────────────────────────────────────────── */}
+      {/* ── Modales de resultado ─────────────────────────────────────────── */}
       {selectedMatch && (
         <>
           {sportType === "judo" ? (
@@ -405,6 +392,24 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
               match={selectedMatch as any}
               phase={phase}
             />
+
+          // ── NUEVO ──────────────────────────────────────────────────────────
+          ) : sportType === "wushu" ? (
+            <WushuScoreModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              match={selectedMatch as any}
+              phase={phase}
+            />
+          ) : sportType === "wushu-taolu" ? (
+            <WushuTaoluScoreModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              match={selectedMatch as any}
+              phase={phase}
+            />
+          // ──────────────────────────────────────────────────────────────────
+
           ) : sportType === "table-tennis" ? (
             <Modal
               isOpen={isModalOpen}
@@ -429,7 +434,7 @@ export function BestOf3View({ matches, phase, eventCategory }: BestOf3ViewProps)
         </>
       )}
 
-      {/* ── Walkover Dialog ─────────────────────────────────────────────────── */}
+      {/* ── Walkover Dialog ──────────────────────────────────────────────── */}
       {showWalkoverDialog && walkoverMatch && (() => {
         const wP1 = walkoverMatch.participations?.[0];
         const wP2 = walkoverMatch.participations?.[1];

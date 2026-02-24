@@ -30,6 +30,8 @@ import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwond
 import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
 import { KarateScoreModal } from "@/features/competitions/components/karate/KarateScoreModal";
 import { WushuScoreModal } from "@/features/competitions/components/wushu/WushuScoreModal";
+import { WushuTaoluScoreTable } from "@/features/competitions/components/wushu/WushuTaoluScoreTable";
+import { WushuTaoluScoreModal } from "@/features/competitions/components/wushu/WushuTaoluScoreModal";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import {
@@ -153,6 +155,21 @@ export function CategorySchedulePage() {
     ) {
       return "kyorugui";
     }
+  };
+
+  const getWushuType = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    if (!sportName.includes("wushu")) return null;
+
+    const categoryName = eventCategory.category?.name?.toLowerCase() || "";
+    if (
+      categoryName.includes("taolu") ||
+      categoryName.includes("formas") ||
+      categoryName.includes("forma")
+    ) {
+      return "taolu";
+    }
+    return "sanda"; // combate por defecto
   };
 
   const handleCreatePhase = async (data: any) => {
@@ -414,13 +431,11 @@ export function CategorySchedulePage() {
                         {selectedPhase.name}
                       </h4>
                       <p className="text-sm text-slate-600">
-                        {getTaekwondoType() === "poomsae"
-                          ? `${eventCategory.registrations?.length || 0} participante${
-                              eventCategory.registrations?.length !== 1
-                                ? "s"
-                                : ""
-                            }`
-                          : `${matches.length} partido${matches.length !== 1 ? "s" : ""}`}
+                        {getTaekwondoType() === "poomsae" || getWushuType() === "taolu"
+                        ? `${eventCategory.registrations?.length || 0} participante${
+                            eventCategory.registrations?.length !== 1 ? "s" : ""
+                          }`
+                        : `${matches.length} partido${matches.length !== 1 ? "s" : ""}`}
                       </p>
                     </div>
                   </div>
@@ -439,6 +454,7 @@ export function CategorySchedulePage() {
                       )}
 
                     {getTaekwondoType() !== "poomsae" &&
+                      getWushuType() !== "taolu" &&
                       selectedPhase.type === "grupo" &&
                       matches.length === 0 && (
                         <Button
@@ -464,9 +480,9 @@ export function CategorySchedulePage() {
                       )}
 
                     {!(
-                      getTaekwondoType() === "poomsae" &&
-                      selectedPhase.type === "grupo"
-                    ) && (
+                        (getTaekwondoType() === "poomsae" || getWushuType() === "taolu") &&
+                        selectedPhase.type === "grupo"
+                      ) && (
                       <Button
                         size="sm"
                         variant="gradient"
@@ -487,10 +503,12 @@ export function CategorySchedulePage() {
                     <p className="text-slate-600">Cargando partidos...</p>
                   </div>
 
-                ) : getTaekwondoType() === "poomsae" &&
-                  selectedPhase.type !== "eliminacion" &&
-                  selectedPhase.type !== "mejor_de_3" ? (
-                  <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
+                ) : (getTaekwondoType() === "poomsae" || getWushuType() === "taolu") &&
+                      selectedPhase.type !== "eliminacion" &&
+                      selectedPhase.type !== "mejor_de_3" ? (
+                      getTaekwondoType() === "poomsae"
+                        ? <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
+                        : <WushuTaoluScoreTable phaseId={selectedPhase.phaseId} />
 
                 ) : selectedPhase.type === "mejor_de_3" ? (
                   <BestOf3View
@@ -587,12 +605,12 @@ export function CategorySchedulePage() {
                                       Puntaje Final
                                     </p>
                                     <p className="text-2xl font-bold text-slate-900">
-                                      {getTaekwondoType() === "poomsae"
+                                      {getTaekwondoType() === "poomsae" || (isWushuMatch && getWushuType() === "taolu")
                                         ? `${Number(match.participant1Score).toFixed(2)} - ${Number(match.participant2Score).toFixed(2)}`
                                         : `${Math.floor(Number(match.participant1Score))} - ${Math.floor(Number(match.participant2Score))}`}
                                     </p>
-                                    {getTaekwondoType() === "poomsae" &&
-                                      match.participant1Accuracy !== null && (
+                                    {(getTaekwondoType() === "poomsae" || (isWushuMatch && getWushuType() === "taolu")) &&
+                                        match.participant1Accuracy !== null && (
                                         <p className="text-xs text-slate-600 mt-1">
                                           {Number(match.participant1Accuracy).toFixed(2)}{" "}
                                           +{" "}
@@ -958,20 +976,33 @@ export function CategorySchedulePage() {
                   match={selectedMatch as any}
                   phase={selectedPhase}
                 />
-              ) : isWushu() ? (
-                <WushuScoreModal
-                  isOpen={isResultModalOpen}
-                  onClose={async () => {
-                    setIsResultModalOpen(false);
-                    setSelectedMatch(null);
-                    if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
-                      await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
-                    }
-                  }}
-                  match={selectedMatch as any}
-                  phase={selectedPhase}
-                />
-              ) : isTableTennis() ? (
+              ) : isWushu() && getWushuType() === "taolu" ? (
+                  <WushuTaoluScoreModal
+                    isOpen={isResultModalOpen}
+                    onClose={async () => {
+                      setIsResultModalOpen(false);
+                      setSelectedMatch(null);
+                      if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                        await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                      }
+                    }}
+                    match={selectedMatch as any}
+                    phase={selectedPhase}
+                  />
+                ) : isWushu() ? (
+                  <WushuScoreModal
+                    isOpen={isResultModalOpen}
+                    onClose={async () => {
+                      setIsResultModalOpen(false);
+                      setSelectedMatch(null);
+                      if (selectedPhase?.type === "grupo" && selectedPhase?.phaseId) {
+                        await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+                      }
+                    }}
+                    match={selectedMatch as any}
+                    phase={selectedPhase}
+                  />
+                ) : isTableTennis() ? (
                 <Modal
                   isOpen={isResultModalOpen}
                   onClose={async () => {

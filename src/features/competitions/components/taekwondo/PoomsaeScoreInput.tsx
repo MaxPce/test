@@ -19,17 +19,12 @@ export const PoomsaeScoreInput = ({
   onSave,
   onCancel,
 }: Props) => {
-  const [accuracy, setAccuracy] = useState(initialAccuracy);
+  const [accuracy, setAccuracy]         = useState(initialAccuracy);
   const [presentation, setPresentation] = useState(initialPresentation);
 
   const handleSave = () => {
-    if (
-      accuracy < 0 ||
-      accuracy > 10 ||
-      presentation < 0 ||
-      presentation > 10
-    ) {
-      alert("Los puntajes deben estar entre 0 y 10");
+    if (accuracy < 0 || presentation < 0) {
+      alert("Los puntajes no pueden ser negativos");
       return;
     }
     onSave(participationId, accuracy, presentation);
@@ -42,8 +37,7 @@ export const PoomsaeScoreInput = ({
         <input
           type="number"
           min="0"
-          max="10"
-          step="0.1"
+          step="0.01"
           value={accuracy}
           onChange={(e) => setAccuracy(parseFloat(e.target.value) || 0)}
           className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -55,8 +49,7 @@ export const PoomsaeScoreInput = ({
         <input
           type="number"
           min="0"
-          max="10"
-          step="0.1"
+          step="0.01"
           value={presentation}
           onChange={(e) => setPresentation(parseFloat(e.target.value) || 0)}
           className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

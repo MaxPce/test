@@ -10,6 +10,7 @@ import { useUpdateStandings } from "@/features/competitions/api/standings.mutati
 import { StandingsTable } from "@/features/results/components/StandingsTable";
 import { SimpleBracket } from "@/features/results/components/SimpleBracket";
 import { PoomsaeResultsTable } from "@/features/results/components/PoomsaeResultsTable";
+import { WushuTaoluResultsTable } from "@/features/results/components/WushuTaoluResultsTable";
 import { PodiumTable } from "@/features/results/components/PodiumTable";
 import { BestOf3ResultsTable } from "@/features/results/components/BestOf3ResultsTable";
 import { getImageUrl } from "@/lib/utils/imageUrl";
@@ -43,6 +44,15 @@ export function CategoryStandingsPage() {
     sportName.includes("ciclismo");
   const isTableTennis =
     sportName.includes("tenis de mesa") || sportName.includes("tenis de campo");
+  const isKarate = sportName.includes("karate");
+  const isWushu       = sportName.includes("wushu");
+  const isWushuTaolu  =
+    sportName.includes("wushu") &&
+    (categoryName.includes("taolu") ||
+      categoryName.includes("formas") ||
+      categoryName.includes("forma"));
+  const isWushuSanda  = isWushu && !isWushuTaolu;
+
 
   const getSportConfig = () => {
     if (isJudo) {
@@ -82,16 +92,20 @@ export function CategoryStandingsPage() {
   };
 
   const getBracketConfig = () => {
-    if (isTaekwondoPoomsae) return { sportType: "poomsae", scoreLabel: "Puntos", showScores: true };
-    if (isJudo) return { sportType: "judo", scoreLabel: "Puntos", showScores: true };
-    if (isTaekwondoKyorugi) return { sportType: "kyorugi", scoreLabel: "Puntos", showScores: true };
-    if (isTableTennis) return { sportType: "table-tennis", scoreLabel: "Sets", showScores: true };
+    if (isTaekwondoPoomsae) return { sportType: "poomsae",       scoreLabel: "Puntos", showScores: true };
+    if (isTaekwondoKyorugi) return { sportType: "kyorugi",       scoreLabel: "Puntos", showScores: true };
+    if (isJudo)             return { sportType: "judo",          scoreLabel: "Puntos", showScores: true };
+    if (isKarate)           return { sportType: "karate",        scoreLabel: "Puntos", showScores: true };
+    if (isWushuTaolu) return { sportType: "wushu-taolu", scoreLabel: "Puntos",  showScores: true };
+    if (isWushuSanda) return { sportType: "wushu",       scoreLabel: "Puntos",  showScores: true };
+    if (isTableTennis)      return { sportType: "table-tennis",  scoreLabel: "Sets",   showScores: true };
     return {
       sportType: "team",
       scoreLabel: sportName.includes("fútbol") || sportName.includes("futbol") ? "Goles" : "Puntos",
       showScores: true,
     };
   };
+
 
   const renderViewPills = () => (
     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
@@ -531,6 +545,8 @@ export function CategoryStandingsPage() {
           )}
           {isTaekwondoPoomsae ? (
             <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+          ) : isWushuTaolu ? (
+            <WushuTaoluResultsTable eventCategoryId={eventCategory.eventCategoryId} />
           ) : (
             renderGroupStandings()
           )}

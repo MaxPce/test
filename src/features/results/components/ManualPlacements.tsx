@@ -88,13 +88,6 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
 
   return (
     <div className="space-y-4">
-      {!hasAnyManualSaved && !hasLocalChanges && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-amber-800 text-sm font-medium">
-          <AlertCircle className="h-4 w-4 flex-shrink-0 text-amber-500" />
-          <span>No hay clasificación manual. Asigna puestos y guarda.</span>
-        </div>
-      )}
-
       <Card>
         <CardBody className="p-0">
           <div className="overflow-x-auto">
