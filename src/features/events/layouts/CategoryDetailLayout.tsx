@@ -142,24 +142,13 @@ export function CategoryDetailLayout() {
       to: baseUrl,
       icon: <UserPlus className="h-4 w-4" />,
     },
-    ...(!isTimedSport
-      ? [
-          {
-            label: "Programación",
-            to: `${baseUrl}/schedule`,
-            icon: <Calendar className="h-4 w-4" />,
-          },
-        ]
-      : []),
-    ...(isTimedSport
-      ? [
-          {
-            label: "Registrar Tiempos",
-            to: `${baseUrl}/results`,
-            icon: <Timer className="h-4 w-4" />,
-          },
-        ]
-      : []),
+    
+    {
+      label: isTimedSport ? "Series" : "Programación",
+      to: `${baseUrl}/schedule`,
+      icon: <Calendar className="h-4 w-4" />,
+    },
+    
     {
       label: "Posiciones",
       to: `${baseUrl}/standings`,
@@ -171,6 +160,7 @@ export function CategoryDetailLayout() {
       icon: <Building2 className="h-4 w-4" />,
     },
   ];
+
 
   return (
     <div className="space-y-6 animate-in">

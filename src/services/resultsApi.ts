@@ -5,6 +5,7 @@ export interface CreateTimeResultDto {
   timeValue: string;
   rankPosition?: number;
   notes?: string;
+  phaseId?: number;
 }
 
 export interface SwimmingResult {

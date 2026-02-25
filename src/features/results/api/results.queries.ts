@@ -32,6 +32,7 @@ export function useCreateTimeResult() {
     mutationFn: resultsApi.createTimeResult,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["swimming-results"] });
+      queryClient.invalidateQueries({ queryKey: ["phase-results"] }); 
     },
   });
 }
@@ -49,6 +50,7 @@ export function useUpdateTimeResult() {
     }) => resultsApi.updateTimeResult(resultId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["swimming-results"] });
+      queryClient.invalidateQueries({ queryKey: ["phase-results"] }); 
     },
   });
 }
@@ -60,6 +62,7 @@ export function useDeleteTimeResult() {
     mutationFn: resultsApi.deleteTimeResult,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["swimming-results"] });
+      queryClient.invalidateQueries({ queryKey: ["phase-results"] }); 
     },
   });
 }

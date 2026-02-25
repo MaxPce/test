@@ -10,6 +10,8 @@ import {
   Grid3x3,
   TrendingUp,
   Award,
+  Timer,
+  UserPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
@@ -34,6 +36,8 @@ import { WushuTaoluScoreTable } from "@/features/competitions/components/wushu/W
 import { WushuTaoluScoreModal } from "@/features/competitions/components/wushu/WushuTaoluScoreModal";
 import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
 import { usePhases } from "@/features/competitions/api/phases.queries";
+import { CollectiveScoreModal } from "@/features/competitions/components/collective/CollectiveScoreModal";
+
 import {
   useMatches,
   useMatch,
@@ -59,6 +63,14 @@ import { useInitializeBestOf3 } from "@/features/competitions/api/best-of-3.muta
 import { GenerateBracketModal } from "@/features/competitions/components/GenerateBracketModal";
 import { useGenerateBracket } from "@/features/competitions/api/bracket.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
+import { SwimmingResultsTable } from "@/features/results/components/SwimmingResultsTable";
+import {
+  usePhaseRegistrations,
+  useAssignPhaseRegistration,
+} from '@/features/competitions/api/phaseRegistrations.queries';
+import { AssignSeriesParticipantModal } from "@/features/competitions/components/AssignSeriesParticipantModal";
+
+
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -74,10 +86,13 @@ export function CategorySchedulePage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isCollectiveModalOpen, setIsCollectiveModalOpen] = useState(false);
   const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] =
     useState(false);
   const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
     useState(false);
+  const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
+
 
   const initializeRoundRobinMutation = useInitializeRoundRobin();
   const updateStandingsMutation = useUpdateStandings();
@@ -126,6 +141,24 @@ export function CategorySchedulePage() {
     const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
     return sportName.includes("wushu");
   };
+  const isCollectiveSport = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sportName.includes("fútbol") ||
+      sportName.includes("futbol") ||
+      sportName.includes("futsal") ||
+      sportName.includes("basquetbol") ||
+      sportName.includes("básquetbol") ||
+      sportName.includes("basketball") ||
+      sportName.includes("voleybol") ||
+      sportName.includes("voleibol") ||
+      sportName.includes("volleyball") ||
+      sportName.includes("rugby")
+    );
+  };
+
+
+
 
   const getTaekwondoType = () => {
     const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
@@ -300,6 +333,165 @@ export function CategorySchedulePage() {
     0,
   );
 
+  const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+  const isTimedSport =
+    sportName.includes("natación") ||
+    sportName.includes("natacion") ||
+    sportName.includes("atletismo") ||
+    sportName.includes("ciclismo");
+
+  if (isTimedSport) {
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Gestionar Series"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Serie
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No hay series creadas"
+            description='Crea la primera serie para registrar tiempos (ej: "Serie 1 Preliminares")'
+            action={{
+              label: "Crear Primera Serie",
+              onClick: () => setIsPhaseModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => (
+              <Card
+                key={phase.phaseId}
+                variant="elevated"
+                padding="none"
+                hover
+                onClick={() => setSelectedPhase(phase)}
+                className={`cursor-pointer transition-all ${
+                  selectedPhase?.phaseId === phase.phaseId
+                    ? "ring-2 ring-blue-500 shadow-strong"
+                    : ""
+                }`}
+
+              >
+                <div className="relative h-24 bg-gradient-to-br from-blue-600 to-cyan-500 overflow-hidden rounded-t-xl">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute top-4 left-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhase(phase.phaseId);
+                    }}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+                <CardBody>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2">
+                    {phase.name}
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="primary" size="sm">
+                      Serie / Grupo
+                    </Badge>
+                    <span className="text-xs text-slate-500">
+                      ID: {phase.phaseId}
+                    </span>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* ── Panel de detalle al hacer clic en una serie ── */}   
+        {selectedPhase && (
+          <div className="space-y-2">
+            {/* Título de la serie activa */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-blue-600" />
+                <h4 className="text-lg font-bold text-slate-800">
+                  {selectedPhase.name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<UserPlus className="h-4 w-4" />}
+                  onClick={() => setIsAssignSeriesModalOpen(true)}
+                >
+                  Asignar Participante
+                </Button>
+                <button
+                  onClick={() => setSelectedPhase(null)}
+                  className="text-slate-400 hover:text-slate-600 text-sm"
+                >
+                  × Cerrar
+                </button>
+              </div>
+            </div>
+
+            {/* Tabla de tiempos directamente */}
+            <SwimmingResultsTable
+              eventCategoryId={eventCategory.eventCategoryId}
+              registrations={eventCategory.registrations || []}
+              categoryName={selectedPhase.name}
+              forcedPhaseId={selectedPhase.phaseId}
+            />
+          </div>
+        )}
+
+
+        {/* Modal crear serie */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Serie"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
+
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+          />
+        )}
+      </div>
+    );
+  }
+
+
   if (phasesLoading) {
     return (
       <div className="flex justify-center items-center h-96">Cargando...</div>
@@ -461,7 +653,7 @@ export function CategorySchedulePage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsGenerateModalOpen(true)}
-                          icon={<Zap className="h-4 w-4" />}
+                          
                         >
                           Generar Partidos
                         </Button>
@@ -473,7 +665,7 @@ export function CategorySchedulePage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setIsGenerateBestOf3ModalOpen(true)}
-                          icon={<Zap className="h-4 w-4" />}
+                          
                         >
                           Generar Serie
                         </Button>
@@ -537,6 +729,7 @@ export function CategorySchedulePage() {
                       const isJudoMatch    = isJudo();
                       const isKarateMatch  = isKarate();
                       const isWushuMatch   = isWushu();
+                      const isCollectiveMatch = isCollectiveSport();
                       const statusConfig = getStatusConfig(match.status);
 
                       return (
@@ -597,7 +790,8 @@ export function CategorySchedulePage() {
                                 getTaekwondoType() === "kyorugui" ||
                                 isJudoMatch ||
                                 isKarateMatch ||
-                                isWushuMatch) &&
+                                isWushuMatch ||
+                                isCollectiveMatch) &&  
                                 match.participant1Score !== null &&
                                 match.participant2Score !== null && (
                                   <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
@@ -1020,22 +1214,33 @@ export function CategorySchedulePage() {
                     eventCategory={eventCategory}
                   />
                 </Modal>
-              ) : (
-                <ResultModal
-                  isOpen={isResultModalOpen}
-                  onClose={() => {
-                    setIsResultModalOpen(false);
-                    setSelectedMatch(null);
-                  }}
-                  match={selectedMatch}
-                  onSubmit={handleRegisterResult}
-                  isLoading={
-                    selectedPhase?.type === "eliminacion"
-                      ? advanceWinnerMutation.isPending
-                      : updateMatchMutation.isPending
-                  }
-                />
-              )}
+                ) : isCollectiveSport() ? (
+                  <CollectiveScoreModal
+                    isOpen={isResultModalOpen}
+                    onClose={() => {
+                      setIsResultModalOpen(false);
+                      setSelectedMatch(null);
+                    }}
+                    match={selectedMatch as any}
+                    phase={selectedPhase}
+                  />
+                ) : (
+                  <ResultModal
+                    isOpen={isResultModalOpen}
+                    onClose={() => {
+                      setIsResultModalOpen(false);
+                      setSelectedMatch(null);
+                    }}
+                    match={selectedMatch}
+                    onSubmit={handleRegisterResult}
+                    isLoading={
+                      selectedPhase?.type === "eliminacion"
+                        ? advanceWinnerMutation.isPending
+                        : updateMatchMutation.isPending
+                    }
+                  />
+                )}
+
             </>
           )}
         </>

@@ -10,6 +10,9 @@ import { JudoMatchDetailsModal } from "@/features/competitions/components/judo/J
 import { KarateMatchDetailsModal } from "@/features/competitions/components/karate/KarateMatchDetailsModal";
 import { WushuMatchDetailsModal } from "@/features/competitions/components/wushu/WushuMatchDetailsModal";
 import { WushuTaoluMatchDetailsModal } from "@/features/competitions/components/wushu/WushuTaoluMatchDetailsModal";
+import { CollectiveScoreModal } from "@/features/competitions/components/collective/CollectiveScoreModal";
+import { CollectiveMatchDetailsModal } from "@/features/competitions/components/collective/CollectiveMatchDetailsModal";
+
 
 
 import { getImageUrl } from "@/lib/utils/imageUrl";
@@ -103,6 +106,8 @@ export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProp
   const isKarate   = sportConfig?.sportType === "karate";  
   const isWushu      = sportConfig?.sportType === "wushu";      
   const isWushuTaolu = sportConfig?.sportType === "wushu-taolu";
+  const isCollective = sportConfig?.sportType === "team";
+
 
   return (
     <>
@@ -157,15 +162,33 @@ export function SimpleBracket({ phaseId, phase, sportConfig }: SimpleBracketProp
           onClose={() => setSelectedMatchId(null)}
         />
       )}
-
-      {/* {selectedMatchId && !isKyorugui && !isPoomsae && !isJudo && (
-        <MatchDetailsModal
-          matchId={selectedMatchId}
-          match={resolvedMatch}
-          sportConfig={sportConfig}
+      {selectedMatchId && isCollective && resolvedMatch && phase && (
+        <CollectiveMatchDetailsModal
+          match={resolvedMatch as any}
+          phase={phase}
+          isOpen={true}
           onClose={() => setSelectedMatchId(null)}
         />
-      )} */}
+      )}
+
+
+      {selectedMatchId &&
+        !isKyorugui &&
+        !isPoomsae &&
+        !isJudo &&
+        !isKarate &&
+        !isWushu &&
+        !isWushuTaolu &&
+        !isCollective &&        
+        resolvedMatch && (
+          <MatchDetailsModal
+            matchId={selectedMatchId}
+            match={resolvedMatch}
+            sportConfig={sportConfig}
+            onClose={() => setSelectedMatchId(null)}
+          />
+        )}
+
       
 
       <div className="space-y-6">

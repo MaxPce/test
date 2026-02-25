@@ -29,6 +29,7 @@ interface TimeInputFormProps {
     rankPosition?: number | null;
     notes?: string | null;
   };
+  phaseId?: number;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -55,6 +56,7 @@ function parseTimeString(time: string): { min: string; sec: string; cs: string }
 export function TimeInputForm({
   registration,
   existingResult,
+  phaseId,
   onSuccess,
   onCancel,
 }: TimeInputFormProps) {
@@ -127,6 +129,7 @@ export function TimeInputForm({
         registrationId: registration.registrationId,
         timeValue: finalTime,
         notes: notes || undefined,
+        phaseId: phaseId || undefined,
       },
       {
         onSuccess: () => {
