@@ -20,6 +20,9 @@ import { WrestlingBracket } from "@/features/competitions/components/wrestling/W
 import { WrestlingRanking } from "@/features/competitions/components/wrestling/WrestlingRanking";
 import { WrestlingEliminationResults } from "@/features/competitions/components/wrestling/WrestlingEliminationResults";
 import { WrestlingEliminationRanking } from "@/features/competitions/components/wrestling/WrestlingEliminationRanking";
+import { TiroDeportivoResultsTable } from "@/features/competitions/components/shooting/TiroDeportivoResultsTable";
+import { TiroDeportivoStandingsTable } from '@/features/competitions/components/shooting/TiroDeportivoStandingsTable';
+
 
 
 interface SportConfig {
@@ -316,6 +319,10 @@ export function CategoryStandingsPage() {
       categoryName.includes("formas") ||
       categoryName.includes("forma"));
   const isWushuSanda = isWushu && !isWushuTaolu;
+  const isTiroDeportivo =
+    sportName.includes("tiro deportivo") ||
+    sportName.includes("tiro al blanco") ||
+    sportName.includes("shooting");
 
   const getSportConfig = (): SportConfig => {
     if (isJudo) {
@@ -708,7 +715,18 @@ export function CategoryStandingsPage() {
               </h3>
             </div>
           )}
-          {isTaekwondoPoomsae ? (
+          {isTiroDeportivo ? (
+            // ── Tiro Deportivo: tabla de series y totales ──────────────────
+            <div className="space-y-4">
+              {groupPhases.map((phase) => (
+                <TiroDeportivoStandingsTable
+                  key={phase.phaseId}
+                  phaseId={phase.phaseId}
+                  phaseName={phase.name}
+                />
+              ))}
+            </div>
+          ) : isTaekwondoPoomsae ? (
             <PoomsaeResultsTable
               eventCategoryId={eventCategory.eventCategoryId}
             />
