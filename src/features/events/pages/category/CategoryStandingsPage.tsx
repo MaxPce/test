@@ -18,6 +18,9 @@ import type { EventCategory } from "../../types";
 import { ManualPlacements } from "@/features/results/components/ManualPlacements";
 import { WrestlingBracket } from "@/features/competitions/components/wrestling/WrestlingBracket";
 import { WrestlingRanking } from "@/features/competitions/components/wrestling/WrestlingRanking";
+import { WrestlingEliminationResults } from "@/features/competitions/components/wrestling/WrestlingEliminationResults";
+import { WrestlingEliminationRanking } from "@/features/competitions/components/wrestling/WrestlingEliminationRanking";
+
 
 interface SportConfig {
   title: string;
@@ -281,7 +284,7 @@ export function CategoryStandingsPage() {
     eventCategory: EventCategory;
   }>();
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
-  type EliminationView = "bracket" | "podium" | "manual";
+  type EliminationView = "bracket" | "podium" | "manual" | "resumen";
   const [elimView, setElimView] = useState<EliminationView>("bracket");
   type WrestlingView = "results" | "bracket" | "ranking";
   const [wrestlingView, setWrestlingView] = useState<WrestlingView>("results");
@@ -412,6 +415,9 @@ export function CategoryStandingsPage() {
         scoreLabel: "Sets",
         showScores: true,
       };
+
+    if (isWrestling)                                          
+      return { sportType: "wrestling", scoreLabel: "TP", showScores: true };
     return {
       sportType: "team",
       scoreLabel:
@@ -422,45 +428,50 @@ export function CategoryStandingsPage() {
     };
   };
 
-  const renderViewPills = () => (
-    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
-      <div className="flex gap-1">
-        {(
-          [
-            { key: "bracket", label: "Llaves" },
-            { key: "podium", label: "Podio" },
-            { key: "manual", label: "Manual" },
-          ] as { key: EliminationView; label: string }[]
-        ).map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setElimView(key)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              elimView === key
-                ? "bg-white text-purple-700 shadow"
-                : "text-white/80 hover:text-white hover:bg-white/20"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+  const renderViewPills = () => {
+    const tabs: { key: EliminationView; label: string }[] = [
+      { key: "bracket", label: "Llaves" },
+      { key: "podium",  label: "Podio" },
+      { key: "manual",  label: "Manual" },
+      ...(isWrestling ? [{ key: "resumen" as EliminationView, label: "Resumen" }] : []),
+    ];
+
+    return (
+      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
+        <div className="flex gap-1">
+          {tabs.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setElimView(key)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                elimView === key
+                  ? "bg-white text-purple-700 shadow"
+                  : "text-white/80 hover:text-white hover:bg-white/20"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
 
   const renderBracketWithToggle = (eliminationPhase: any) => {
     const bracketConfig = getBracketConfig();
+
     const viewTitles: Record<EliminationView, string> = {
       bracket: "Llave de Eliminación",
-      podium: "Podio Final",
-      manual: "Clasificación Manual",
+      podium:  "Podio Final",
+      manual:  "Clasificación Manual",
+      resumen: "Resumen — Fase de Eliminación", 
     };
     const viewSubtitles: Record<EliminationView, string> = {
       bracket: "Diagrama de enfrentamientos",
-      podium: isTaekwondoPoomsae
-        ? "Top 3 de Poomsae"
-        : "Top 3 de la competencia",
-      manual: "Asignación manual de puestos",
+      podium:  isTaekwondoPoomsae ? "Top 3 de Poomsae" : "Top 3 de la competencia",
+      manual:  "Asignación manual de puestos",
+      resumen: "Resultados y clasificación UWW", 
     };
 
     return (
@@ -473,14 +484,13 @@ export function CategoryStandingsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">{viewTitles[elimView]}</h3>
-                <p className="text-purple-100 mt-1">
-                  {viewSubtitles[elimView]}
-                </p>
+                <p className="text-purple-100 mt-1">{viewSubtitles[elimView]}</p>
               </div>
             </div>
             {renderViewPills()}
           </div>
         </div>
+
         {elimView === "bracket" && (
           <SimpleBracket
             phaseId={eliminationPhase.phaseId}
@@ -494,9 +504,24 @@ export function CategoryStandingsPage() {
         {elimView === "manual" && (
           <ManualPlacements phaseId={eliminationPhase.phaseId} />
         )}
+
+        {/* ── Tab Resumen: solo Wrestling ─────────────────────────────────── */}
+        {elimView === "resumen" && isWrestling && (
+          <div className="space-y-8">
+            <WrestlingEliminationResults
+              phaseId={eliminationPhase.phaseId}
+              title="Resultados por Ronda"
+            />
+            <WrestlingEliminationRanking
+              phaseId={eliminationPhase.phaseId}
+              title="Clasificación Final"
+            />
+          </div>
+        )}
       </div>
     );
   };
+
 
   function renderGroupStandings() {
     const groupPhases = phases.filter((p) => p.type === "grupo");
@@ -669,6 +694,8 @@ export function CategoryStandingsPage() {
             </div>
           )}
           {renderBracketWithToggle(eliminationPhase)}
+
+          
         </div>
       )}
 
