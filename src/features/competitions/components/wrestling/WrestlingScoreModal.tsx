@@ -17,37 +17,13 @@ interface Props {
   onClose: () => void;
 }
 
-const VICTORY_TYPES: {
-  value: WrestlingVictoryType;
-  label: string;
-  description: string;
-}[] = [
-  { value: null, label: "Sin especificar", description: "" },
-  {
-    value: "VFA",
-    label: "VFA — Victoria por Caída",
-    description: "Equivale a Ippon. El combate termina inmediatamente.",
-  },
-  {
-    value: "VSU",
-    label: "VSU — Por Superioridad",
-    description: "Diferencia ≥ 8 TP.",
-  },
-  {
-    value: "VSU1",
-    label: "VSU1 — Superioridad var.",
-    description: "Resultado 4-0 o 4-1.",
-  },
-  {
-    value: "VPO",
-    label: "VPO — Por Puntos",
-    description: "Al finalizar el tiempo.",
-  },
-  {
-    value: "VCA",
-    label: "VCA — Por Descalificación",
-    description: "El oponente es descalificado.",
-  },
+const VICTORY_TYPES: { value: WrestlingVictoryType; label: string }[] = [
+  { value: null, label: "Sin especificar" },
+  { value: "VFA", label: "VFA — Victoria por Caída" },
+  { value: "VSU", label: "VSU — Por Superioridad" },
+  { value: "VSU1", label: "VSU1 — Superioridad variante" },
+  { value: "VPO", label: "VPO — Por Puntos" },
+  { value: "VCA", label: "VCA — Por Descalificación" },
 ];
 
 export const WrestlingScoreModal = ({
@@ -71,7 +47,7 @@ export const WrestlingScoreModal = ({
   useEffect(() => {
     setTp1(Number(match.participant1Score) || 0);
     setTp2(Number(match.participant2Score) || 0);
-    setVictoryType(null);
+    setVictoryType(match.victoryType ?? null);
     setVfaWinner(null);
     setManualWinner(null);
   }, [match]);
@@ -103,14 +79,13 @@ export const WrestlingScoreModal = ({
     );
   }
 
-  // ── Winner logic ──
   const isTie = tp1 === tp2;
   const isVFA = victoryType === "VFA";
 
   const winnerIndex: 1 | 2 | null = (() => {
     if (isVFA) return vfaWinner;
     if (!isTie) return tp1 > tp2 ? 1 : 2;
-    return manualWinner; // null when no selection (draw allowed in groups)
+    return manualWinner;
   })();
 
   const winnerRegistrationId: number | null =
@@ -137,6 +112,7 @@ export const WrestlingScoreModal = ({
       participant2Score: tp2,
       winnerRegistrationId,
       status: "finalizado",
+      victoryType: victoryType ?? null,
     };
 
     if (isElimination) {
@@ -210,7 +186,6 @@ export const WrestlingScoreModal = ({
         className="bg-white rounded-xl w-full max-w-lg mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="bg-gradient-to-r from-orange-700 to-red-600 text-white px-6 py-4 rounded-t-xl">
           <h2 className="text-xl font-bold">
             {match.participant1Score !== null &&
@@ -224,7 +199,6 @@ export const WrestlingScoreModal = ({
         </div>
 
         <div className="p-6 space-y-5">
-          {/* ── TP Inputs ── */}
           <div className="grid grid-cols-2 gap-4">
             <div className="border-2 border-orange-400 rounded-lg p-4 bg-orange-50">
               <p className="text-xs font-semibold text-orange-700 uppercase mb-1">
@@ -271,7 +245,6 @@ export const WrestlingScoreModal = ({
             </div>
           </div>
 
-          {/* ── Victory Type ── */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Tipo de Victoria
@@ -292,22 +265,10 @@ export const WrestlingScoreModal = ({
                 </option>
               ))}
             </select>
-            {victoryType && (
-              <p className="text-xs text-gray-500 mt-1">
-                {
-                  VICTORY_TYPES.find((v) => v.value === victoryType)
-                    ?.description
-                }
-              </p>
-            )}
           </div>
 
-          {/* ── VFA: selector de quién hizo la caída ── */}
           {isVFA && (
             <div className="bg-orange-50 border border-orange-300 rounded-lg p-4">
-              <p className="text-sm font-semibold text-orange-800 mb-3">
-                ⬇ Victoria por Caída — ¿Quién realizó la caída?
-              </p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -335,7 +296,6 @@ export const WrestlingScoreModal = ({
             </div>
           )}
 
-          {/* ── Tie-break manual selector ── */}
           {!isVFA && isTie && (
             <div
               className={`border rounded-lg p-4 ${
@@ -344,11 +304,6 @@ export const WrestlingScoreModal = ({
                   : "bg-amber-50 border-amber-300"
               }`}
             >
-              <p
-                className={`text-sm font-semibold mb-2 ${
-                  isElimination ? "text-red-800" : "text-amber-800"
-                }`}
-              ></p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -376,19 +331,6 @@ export const WrestlingScoreModal = ({
             </div>
           )}
 
-          {/* ── Winner preview ── */}
-          {winnerIndex !== null && (
-            <div className="text-center py-1">
-              <span className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-1.5 rounded-full text-sm font-semibold">
-                🏆 Ganador:{" "}
-                {winnerIndex === 1
-                  ? getName(participant1)
-                  : getName(participant2)}
-              </span>
-            </div>
-          )}
-
-          {/* ── CP preview ── */}
           {winnerIndex !== null && (
             <div className="flex justify-around text-center bg-gray-50 rounded-lg py-3">
               <div>
@@ -416,7 +358,6 @@ export const WrestlingScoreModal = ({
           )}
         </div>
 
-        {/* ── Actions ── */}
         <div className="flex gap-2 px-6 pb-6">
           <button
             onClick={onClose}

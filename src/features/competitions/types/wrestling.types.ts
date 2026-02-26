@@ -8,6 +8,7 @@ export interface WrestlingMatch {
   winnerRegistrationId?: number | null;
   participant1Score?: number | null; // TP participante 1
   participant2Score?: number | null; // TP participante 2
+  victoryType?: WrestlingVictoryType;
   participations?: Array<{
     participationId: number;
     registrationId: number;

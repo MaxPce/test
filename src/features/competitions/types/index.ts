@@ -36,6 +36,7 @@ export interface Match {
   phase?: Phase;
   winner?: any;
   participations?: Participation[];
+  victoryType?: string | null;
 }
 
 export interface Participation {
@@ -128,4 +129,5 @@ export interface UpdateMatchData {
   scheduledTime?: string;
   platformNumber?: number;
   round?: string;
+  victoryType?: string | null;
 }

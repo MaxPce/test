@@ -12,11 +12,10 @@ import { PoomsaeResultsTable } from "@/features/results/components/PoomsaeResult
 import { WushuTaoluResultsTable } from "@/features/results/components/WushuTaoluResultsTable";
 import { PodiumTable } from "@/features/results/components/PodiumTable";
 import { BestOf3ResultsTable } from "@/features/results/components/BestOf3ResultsTable";
+import { WrestlingResultsTable } from "@/features/competitions/components/wrestling/WrestlingResultsTable";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { EventCategory } from "../../types";
 import { ManualPlacements } from "@/features/results/components/ManualPlacements";
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface SportConfig {
   title: string;
@@ -37,8 +36,6 @@ interface SportConfig {
   };
   showScores: boolean;
 }
-
-// ─── Sub-componente: tabla de posiciones por fase ─────────────────────────────
 
 function PhaseStandingsBlock({
   phase,
@@ -74,7 +71,6 @@ function PhaseStandingsBlock({
           <div className="text-center py-12 text-gray-500">
             <BarChart3 className="h-12 w-12 mx-auto mb-2 text-gray-400" />
             <p className="font-medium">No hay datos de posiciones</p>
-            
           </div>
         ) : (
           <>
@@ -82,28 +78,50 @@ function PhaseStandingsBlock({
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-300">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Pos</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Participante</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">PJ</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">{config.headers.wins}</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">{config.headers.draws}</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">{config.headers.losses}</th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Pos
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Participante
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      PJ
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      {config.headers.wins}
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      {config.headers.draws}
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      {config.headers.losses}
+                    </th>
                     {config.showScores && (
                       <>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">{config.headers.scoreFor}</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">{config.headers.scoreAgainst}</th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">{config.headers.scoreDiff}</th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          {config.headers.scoreFor}
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          {config.headers.scoreAgainst}
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          {config.headers.scoreDiff}
+                        </th>
                       </>
                     )}
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Pts</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Pts
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {standings.map((standing, index) => {
                     const reg = standing.registration;
                     const isAthlete = !!reg?.athlete;
-                    const name = reg?.athlete?.name || reg?.team?.name || "Sin nombre";
-                    const institution = reg?.athlete?.institution || reg?.team?.institution;
+                    const name =
+                      reg?.athlete?.name || reg?.team?.name || "Sin nombre";
+                    const institution =
+                      reg?.athlete?.institution || reg?.team?.institution;
                     const photoUrl = reg?.athlete?.photoUrl;
                     const logoUrl = institution?.logoUrl;
                     const isQualified = allMatchesFinished && index < 2;
@@ -119,7 +137,9 @@ function PhaseStandingsBlock({
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            {isQualified && <Trophy className="h-4 w-4 text-green-600" />}
+                            {isQualified && (
+                              <Trophy className="h-4 w-4 text-green-600" />
+                            )}
                             <Badge
                               variant={isQualified ? "success" : "default"}
                               size="sm"
@@ -146,7 +166,9 @@ function PhaseStandingsBlock({
                               </div>
                             )}
                             <div className="flex-1">
-                              <p className="font-semibold text-gray-900">{name}</p>
+                              <p className="font-semibold text-gray-900">
+                                {name}
+                              </p>
                               {institution && (
                                 <div className="flex items-center gap-2 mt-0.5">
                                   {logoUrl && (
@@ -167,14 +189,26 @@ function PhaseStandingsBlock({
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-center text-sm font-medium">{standing.matchesPlayed}</td>
-                        <td className="px-4 py-3 text-center text-sm text-green-600 font-bold">{standing.wins}</td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-600 font-medium">{standing.draws}</td>
-                        <td className="px-4 py-3 text-center text-sm text-red-600 font-bold">{standing.losses}</td>
+                        <td className="px-4 py-3 text-center text-sm font-medium">
+                          {standing.matchesPlayed}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-green-600 font-bold">
+                          {standing.wins}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-gray-600 font-medium">
+                          {standing.draws}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-red-600 font-bold">
+                          {standing.losses}
+                        </td>
                         {config.showScores && (
                           <>
-                            <td className="px-4 py-3 text-center text-sm font-medium">{standing.scoreFor}</td>
-                            <td className="px-4 py-3 text-center text-sm font-medium">{standing.scoreAgainst}</td>
+                            <td className="px-4 py-3 text-center text-sm font-medium">
+                              {standing.scoreFor}
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm font-medium">
+                              {standing.scoreAgainst}
+                            </td>
                             <td className="px-4 py-3 text-center text-sm font-bold">
                               <span
                                 className={
@@ -192,7 +226,10 @@ function PhaseStandingsBlock({
                           </>
                         )}
                         <td className="px-4 py-3 text-center">
-                          <Badge variant="primary" className="font-bold text-base px-3">
+                          <Badge
+                            variant="primary"
+                            className="font-bold text-base px-3"
+                          >
                             {standing.points}
                           </Badge>
                         </td>
@@ -204,17 +241,30 @@ function PhaseStandingsBlock({
             </div>
             <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-600">
-                <span><strong>PJ:</strong> Partidos Jugados</span>
-                <span><strong>{config.headers.wins}:</strong> {config.legend.wins}</span>
-                <span><strong>{config.headers.draws}:</strong> {config.legend.draws}</span>
-                <span><strong>{config.headers.losses}:</strong> {config.legend.losses}</span>
+                <span>
+                  <strong>PJ:</strong> Partidos Jugados
+                </span>
+                <span>
+                  <strong>{config.headers.wins}:</strong> {config.legend.wins}
+                </span>
+                <span>
+                  <strong>{config.headers.draws}:</strong> {config.legend.draws}
+                </span>
+                <span>
+                  <strong>{config.headers.losses}:</strong>{" "}
+                  {config.legend.losses}
+                </span>
                 {config.showScores && config.legend.scores && (
                   <span>
-                    <strong>{config.headers.scoreFor}/{config.headers.scoreAgainst}:</strong>{" "}
+                    <strong>
+                      {config.headers.scoreFor}/{config.headers.scoreAgainst}:
+                    </strong>{" "}
                     {config.legend.scores} A Favor/En Contra
                   </span>
                 )}
-                <span><strong>Pts:</strong> Puntos</span>
+                <span>
+                  <strong>Pts:</strong> Puntos
+                </span>
               </div>
             </div>
           </>
@@ -224,10 +274,10 @@ function PhaseStandingsBlock({
   );
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
-
 export function CategoryStandingsPage() {
-  const { eventCategory } = useOutletContext<{ eventCategory: EventCategory }>();
+  const { eventCategory } = useOutletContext<{
+    eventCategory: EventCategory;
+  }>();
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
   type EliminationView = "bracket" | "podium" | "manual";
   const [elimView, setElimView] = useState<EliminationView>("bracket");
@@ -251,6 +301,8 @@ export function CategoryStandingsPage() {
     sportName.includes("tenis de mesa") || sportName.includes("tenis de campo");
   const isKarate = sportName.includes("karate");
   const isWushu = sportName.includes("wushu");
+  const isWrestling =
+    sportName.includes("lucha") || sportName.includes("wrestling");
   const isWushuTaolu =
     sportName.includes("wushu") &&
     (categoryName.includes("taolu") ||
@@ -263,7 +315,14 @@ export function CategoryStandingsPage() {
       return {
         title: "Tabla de Clasificación",
         subtitle: "Round Robin - Judo",
-        headers: { wins: "V", draws: "E", losses: "D", scoreFor: "Victorias", scoreAgainst: "-", scoreDiff: "-" },
+        headers: {
+          wins: "V",
+          draws: "E",
+          losses: "D",
+          scoreFor: "Victorias",
+          scoreAgainst: "-",
+          scoreDiff: "-",
+        },
         legend: { wins: "Victorias", draws: "Empates", losses: "Derrotas" },
         showScores: false,
       };
@@ -272,7 +331,14 @@ export function CategoryStandingsPage() {
       return {
         title: "Tabla de Clasificación",
         subtitle: "Round Robin - Kyorugi",
-        headers: { wins: "V", draws: "E", losses: "D", scoreFor: "Pts A Favor", scoreAgainst: "Pts En Contra", scoreDiff: "Dif" },
+        headers: {
+          wins: "V",
+          draws: "E",
+          losses: "D",
+          scoreFor: "Pts A Favor",
+          scoreAgainst: "Pts En Contra",
+          scoreDiff: "Dif",
+        },
         legend: { wins: "Victorias", draws: "Empates", losses: "Derrotas" },
         showScores: false,
       };
@@ -281,31 +347,73 @@ export function CategoryStandingsPage() {
       return {
         title: "Tabla de Posiciones",
         subtitle: "Round Robin - Tenis de Mesa",
-        headers: { wins: "PG", draws: "E", losses: "PP", scoreFor: "Sets A Favor", scoreAgainst: "Sets En Contra", scoreDiff: "DS" },
-        legend: { wins: "Partidos Ganados", draws: "Empates", losses: "Partidos Perdidos", scores: "Sets" },
+        headers: {
+          wins: "PG",
+          draws: "E",
+          losses: "PP",
+          scoreFor: "Sets A Favor",
+          scoreAgainst: "Sets En Contra",
+          scoreDiff: "DS",
+        },
+        legend: {
+          wins: "Partidos Ganados",
+          draws: "Empates",
+          losses: "Partidos Perdidos",
+          scores: "Sets",
+        },
         showScores: false,
       };
     }
     return {
       title: "Tabla de Posiciones",
       subtitle: `${eventCategory?.category?.sport?.name}`,
-      headers: { wins: "G", draws: "E", losses: "P", scoreFor: "GF", scoreAgainst: "GC", scoreDiff: "DG" },
-      legend: { wins: "Ganados", draws: "Empatados", losses: "Perdidos", scores: "Goles/Puntos" },
+      headers: {
+        wins: "G",
+        draws: "E",
+        losses: "P",
+        scoreFor: "GF",
+        scoreAgainst: "GC",
+        scoreDiff: "DG",
+      },
+      legend: {
+        wins: "Ganados",
+        draws: "Empatados",
+        losses: "Perdidos",
+        scores: "Goles/Puntos",
+      },
       showScores: false,
     };
   };
 
   const getBracketConfig = () => {
-    if (isTaekwondoPoomsae) return { sportType: "poomsae",      scoreLabel: "Puntos", showScores: true };
-    if (isTaekwondoKyorugi) return { sportType: "kyorugi",      scoreLabel: "Puntos", showScores: true };
-    if (isJudo)             return { sportType: "judo",         scoreLabel: "Puntos", showScores: true };
-    if (isKarate)           return { sportType: "karate",       scoreLabel: "Puntos", showScores: true };
-    if (isWushuTaolu)       return { sportType: "wushu-taolu",  scoreLabel: "Puntos", showScores: true };
-    if (isWushuSanda)       return { sportType: "wushu",        scoreLabel: "Puntos", showScores: true };
-    if (isTableTennis)      return { sportType: "table-tennis", scoreLabel: "Sets",   showScores: true };
+    if (isTaekwondoPoomsae)
+      return { sportType: "poomsae", scoreLabel: "Puntos", showScores: true };
+    if (isTaekwondoKyorugi)
+      return { sportType: "kyorugi", scoreLabel: "Puntos", showScores: true };
+    if (isJudo)
+      return { sportType: "judo", scoreLabel: "Puntos", showScores: true };
+    if (isKarate)
+      return { sportType: "karate", scoreLabel: "Puntos", showScores: true };
+    if (isWushuTaolu)
+      return {
+        sportType: "wushu-taolu",
+        scoreLabel: "Puntos",
+        showScores: true,
+      };
+    if (isWushuSanda)
+      return { sportType: "wushu", scoreLabel: "Puntos", showScores: true };
+    if (isTableTennis)
+      return {
+        sportType: "table-tennis",
+        scoreLabel: "Sets",
+        showScores: true,
+      };
     return {
       sportType: "team",
-      scoreLabel: sportName.includes("fútbol") || sportName.includes("futbol") ? "Goles" : "Puntos",
+      scoreLabel:
+        sportName.includes("fútbol") || sportName.includes("futbol")
+          ? "Goles"
+          : "Puntos",
       showScores: true,
     };
   };
@@ -316,8 +424,8 @@ export function CategoryStandingsPage() {
         {(
           [
             { key: "bracket", label: "Llaves" },
-            { key: "podium",  label: "Podio" },
-            { key: "manual",  label: "Manual" },
+            { key: "podium", label: "Podio" },
+            { key: "manual", label: "Manual" },
           ] as { key: EliminationView; label: string }[]
         ).map(({ key, label }) => (
           <button
@@ -340,13 +448,15 @@ export function CategoryStandingsPage() {
     const bracketConfig = getBracketConfig();
     const viewTitles: Record<EliminationView, string> = {
       bracket: "Llave de Eliminación",
-      podium:  "Podio Final",
-      manual:  "Clasificación Manual",
+      podium: "Podio Final",
+      manual: "Clasificación Manual",
     };
     const viewSubtitles: Record<EliminationView, string> = {
       bracket: "Diagrama de enfrentamientos",
-      podium:  isTaekwondoPoomsae ? "Top 3 de Poomsae" : "Top 3 de la competencia",
-      manual:  "Asignación manual de puestos",
+      podium: isTaekwondoPoomsae
+        ? "Top 3 de Poomsae"
+        : "Top 3 de la competencia",
+      manual: "Asignación manual de puestos",
     };
 
     return (
@@ -359,7 +469,9 @@ export function CategoryStandingsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">{viewTitles[elimView]}</h3>
-                <p className="text-purple-100 mt-1">{viewSubtitles[elimView]}</p>
+                <p className="text-purple-100 mt-1">
+                  {viewSubtitles[elimView]}
+                </p>
               </div>
             </div>
             {renderViewPills()}
@@ -372,8 +484,12 @@ export function CategoryStandingsPage() {
             phase={eliminationPhase}
           />
         )}
-        {elimView === "podium" && <PodiumTable phaseId={eliminationPhase.phaseId} />}
-        {elimView === "manual" && <ManualPlacements phaseId={eliminationPhase.phaseId} />}
+        {elimView === "podium" && (
+          <PodiumTable phaseId={eliminationPhase.phaseId} />
+        )}
+        {elimView === "manual" && (
+          <ManualPlacements phaseId={eliminationPhase.phaseId} />
+        )}
       </div>
     );
   };
@@ -392,7 +508,6 @@ export function CategoryStandingsPage() {
 
     return (
       <div className="space-y-6">
-        {/* Banner */}
         <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
@@ -419,7 +534,6 @@ export function CategoryStandingsPage() {
           </Card>
         ) : (
           <>
-            {/* Selector — solo visible si hay más de 1 fase */}
             {groupPhases.length > 1 && (
               <Card>
                 <CardBody>
@@ -428,7 +542,9 @@ export function CategoryStandingsPage() {
                       <Select
                         label="Filtrar por fase"
                         value={String(selectedPhaseId)}
-                        onChange={(e) => setSelectedPhaseId(Number(e.target.value))}
+                        onChange={(e) =>
+                          setSelectedPhaseId(Number(e.target.value))
+                        }
                         options={phaseOptions}
                       />
                     </div>
@@ -437,15 +553,12 @@ export function CategoryStandingsPage() {
               </Card>
             )}
 
-            {/* Tablas */}
             {selectedPhaseId > 0 ? (
-              // Una fase específica seleccionada
               <PhaseStandingsBlock
                 phase={phases.find((p) => p.phaseId === selectedPhaseId)!}
                 config={config}
               />
             ) : (
-              // Todas las fases por defecto
               <div className="space-y-6">
                 {groupPhases.map((phase) => (
                   <PhaseStandingsBlock
@@ -462,8 +575,6 @@ export function CategoryStandingsPage() {
     );
   }
 
-  // ── Early returns ────────────────────────────────────────────────────────────
-
   if (isTimedSport) {
     return (
       <div className="space-y-6">
@@ -473,8 +584,8 @@ export function CategoryStandingsPage() {
   }
 
   const eliminationPhase = phases.find((p) => p.type === "eliminacion");
-  const groupPhases      = phases.filter((p) => p.type === "grupo");
-  const bestOf3Phases    = phases.filter((p) => p.type === "mejor_de_3");
+  const groupPhases = phases.filter((p) => p.type === "grupo");
+  const bestOf3Phases = phases.filter((p) => p.type === "mejor_de_3");
 
   const hasAnyPhase =
     bestOf3Phases.length > 0 || !!eliminationPhase || groupPhases.length > 0;
@@ -489,7 +600,9 @@ export function CategoryStandingsPage() {
             </div>
             <div>
               <h3 className="text-2xl font-bold">Posiciones</h3>
-              <p className="text-purple-100 mt-1">{eventCategory?.category?.sport?.name}</p>
+              <p className="text-purple-100 mt-1">
+                {eventCategory?.category?.sport?.name}
+              </p>
             </div>
           </div>
         </div>
@@ -510,14 +623,14 @@ export function CategoryStandingsPage() {
   }
 
   const multipleTypes =
-    [bestOf3Phases.length > 0, !!eliminationPhase, groupPhases.length > 0]
-      .filter(Boolean).length > 1;
-
-  // ── Render principal ─────────────────────────────────────────────────────────
+    [
+      bestOf3Phases.length > 0,
+      !!eliminationPhase,
+      groupPhases.length > 0,
+    ].filter(Boolean).length > 1;
 
   return (
     <div className="space-y-8">
-      {/* Mejor de 3 */}
       {bestOf3Phases.map((bestOf3Phase) => (
         <div key={bestOf3Phase.phaseId} className="space-y-6">
           <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
@@ -529,7 +642,9 @@ export function CategoryStandingsPage() {
                 <h3 className="text-2xl font-bold">
                   {bestOf3Phase.name || "Mejor de 3"}
                 </h3>
-                <p className="text-orange-100 mt-1">Serie de partidos al mejor de tres</p>
+                <p className="text-orange-100 mt-1">
+                  Serie de partidos al mejor de tres
+                </p>
               </div>
             </div>
           </div>
@@ -540,30 +655,60 @@ export function CategoryStandingsPage() {
         </div>
       ))}
 
-      {/* Eliminación */}
       {eliminationPhase && (
         <div className="space-y-6">
           {multipleTypes && bestOf3Phases.length > 0 && (
             <div className="border-t-2 border-gray-200 pt-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Fase de Eliminación</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                Fase de Eliminación
+              </h3>
             </div>
           )}
           {renderBracketWithToggle(eliminationPhase)}
         </div>
       )}
 
-      {/* Grupos */}
       {groupPhases.length > 0 && (
         <div className="space-y-6">
           {multipleTypes && (
             <div className="border-t-2 border-gray-200 pt-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Fase de Grupos</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                Fase de Grupos
+              </h3>
             </div>
           )}
           {isTaekwondoPoomsae ? (
-            <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+            <PoomsaeResultsTable
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
           ) : isWushuTaolu ? (
-            <WushuTaoluResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+            <WushuTaoluResultsTable
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
+          ) : isWrestling ? (
+            // ── Lucha Olímpica: tabla de resultados por ronda ──────────────────
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-orange-700 to-red-600 rounded-2xl p-6 text-white shadow-lg">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                    <BarChart3 className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold">Resultados</h3>
+                    <p className="text-orange-100 mt-1">
+                      Round Robin — Lucha Olímpica
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {groupPhases.map((phase) => (
+                <WrestlingResultsTable
+                  key={phase.phaseId}
+                  phaseId={phase.phaseId}
+                  title={phase.name}
+                />
+              ))}
+            </div>
           ) : (
             renderGroupStandings()
           )}

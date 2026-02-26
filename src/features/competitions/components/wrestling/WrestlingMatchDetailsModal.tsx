@@ -10,7 +10,10 @@ import {
 import { useState } from "react";
 import { useAdvanceWinner } from "../../api/bracket.mutations";
 import { WrestlingScoreModal } from "./WrestlingScoreModal";
-import type { WrestlingMatch } from "../../types/wrestling.types";
+import type {
+  WrestlingMatch,
+  WrestlingVictoryType,
+} from "../../types/wrestling.types";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface Props {
@@ -77,7 +80,7 @@ export const WrestlingMatchDetailsModal = ({
   const canAdvance = hasOnlyOneParticipant && match.status !== "finalizado";
 
   // victoryType es solo visual — se guarda localmente si se pasó en el objeto extendido
-  const victoryType: string | null = (match as any).victoryType || null;
+  const victoryType: WrestlingVictoryType = match.victoryType ?? null;
 
   // CP: 5 al ganador, 0 al perdedor
   const cp1 = match.winnerRegistrationId
@@ -365,7 +368,7 @@ export const WrestlingMatchDetailsModal = ({
                         : "bg-gray-200 text-gray-700"
                     }`}
                   >
-                    {victoryType === "VFA" ? "⬇ CAÍDA" : victoryType}
+                    {victoryType === "VFA" ? "CAÍDA" : victoryType}
                   </span>
                 )}
               </div>
@@ -398,8 +401,8 @@ export const WrestlingMatchDetailsModal = ({
                     <p className="text-xs text-gray-400 mt-1">TP</p>
                     {victoryType === "VFA" &&
                       isWinner(participant1?.participationId || 0) && (
-                        <span className="mt-2 inline-block text-xs font-bold text-orange-700 bg-orange-200 px-2 py-0.5 rounded-full">
-                          CAÍDA
+                        <span className="mt-2 inline-block text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-md">
+                          caída
                         </span>
                       )}
                   </div>
