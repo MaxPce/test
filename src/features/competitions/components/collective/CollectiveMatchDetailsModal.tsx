@@ -40,7 +40,12 @@ interface Props {
   onClose: () => void;
 }
 
-export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: Props) => {
+export const CollectiveMatchDetailsModal = ({
+  match,
+  phase,
+  isOpen,
+  onClose,
+}: Props) => {
   const advanceWinnerMutation = useAdvanceWinner();
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
 
@@ -95,7 +100,6 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
-
           {/* Header */}
           <div className="sticky top-0 bg-gradient-to-r from-green-700 to-emerald-500 text-white px-6 py-4 flex items-center justify-between z-10 rounded-t-xl">
             <div className="flex items-center gap-3">
@@ -104,9 +108,7 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
                 <h2 className="text-2xl font-bold">
                   Partido #{match.matchNumber}
                 </h2>
-                <p className="text-sm text-green-100">
-                  {match.round}
-                </p>
+                <p className="text-sm text-green-100">{match.round}</p>
               </div>
             </div>
 
@@ -117,7 +119,9 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
                   disabled={advanceWinnerMutation.isPending}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 rounded-lg transition-colors font-medium text-sm"
                 >
-                  {advanceWinnerMutation.isPending ? "Procesando..." : "Pasar Equipo"}
+                  {advanceWinnerMutation.isPending
+                    ? "Procesando..."
+                    : "Pasar Participante"}
                 </button>
               )}
 
@@ -181,18 +185,22 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
           {/* Participants */}
           <div className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-
               {/* Equipo 1 — Local */}
               {[participant1, participant2].map((p, idx) => {
                 const institution = getInstitution(p);
                 const won = isWinner(p);
-                const score = idx === 0
-                  ? formatScore(match.participant1Score)
-                  : formatScore(match.participant2Score);
-                const colorWin = idx === 0 ? "border-green-500 bg-green-50 shadow-lg" : "border-blue-500 bg-blue-50 shadow-lg";
-                const colorScore = idx === 0 ? "text-green-700" : "text-blue-700";
-                const colorAward = idx === 0 ? "text-green-600" : "text-blue-600";
-               
+                const score =
+                  idx === 0
+                    ? formatScore(match.participant1Score)
+                    : formatScore(match.participant2Score);
+                const colorWin =
+                  idx === 0
+                    ? "border-green-500 bg-green-50 shadow-lg"
+                    : "border-blue-500 bg-blue-50 shadow-lg";
+                const colorScore =
+                  idx === 0 ? "text-green-700" : "text-blue-700";
+                const colorAward =
+                  idx === 0 ? "text-green-600" : "text-blue-600";
 
                 return (
                   <div
@@ -207,16 +215,17 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
                           src={getImageUrl(institution.logoUrl)}
                           alt={institution.name}
                           className="w-16 h-16 object-contain flex-shrink-0 rounded-lg border border-gray-100 bg-white p-1"
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
                         />
                       ) : (
                         <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center text-xl font-bold text-gray-500 flex-shrink-0">
-                        {getParticipantName(p).charAt(0).toUpperCase()}
+                          {getParticipantName(p).charAt(0).toUpperCase()}
                         </div>
                       )}
 
                       <div className="flex-1 min-w-0">
-                        
                         <h3 className="text-xl font-bold text-gray-900 truncate">
                           {getParticipantName(p)}
                         </h3>
@@ -225,7 +234,9 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
                         </p>
                         <div className="flex items-center gap-2">
                           <Award className={`w-5 h-5 ${colorAward}`} />
-                          <span className={`text-4xl font-black ${won ? colorScore : "text-gray-400"}`}>
+                          <span
+                            className={`text-4xl font-black ${won ? colorScore : "text-gray-400"}`}
+                          >
                             {score}
                           </span>
                         </div>
@@ -251,41 +262,49 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
               {!hasScore ? (
                 <div className="text-center py-8 text-gray-400">
                   <p className="font-medium">No hay resultado registrado aún</p>
-                  {canRegisterScore && (
-                    <button
-                      onClick={() => setIsScoreModalOpen(true)}
-                      className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold"
-                    >
-                      Registrar Resultado
-                    </button>
-                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-6">
-                  <div className={`rounded-xl p-6 text-center border-2 flex-1 ${
-                    isWinner(participant1) ? "bg-green-100 border-green-400" : "bg-white border-gray-200"
-                  }`}>
+                  <div
+                    className={`rounded-xl p-6 text-center border-2 flex-1 ${
+                      isWinner(participant1)
+                        ? "bg-green-100 border-green-400"
+                        : "bg-white border-gray-200"
+                    }`}
+                  >
                     <p className="text-xs text-gray-500 mb-1 truncate">
                       {getParticipantName(participant1)}
                     </p>
-                    <p className={`text-5xl font-black ${
-                      isWinner(participant1) ? "text-green-700" : "text-gray-500"
-                    }`}>
+                    <p
+                      className={`text-5xl font-black ${
+                        isWinner(participant1)
+                          ? "text-green-700"
+                          : "text-gray-500"
+                      }`}
+                    >
                       {formatScore(match.participant1Score)}
                     </p>
                   </div>
 
                   <div className="text-3xl font-black text-gray-300">-</div>
 
-                  <div className={`rounded-xl p-6 text-center border-2 flex-1 ${
-                    isWinner(participant2) ? "bg-blue-100 border-blue-400" : "bg-white border-gray-200"
-                  }`}>
+                  <div
+                    className={`rounded-xl p-6 text-center border-2 flex-1 ${
+                      isWinner(participant2)
+                        ? "bg-blue-100 border-blue-400"
+                        : "bg-white border-gray-200"
+                    }`}
+                  >
                     <p className="text-xs text-gray-500 mb-1 truncate">
                       {getParticipantName(participant2)}
                     </p>
-                    <p className={`text-5xl font-black ${
-                      isWinner(participant2) ? "text-blue-700" : "text-gray-500"
-                    }`}>
+                    <p
+                      className={`text-5xl font-black ${
+                        isWinner(participant2)
+                          ? "text-blue-700"
+                          : "text-gray-500"
+                      }`}
+                    >
                       {formatScore(match.participant2Score)}
                     </p>
                   </div>
@@ -295,13 +314,15 @@ export const CollectiveMatchDetailsModal = ({ match, phase, isOpen, onClose }: P
 
             {/* Status */}
             <div className="mt-6 text-center">
-              <span className={`inline-block px-4 py-2 rounded-full font-semibold ${
-                match.status === "finalizado"
-                  ? "bg-green-100 text-green-800"
-                  : match.status === "en_curso"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-gray-100 text-gray-800"
-              }`}>
+              <span
+                className={`inline-block px-4 py-2 rounded-full font-semibold ${
+                  match.status === "finalizado"
+                    ? "bg-green-100 text-green-800"
+                    : match.status === "en_curso"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-gray-100 text-gray-800"
+                }`}
+              >
                 {match.status === "programado" && "Programado"}
                 {match.status === "en_curso" && "En Curso"}
                 {match.status === "finalizado" && "Finalizado"}

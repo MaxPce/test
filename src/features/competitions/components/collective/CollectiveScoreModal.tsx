@@ -33,12 +33,21 @@ interface Props {
   onClose: () => void;
 }
 
-export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
+export const CollectiveScoreModal = ({
+  match,
+  phase,
+  isOpen,
+  onClose,
+}: Props) => {
   const [score1, setScore1] = useState<number>(
-    match.participant1Score != null ? Math.floor(Number(match.participant1Score)) : 0
+    match.participant1Score != null
+      ? Math.floor(Number(match.participant1Score))
+      : 0,
   );
   const [score2, setScore2] = useState<number>(
-    match.participant2Score != null ? Math.floor(Number(match.participant2Score)) : 0
+    match.participant2Score != null
+      ? Math.floor(Number(match.participant2Score))
+      : 0,
   );
   const [manualWinnerId, setManualWinnerId] = useState<number | null>(null);
 
@@ -47,26 +56,36 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
   const updateStandingsMutation = useUpdateStandings();
 
   useEffect(() => {
-    setScore1(match.participant1Score != null ? Math.floor(Number(match.participant1Score)) : 0);
-    setScore2(match.participant2Score != null ? Math.floor(Number(match.participant2Score)) : 0);
+    setScore1(
+      match.participant1Score != null
+        ? Math.floor(Number(match.participant1Score))
+        : 0,
+    );
+    setScore2(
+      match.participant2Score != null
+        ? Math.floor(Number(match.participant2Score))
+        : 0,
+    );
     setManualWinnerId(null);
   }, [match]);
 
   const participant1 = match.participations?.[0];
   const participant2 = match.participations?.[1];
 
-  const getParticipantName = (
-    participation: typeof participant1
-  ): string => {
+  const getParticipantName = (participation: typeof participant1): string => {
     if (!participation) return "Sin asignar";
     const reg = participation.registration;
     if (!reg) return `Participación #${participation.participationId}`;
-    return reg.team?.name || reg.athlete?.name || `Registro #${reg.registrationId}`;
+    return (
+      reg.team?.name || reg.athlete?.name || `Registro #${reg.registrationId}`
+    );
   };
 
   const getInstitutionName = (participation: typeof participant1): string => {
     const reg = participation?.registration;
-    return reg?.team?.institution?.name || reg?.athlete?.institution?.name || "";
+    return (
+      reg?.team?.institution?.name || reg?.athlete?.institution?.name || ""
+    );
   };
 
   const isDraw = score1 === score2;
@@ -81,7 +100,9 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
 
   const handleSubmit = () => {
     if (isDraw && !manualWinnerId && phase?.type === "eliminacion") {
-      toast.error("Hay empate en fase eliminatoria. Selecciona el ganador manualmente.");
+      toast.error(
+        "Hay empate en fase eliminatoria. Selecciona el ganador manualmente.",
+      );
       return;
     }
 
@@ -98,18 +119,21 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
         {
           onSuccess: () => {
             advanceWinnerMutation.mutate(
-              { matchId: match.matchId, winnerRegistrationId: effectiveWinnerId },
+              {
+                matchId: match.matchId,
+                winnerRegistrationId: effectiveWinnerId,
+              },
               {
                 onSuccess: () => {
                   toast.success("Resultado registrado y ganador avanzado");
                   onClose();
                 },
                 onError: () => toast.error("Error al avanzar al ganador"),
-              }
+              },
             );
           },
           onError: () => toast.error("Error al guardar el resultado"),
-        }
+        },
       );
     } else {
       updateMutation.mutate(
@@ -130,7 +154,7 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
             }
           },
           onError: () => toast.error("Error al guardar el resultado"),
-        }
+        },
       );
     }
   };
@@ -145,7 +169,8 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
             Error: Participantes no encontrados
           </h2>
           <p className="text-gray-700 mb-4">
-            Este partido no tiene participantes asignados o no se cargaron correctamente.
+            Este partido no tiene participantes asignados o no se cargaron
+            correctamente.
           </p>
           <Button onClick={onClose} className="w-full">
             Cerrar
@@ -155,7 +180,10 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
     );
   }
 
-  const isLoading = updateMutation.isPending || advanceWinnerMutation.isPending || updateStandingsMutation.isPending;
+  const isLoading =
+    updateMutation.isPending ||
+    advanceWinnerMutation.isPending ||
+    updateStandingsMutation.isPending;
 
   return (
     <div
@@ -177,7 +205,6 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
           {/* Equipo 1 — Local */}
           <div className="border-2 border-blue-500 rounded-lg p-4 bg-blue-50">
             <div className="flex items-center gap-2 mb-1">
-              
               <div>
                 <p className="font-semibold text-sm">
                   {getParticipantName(participant1)}
@@ -193,7 +220,10 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
               type="number"
               min="0"
               value={score1}
-              onChange={(e) => { setScore1(Number(e.target.value)); setManualWinnerId(null); }}
+              onChange={(e) => {
+                setScore1(Number(e.target.value));
+                setManualWinnerId(null);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-xl font-bold"
               placeholder="0"
             />
@@ -220,7 +250,10 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
               type="number"
               min="0"
               value={score2}
-              onChange={(e) => { setScore2(Number(e.target.value)); setManualWinnerId(null); }}
+              onChange={(e) => {
+                setScore2(Number(e.target.value));
+                setManualWinnerId(null);
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-xl font-bold"
               placeholder="0"
             />
@@ -230,7 +263,10 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
           {isDraw && (
             <div className="border border-amber-300 bg-amber-50 rounded-lg p-3">
               <p className="text-sm font-semibold text-amber-700 mb-2 text-center">
-                Marcador empatado {phase?.type === "eliminacion" ? "— selecciona el ganador" : "— puedes dejarlo así"}
+                Marcador empatado{" "}
+                {phase?.type === "eliminacion"
+                  ? "— selecciona el ganador"
+                  : "— puedes dejarlo así"}
               </p>
               <div className="flex gap-2">
                 {[participant1, participant2].map((p) => (
@@ -238,7 +274,9 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
                     key={p?.registrationId}
                     onClick={() =>
                       setManualWinnerId(
-                        manualWinnerId === p?.registrationId ? null : p?.registrationId ?? null
+                        manualWinnerId === p?.registrationId
+                          ? null
+                          : (p?.registrationId ?? null),
                       )
                     }
                     className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all ${
@@ -266,7 +304,10 @@ export const CollectiveScoreModal = ({ match, phase, isOpen, onClose }: Props) =
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isLoading || (isDraw && phase?.type === "eliminacion" && !manualWinnerId)}
+            disabled={
+              isLoading ||
+              (isDraw && phase?.type === "eliminacion" && !manualWinnerId)
+            }
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
           >
             {isLoading ? "Guardando..." : "Guardar"}
