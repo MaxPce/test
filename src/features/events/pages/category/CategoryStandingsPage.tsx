@@ -16,6 +16,8 @@ import { WrestlingResultsTable } from "@/features/competitions/components/wrestl
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { EventCategory } from "../../types";
 import { ManualPlacements } from "@/features/results/components/ManualPlacements";
+import { WrestlingBracket } from "@/features/competitions/components/wrestling/WrestlingBracket";
+import { WrestlingRanking } from "@/features/competitions/components/wrestling/WrestlingRanking";
 
 interface SportConfig {
   title: string;
@@ -281,6 +283,8 @@ export function CategoryStandingsPage() {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
   type EliminationView = "bracket" | "podium" | "manual";
   const [elimView, setElimView] = useState<EliminationView>("bracket");
+  type WrestlingView = "results" | "bracket" | "ranking";
+  const [wrestlingView, setWrestlingView] = useState<WrestlingView>("results");
 
   const { data: phases = [] } = usePhases(eventCategory.eventCategoryId);
 
@@ -686,28 +690,82 @@ export function CategoryStandingsPage() {
               eventCategoryId={eventCategory.eventCategoryId}
             />
           ) : isWrestling ? (
-            // ── Lucha Olímpica: tabla de resultados por ronda ──────────────────
+            // ── Lucha Olímpica: 3 vistas UWW ─────────────────────────────────
             <div className="space-y-6">
+              {/* Header con tabs */}
               <div className="bg-gradient-to-r from-orange-700 to-red-600 rounded-2xl p-6 text-white shadow-lg">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                    <BarChart3 className="h-8 w-8" />
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                      <BarChart3 className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">
+                        {wrestlingView === "results"
+                          ? "Results"
+                          : wrestlingView === "bracket"
+                            ? "Bracket"
+                            : "Ranking"}
+                      </h3>
+                      <p className="text-orange-100 mt-1">
+                        Round Robin — Lucha Olímpica
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-2xl font-bold">Resultados</h3>
-                    <p className="text-orange-100 mt-1">
-                      Round Robin — Lucha Olímpica
-                    </p>
+
+                  {/* Pills de navegación */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
+                    <div className="flex gap-1">
+                      {(
+                        [
+                          { key: "results", label: "Results" },
+                          { key: "bracket", label: "Bracket" },
+                          { key: "ranking", label: "Ranking" },
+                        ] as { key: WrestlingView; label: string }[]
+                      ).map(({ key, label }) => (
+                        <button
+                          key={key}
+                          onClick={() => setWrestlingView(key)}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            wrestlingView === key
+                              ? "bg-white text-orange-700 shadow"
+                              : "text-white/80 hover:text-white hover:bg-white/20"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-              {groupPhases.map((phase) => (
-                <WrestlingResultsTable
-                  key={phase.phaseId}
-                  phaseId={phase.phaseId}
-                  title={phase.name}
-                />
-              ))}
+
+              {/* Contenido de la vista activa */}
+              {wrestlingView === "results" &&
+                groupPhases.map((phase) => (
+                  <WrestlingResultsTable
+                    key={phase.phaseId}
+                    phaseId={phase.phaseId}
+                    title={phase.name}
+                    categoryLabel={eventCategory?.category?.name}
+                  />
+                ))}
+
+              {wrestlingView === "bracket" &&
+                groupPhases.map((phase) => (
+                  <WrestlingBracket
+                    key={phase.phaseId}
+                    phaseId={phase.phaseId}
+                  />
+                ))}
+
+              {wrestlingView === "ranking" &&
+                groupPhases.map((phase) => (
+                  <WrestlingRanking
+                    key={phase.phaseId}
+                    phaseId={phase.phaseId}
+                  />
+                ))}
             </div>
           ) : (
             renderGroupStandings()
