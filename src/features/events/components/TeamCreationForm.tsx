@@ -186,7 +186,7 @@ export function TeamCreationForm({
           label="Nombre del Equipo *"
           value={teamName}
           onChange={(e) => setTeamName(e.target.value)}
-          placeholder="Ej: Las Águilas"
+          
           required
         />
 

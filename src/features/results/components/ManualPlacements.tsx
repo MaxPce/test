@@ -101,7 +101,7 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                     Institución
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider w-36">
-                    Puesto Manual
+                    Puesto
                   </th>
                 </tr>
               </thead>
@@ -109,12 +109,8 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
                 {participants.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="px-4 py-14 text-center text-gray-400">
-                      <User className="h-10 w-10 mx-auto mb-3 text-gray-300" />
                       <p className="text-sm font-medium text-gray-500">
                         No hay participantes en esta fase
-                      </p>
-                      <p className="text-xs mt-1">
-                        Genera las llaves primero en la pestaña Programación
                       </p>
                     </td>
                   </tr>
@@ -229,7 +225,6 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
           disabled={setManualRanksMutation.isPending || participants.length === 0}
           className="flex items-center gap-2"
         >
-          <Save className="h-4 w-4" />
           {setManualRanksMutation.isPending ? "Guardando..." : "Guardar"}
         </Button>
       </div>

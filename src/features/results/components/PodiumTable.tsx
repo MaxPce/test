@@ -79,11 +79,7 @@ export function PodiumTable({ phaseId }: PodiumTableProps) {
     if (!finalMatch || finalMatch.status !== "finalizado") {
       return (
         <Card>
-          <CardBody className="text-center py-12">
-            <p className="text-sm text-gray-400 mt-2">
-              El podio aparecerá cuando termine la final
-            </p>
-          </CardBody>
+          
         </Card>
       );
     }

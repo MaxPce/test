@@ -122,33 +122,7 @@ export function EventsPage() {
             </div>
           </div>
 
-          {/* Estadísticas rápidas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-200">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-slate-900">
-                {events.length}
-              </p>
-              <p className="text-xs text-slate-600 mt-1">Total Eventos</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">
-                {events.filter((e) => e.status === "programado").length}
-              </p>
-              <p className="text-xs text-slate-600 mt-1">Programados</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-600">
-                {events.filter((e) => e.status === "en_curso").length}
-              </p>
-              <p className="text-xs text-slate-600 mt-1">En Curso</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-slate-600">
-                {events.filter((e) => e.status === "finalizado").length}
-              </p>
-              <p className="text-xs text-slate-600 mt-1">Finalizados</p>
-            </div>
-          </div>
+          
 
           {/* Filtros activos */}
           {(filterStatus || searchQuery) && (

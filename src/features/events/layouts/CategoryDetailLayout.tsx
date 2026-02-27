@@ -142,24 +142,27 @@ export function CategoryDetailLayout() {
       to: baseUrl,
       icon: <UserPlus className="h-4 w-4" />,
     },
-    
     {
       label: isTimedSport ? "Series" : "Programación",
       to: `${baseUrl}/schedule`,
       icon: <Calendar className="h-4 w-4" />,
     },
-    
     {
       label: "Posiciones",
       to: `${baseUrl}/standings`,
       icon: <BarChart3 className="h-4 w-4" />,
     },
-    {
-      label: "Instituciones",
-      to: `${baseUrl}/institutions`,
-      icon: <Building2 className="h-4 w-4" />,
-    },
+    // ...(isTeam
+    //   ? [
+    //       {
+    //         label: "Equipos",
+    //         to: `${baseUrl}/institutions`,
+    //         icon: <Users className="h-4 w-4" />,
+    //       },
+    //     ]
+    //   : []),
   ];
+
 
 
   return (

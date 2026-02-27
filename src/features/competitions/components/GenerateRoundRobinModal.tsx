@@ -54,7 +54,7 @@ export function GenerateRoundRobinModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Generar Partidos Automáticamente"
+      title="Generar Partidos"
       size="lg"
     >
       <div className="space-y-6">
@@ -175,7 +175,6 @@ export function GenerateRoundRobinModal({
             isLoading={isLoading}
             disabled={selectedCount < 2}
           >
-            <Zap className="h-4 w-4 mr-2" />
             Generar {totalMatches} Partidos
           </Button>
         </div>

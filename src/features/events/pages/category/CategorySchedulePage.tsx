@@ -81,7 +81,6 @@ export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
     eventCategory: EventCategory;
   }>();
-  const { eventId, sportId, categoryId } = useParams();
 
   const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
@@ -707,13 +706,7 @@ export function CategorySchedulePage() {
 
       {phases.length === 0 ? (
         <EmptyState
-          icon={Calendar}
           title="No hay fases creadas"
-          description="Crea la primera fase para comenzar a organizar la competencia"
-          action={{
-            label: "Crear Primera Fase",
-            onClick: () => setIsPhaseModalOpen(true),
-          }}
         />
       ) : (
         <>
@@ -829,22 +822,15 @@ export function CategorySchedulePage() {
 
                   {/* Acciones */}
                   <div className="flex flex-wrap gap-2">
-                    {selectedPhase.type === "eliminacion" &&
-                      matches.length === 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsGenerateBracketModalOpen(true)}
-                        >
-                          Generar Bracket
-                        </Button>
-                      )}
+                    {/* Generar Bracket → solo eliminacion sin partidos */}
+                    {selectedPhase.type === "eliminacion" && matches.length === 0 && (
+                      <Button variant="outline" size="sm" onClick={() => setIsGenerateBracketModalOpen(true)}>
+                        Generar Bracket
+                      </Button>
+                    )}
 
-                    {!(
-                      getTaekwondoType() === "poomsae" ||
-                      getWushuType() === "taolu" ||
-                      isTiroDeportivo
-                    ) &&
+                    {/* Generar Partidos → solo grupo, sin poomsae/taolu/tiro y sin partidos */}
+                    {!( getTaekwondoType() === "poomsae" || getWushuType() === "taolu" || isTiroDeportivo ) &&
                       selectedPhase.type === "grupo" &&
                       matches.length === 0 && (
                         <Button onClick={() => setIsGenerateModalOpen(true)}>
@@ -852,44 +838,27 @@ export function CategorySchedulePage() {
                         </Button>
                       )}
 
-                    {!(
-                      getTaekwondoType() === "poomsae" ||
-                      getWushuType() === "taolu" ||
-                      isTiroDeportivo
-                    ) &&
-                      selectedPhase.type === "grupo" && (
-                        <Button onClick={() => setIsMatchModalOpen(true)}>
+                    {/* Generar Serie → mejor_de_3 sin partidos */}
+                    {selectedPhase.type === "mejor_de_3" && matches.length === 0 && (
+                      <Button variant="outline" size="sm" onClick={() => setIsGenerateBestOf3ModalOpen(true)}>
+                        Generar Serie
+                      </Button>
+                    )}
+
+                    {/* Nuevo Partido → para grupo y eliminacion, excluyendo poomsae/taolu/tiro */}
+                    {!( getTaekwondoType() === "poomsae" || getWushuType() === "taolu" || isTiroDeportivo ) &&
+                      ( selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion" ) && (
+                        <Button
+                          size="sm"
+                          variant="gradient"
+                          onClick={() => setIsMatchModalOpen(true)}
+                          icon={<Plus className="h-4 w-4" />}
+                        >
                           Nuevo Partido
                         </Button>
                       )}
-
-                    {selectedPhase.type === "mejor_de_3" &&
-                      matches.length === 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsGenerateBestOf3ModalOpen(true)}
-                        >
-                          Generar Serie
-                        </Button>
-                      )}
-
-                    {!(
-                      (getTaekwondoType() === "poomsae" ||
-                        getWushuType() === "taolu" ||
-                        isTiroDeportivo) &&
-                      selectedPhase.type === "grupo"
-                    ) && (
-                      <Button
-                        size="sm"
-                        variant="gradient"
-                        onClick={() => setIsMatchModalOpen(true)}
-                        icon={<Plus className="h-4 w-4" />}
-                      >
-                        Nuevo Partido
-                      </Button>
-                    )}
                   </div>
+
                 </div>
               </CardHeader>
 
@@ -926,13 +895,8 @@ export function CategorySchedulePage() {
                   />
                 ) : matches.length === 0 ? (
                   <EmptyState
-                    icon={Trophy}
-                    title="No hay partidos en esta fase"
-                    description="Agrega partidos manualmente o genera automáticamente"
-                    action={{
-                      label: "Crear Primer Partido",
-                      onClick: () => setIsMatchModalOpen(true),
-                    }}
+                    title="No hay partidos"
+                    
                   />
                 ) : (
                   <div className="space-y-4">

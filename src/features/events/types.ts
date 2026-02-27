@@ -37,8 +37,8 @@ export interface EventCategory {
   eventCategoryId: number;
   eventId: number;
   categoryId: number;
-  externalEventId?: number; // ✅ NUEVO - ID del evento en sismaster
-  externalSportId?: number; // ✅ NUEVO - ID del deporte en sismaster
+  externalEventId?: number; 
+  externalSportId?: number; 
   status: "pendiente" | "en_curso" | "finalizado";
   createdAt: string;
   updatedAt: string;

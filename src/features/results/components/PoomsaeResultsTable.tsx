@@ -127,7 +127,6 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
               </div>
             ) : scores.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
-                <Award className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                 <p className="font-medium">No hay participantes en esta fase</p>
                 <p className="text-sm mt-1">
                   Los participantes aparecerán cuando se inscriban en la categoría

@@ -1,11 +1,12 @@
+// src/features/events/components/CategoryStandingsPage.tsx
+
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { BarChart3, Trophy, Users, User } from "lucide-react";
+import { BarChart3, Trophy, Users } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { usePhases } from "@/features/competitions/api/phases.queries";
-import { useStandings } from "@/features/competitions/api/standings.queries";
 import { StandingsTable } from "@/features/results/components/StandingsTable";
 import { SimpleBracket } from "@/features/results/components/SimpleBracket";
 import { PoomsaeResultsTable } from "@/features/results/components/PoomsaeResultsTable";
@@ -13,17 +14,17 @@ import { WushuTaoluResultsTable } from "@/features/results/components/WushuTaolu
 import { PodiumTable } from "@/features/results/components/PodiumTable";
 import { BestOf3ResultsTable } from "@/features/results/components/BestOf3ResultsTable";
 import { WrestlingResultsTable } from "@/features/competitions/components/wrestling/WrestlingResultsTable";
-import { getImageUrl } from "@/lib/utils/imageUrl";
-import type { EventCategory } from "../../types";
 import { ManualPlacements } from "@/features/results/components/ManualPlacements";
 import { WrestlingBracket } from "@/features/competitions/components/wrestling/WrestlingBracket";
 import { WrestlingRanking } from "@/features/competitions/components/wrestling/WrestlingRanking";
 import { WrestlingEliminationResults } from "@/features/competitions/components/wrestling/WrestlingEliminationResults";
 import { WrestlingEliminationRanking } from "@/features/competitions/components/wrestling/WrestlingEliminationRanking";
 import { WeightliftingResultsTable } from "@/features/competitions/components/weightlifting/WeightliftingResultsTable";
-import { TiroDeportivoStandingsTable } from '@/features/competitions/components/shooting/TiroDeportivoStandingsTable';
+import { TiroDeportivoStandingsTable } from "@/features/competitions/components/shooting/TiroDeportivoStandingsTable";
+import { PhaseStandingsBlock } from "@/features/competitions/components/PhaseStandingsBlock";
+import type { EventCategory } from "../../types";
 
-
+// ── Tipos ────────────────────────────────────────────────────────────────────
 
 interface SportConfig {
   title: string;
@@ -45,250 +46,18 @@ interface SportConfig {
   showScores: boolean;
 }
 
-function PhaseStandingsBlock({
-  phase,
-  config,
-}: {
-  phase: any;
-  config: SportConfig;
-}) {
-  const { data: standings = [], isLoading } = useStandings(phase.phaseId);
-
-  const phaseMatches = phase.matches || [];
-  const allMatchesFinished =
-    phaseMatches.length > 0 &&
-    phaseMatches
-      .filter((m: any) => (m.participations?.length ?? 0) >= 2)
-      .every((m: any) => m.status === "finalizado");
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <h4 className="font-bold text-gray-900 text-lg">{phase.name}</h4>
-          <Badge variant="primary">{standings.length} participantes</Badge>
-        </div>
-      </CardHeader>
-      <CardBody className="p-0">
-        {isLoading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600">Cargando posiciones...</p>
-          </div>
-        ) : standings.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <BarChart3 className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-            <p className="font-medium">No hay datos de posiciones</p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-300">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Pos
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Participante
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      PJ
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      {config.headers.wins}
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      {config.headers.draws}
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      {config.headers.losses}
-                    </th>
-                    {config.showScores && (
-                      <>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                          {config.headers.scoreFor}
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                          {config.headers.scoreAgainst}
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                          {config.headers.scoreDiff}
-                        </th>
-                      </>
-                    )}
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Pts
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {standings.map((standing, index) => {
-                    const reg = standing.registration;
-                    const isAthlete = !!reg?.athlete;
-                    const name =
-                      reg?.athlete?.name || reg?.team?.name || "Sin nombre";
-                    const institution =
-                      reg?.athlete?.institution || reg?.team?.institution;
-                    const photoUrl = reg?.athlete?.photoUrl;
-                    const logoUrl = institution?.logoUrl;
-                    const isQualified = allMatchesFinished && index < 2;
-
-                    return (
-                      <tr
-                        key={standing.standingId}
-                        className={`${
-                          isQualified
-                            ? "bg-gradient-to-r from-green-50 to-emerald-50"
-                            : "hover:bg-gray-50"
-                        } transition-colors`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {isQualified && (
-                              <Trophy className="h-4 w-4 text-green-600" />
-                            )}
-                            <Badge
-                              variant={isQualified ? "success" : "default"}
-                              size="sm"
-                              className="font-bold"
-                            >
-                              {standing.rankPosition || index + 1}°
-                            </Badge>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            {isAthlete && photoUrl ? (
-                              <img
-                                src={getImageUrl(photoUrl)}
-                                alt={name}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = "none";
-                                }}
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center border-2 border-white shadow">
-                                <User className="h-5 w-5 text-white" />
-                              </div>
-                            )}
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-900">
-                                {name}
-                              </p>
-                              {institution && (
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  {logoUrl && (
-                                    <img
-                                      src={getImageUrl(logoUrl)}
-                                      alt={institution.name}
-                                      className="h-4 w-4 object-contain"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
-                                      }}
-                                    />
-                                  )}
-                                  <p className="text-xs text-gray-600 font-medium">
-                                    {institution.abrev || institution.name}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm font-medium">
-                          {standing.matchesPlayed}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-green-600 font-bold">
-                          {standing.wins}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-600 font-medium">
-                          {standing.draws}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-red-600 font-bold">
-                          {standing.losses}
-                        </td>
-                        {config.showScores && (
-                          <>
-                            <td className="px-4 py-3 text-center text-sm font-medium">
-                              {standing.scoreFor}
-                            </td>
-                            <td className="px-4 py-3 text-center text-sm font-medium">
-                              {standing.scoreAgainst}
-                            </td>
-                            <td className="px-4 py-3 text-center text-sm font-bold">
-                              <span
-                                className={
-                                  standing.scoreDiff > 0
-                                    ? "text-green-600"
-                                    : standing.scoreDiff < 0
-                                      ? "text-red-600"
-                                      : "text-gray-600"
-                                }
-                              >
-                                {standing.scoreDiff > 0 && "+"}
-                                {standing.scoreDiff}
-                              </span>
-                            </td>
-                          </>
-                        )}
-                        <td className="px-4 py-3 text-center">
-                          <Badge
-                            variant="primary"
-                            className="font-bold text-base px-3"
-                          >
-                            {standing.points}
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-600">
-                <span>
-                  <strong>PJ:</strong> Partidos Jugados
-                </span>
-                <span>
-                  <strong>{config.headers.wins}:</strong> {config.legend.wins}
-                </span>
-                <span>
-                  <strong>{config.headers.draws}:</strong> {config.legend.draws}
-                </span>
-                <span>
-                  <strong>{config.headers.losses}:</strong>{" "}
-                  {config.legend.losses}
-                </span>
-                {config.showScores && config.legend.scores && (
-                  <span>
-                    <strong>
-                      {config.headers.scoreFor}/{config.headers.scoreAgainst}:
-                    </strong>{" "}
-                    {config.legend.scores} A Favor/En Contra
-                  </span>
-                )}
-                <span>
-                  <strong>Pts:</strong> Puntos
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </CardBody>
-    </Card>
-  );
-}
+// ── Componente principal ─────────────────────────────────────────────────────
 
 export function CategoryStandingsPage() {
   const { eventCategory } = useOutletContext<{
     eventCategory: EventCategory;
   }>();
+
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
+
   type EliminationView = "bracket" | "podium" | "manual" | "resumen";
   const [elimView, setElimView] = useState<EliminationView>("bracket");
+
   type WrestlingView = "results" | "bracket" | "ranking";
   const [wrestlingView, setWrestlingView] = useState<WrestlingView>("results");
 
@@ -296,6 +65,8 @@ export function CategoryStandingsPage() {
 
   const sportName = eventCategory?.category?.sport?.name?.toLowerCase() || "";
   const categoryName = eventCategory?.category?.name?.toLowerCase() || "";
+
+  // ── Flags de deporte ───────────────────────────────────────────────────────
 
   const isTaekwondoKyorugi =
     sportName.includes("taekwondo") && categoryName.includes("kyorugi");
@@ -308,7 +79,8 @@ export function CategoryStandingsPage() {
     sportName.includes("atletismo") ||
     sportName.includes("ciclismo");
   const isTableTennis =
-    sportName.includes("tenis de mesa") || sportName.includes("tenis de campo");
+    sportName.includes("tenis de mesa") ||
+    sportName.includes("tenis de campo");
   const isKarate = sportName.includes("karate");
   const isWushu = sportName.includes("wushu");
   const isWrestling =
@@ -323,12 +95,12 @@ export function CategoryStandingsPage() {
     sportName.includes("tiro deportivo") ||
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
-
   const isWeightlifting =
     sportName.includes("halterofilia") ||
     sportName.includes("weightlifting") ||
     sportName.includes("levantamiento de pesas");
 
+  // ── Config de tabla por deporte ────────────────────────────────────────────
 
   const getSportConfig = (): SportConfig => {
     if (isJudo) {
@@ -405,6 +177,8 @@ export function CategoryStandingsPage() {
     };
   };
 
+  // ── Config de bracket por deporte ──────────────────────────────────────────
+
   const getBracketConfig = () => {
     if (isTaekwondoPoomsae)
       return { sportType: "poomsae", scoreLabel: "Puntos", showScores: true };
@@ -415,21 +189,12 @@ export function CategoryStandingsPage() {
     if (isKarate)
       return { sportType: "karate", scoreLabel: "Puntos", showScores: true };
     if (isWushuTaolu)
-      return {
-        sportType: "wushu-taolu",
-        scoreLabel: "Puntos",
-        showScores: true,
-      };
+      return { sportType: "wushu-taolu", scoreLabel: "Puntos", showScores: true };
     if (isWushuSanda)
       return { sportType: "wushu", scoreLabel: "Puntos", showScores: true };
     if (isTableTennis)
-      return {
-        sportType: "table-tennis",
-        scoreLabel: "Sets",
-        showScores: true,
-      };
-
-    if (isWrestling)                                          
+      return { sportType: "table-tennis", scoreLabel: "Sets", showScores: true };
+    if (isWrestling)
       return { sportType: "wrestling", scoreLabel: "TP", showScores: true };
     return {
       sportType: "team",
@@ -441,12 +206,16 @@ export function CategoryStandingsPage() {
     };
   };
 
+  // ── Pills de vista eliminación ─────────────────────────────────────────────
+
   const renderViewPills = () => {
     const tabs: { key: EliminationView; label: string }[] = [
       { key: "bracket", label: "Llaves" },
       { key: "podium",  label: "Podio" },
       { key: "manual",  label: "Manual" },
-      ...(isWrestling ? [{ key: "resumen" as EliminationView, label: "Resumen" }] : []),
+      ...(isWrestling
+        ? [{ key: "resumen" as EliminationView, label: "Resumen" }]
+        : []),
     ];
 
     return (
@@ -470,6 +239,7 @@ export function CategoryStandingsPage() {
     );
   };
 
+  // ── Render: fase de eliminación con toggle de vistas ──────────────────────
 
   const renderBracketWithToggle = (eliminationPhase: any) => {
     const bracketConfig = getBracketConfig();
@@ -478,13 +248,13 @@ export function CategoryStandingsPage() {
       bracket: "Llave de Eliminación",
       podium:  "Podio Final",
       manual:  "Clasificación Manual",
-      resumen: "Resumen — Fase de Eliminación", 
+      resumen: "Resumen — Fase de Eliminación",
     };
     const viewSubtitles: Record<EliminationView, string> = {
       bracket: "Diagrama de enfrentamientos",
       podium:  isTaekwondoPoomsae ? "Top 3 de Poomsae" : "Top 3 de la competencia",
       manual:  "Asignación manual de puestos",
-      resumen: "Resultados y clasificación UWW", 
+      resumen: "Resultados y clasificación UWW",
     };
 
     return (
@@ -517,8 +287,6 @@ export function CategoryStandingsPage() {
         {elimView === "manual" && (
           <ManualPlacements phaseId={eliminationPhase.phaseId} />
         )}
-
-        {/* ── Tab Resumen: solo Wrestling ─────────────────────────────────── */}
         {elimView === "resumen" && isWrestling && (
           <div className="space-y-8">
             <WrestlingEliminationResults
@@ -535,6 +303,7 @@ export function CategoryStandingsPage() {
     );
   };
 
+  // ── Render: tabla de posiciones de grupos ──────────────────────────────────
 
   function renderGroupStandings() {
     const groupPhases = phases.filter((p) => p.type === "grupo");
@@ -550,6 +319,7 @@ export function CategoryStandingsPage() {
 
     return (
       <div className="space-y-6">
+        {/* Header verde */}
         <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
@@ -576,6 +346,7 @@ export function CategoryStandingsPage() {
           </Card>
         ) : (
           <>
+            {/* Selector de fase si hay más de una */}
             {groupPhases.length > 1 && (
               <Card>
                 <CardBody>
@@ -595,10 +366,12 @@ export function CategoryStandingsPage() {
               </Card>
             )}
 
+            {/* PhaseStandingsBlock ahora viene del archivo externo */}
             {selectedPhaseId > 0 ? (
               <PhaseStandingsBlock
                 phase={phases.find((p) => p.phaseId === selectedPhaseId)!}
                 config={config}
+                
               />
             ) : (
               <div className="space-y-6">
@@ -616,6 +389,8 @@ export function CategoryStandingsPage() {
       </div>
     );
   }
+
+  // ── Guards de render temprano ──────────────────────────────────────────────
 
   if (isTimedSport) {
     return (
@@ -651,12 +426,10 @@ export function CategoryStandingsPage() {
         <Card>
           <CardBody>
             <div className="text-center py-16 text-gray-500">
-              <Trophy className="h-16 w-16 mx-auto mb-4 text-gray-400" />
               <p className="text-lg font-medium">No hay fases creadas</p>
-              <p className="text-sm mt-2">
-                Crea fases de grupos o eliminación en la sección de Programación
+              <p className="text-xs mt-2 text-gray-400">
+                Deporte: {sportName}
               </p>
-              <p className="text-xs mt-2 text-gray-400">Deporte: {sportName}</p>
             </div>
           </CardBody>
         </Card>
@@ -671,8 +444,11 @@ export function CategoryStandingsPage() {
       groupPhases.length > 0,
     ].filter(Boolean).length > 1;
 
+  // ── Render principal ───────────────────────────────────────────────────────
+
   return (
     <div className="space-y-8">
+      {/* ── Mejor de 3 ────────────────────────────────────────────────────── */}
       {bestOf3Phases.map((bestOf3Phase) => (
         <div key={bestOf3Phase.phaseId} className="space-y-6">
           <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
@@ -697,6 +473,7 @@ export function CategoryStandingsPage() {
         </div>
       ))}
 
+      {/* ── Eliminación ───────────────────────────────────────────────────── */}
       {eliminationPhase && (
         <div className="space-y-6">
           {multipleTypes && bestOf3Phases.length > 0 && (
@@ -707,11 +484,10 @@ export function CategoryStandingsPage() {
             </div>
           )}
           {renderBracketWithToggle(eliminationPhase)}
-
-          
         </div>
       )}
 
+      {/* ── Grupos ────────────────────────────────────────────────────────── */}
       {groupPhases.length > 0 && (
         <div className="space-y-6">
           {multipleTypes && (
@@ -723,7 +499,6 @@ export function CategoryStandingsPage() {
           )}
 
           {isTiroDeportivo ? (
-            // ── Tiro Deportivo ────────────────────────────────────────────
             <div className="space-y-4">
               {groupPhases.map((phase) => (
                 <TiroDeportivoStandingsTable
@@ -735,7 +510,6 @@ export function CategoryStandingsPage() {
             </div>
 
           ) : isWeightlifting ? (
-            // ── Halterofilia: tabla de resultados IWF ─────────────────────
             <div className="space-y-4">
               {groupPhases.map((phase) => (
                 <WeightliftingResultsTable
@@ -747,21 +521,18 @@ export function CategoryStandingsPage() {
             </div>
 
           ) : isTaekwondoPoomsae ? (
-            // ── Taekwondo Poomsae ─────────────────────────────────────────
             <PoomsaeResultsTable
               eventCategoryId={eventCategory.eventCategoryId}
             />
 
           ) : isWushuTaolu ? (
-            // ── Wushu Taolu ───────────────────────────────────────────────
             <WushuTaoluResultsTable
               eventCategoryId={eventCategory.eventCategoryId}
             />
 
           ) : isWrestling ? (
-            // ── Lucha Olímpica: 3 vistas UWW ──────────────────────────────
             <div className="space-y-6">
-              {/* Header con tabs */}
+              {/* Header Wrestling con tabs */}
               <div className="bg-gradient-to-r from-orange-700 to-red-600 rounded-2xl p-6 text-white shadow-lg">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
@@ -782,7 +553,7 @@ export function CategoryStandingsPage() {
                     </div>
                   </div>
 
-                  {/* Pills de navegación */}
+                  {/* Pills Wrestling */}
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
                     <div className="flex gap-1">
                       {(
@@ -809,7 +580,6 @@ export function CategoryStandingsPage() {
                 </div>
               </div>
 
-              {/* Contenido de la vista activa */}
               {wrestlingView === "results" &&
                 groupPhases.map((phase) => (
                   <WrestlingResultsTable
@@ -819,7 +589,6 @@ export function CategoryStandingsPage() {
                     categoryLabel={eventCategory?.category?.name}
                   />
                 ))}
-
               {wrestlingView === "bracket" &&
                 groupPhases.map((phase) => (
                   <WrestlingBracket
@@ -827,7 +596,6 @@ export function CategoryStandingsPage() {
                     phaseId={phase.phaseId}
                   />
                 ))}
-
               {wrestlingView === "ranking" &&
                 groupPhases.map((phase) => (
                   <WrestlingRanking
@@ -842,7 +610,6 @@ export function CategoryStandingsPage() {
           )}
         </div>
       )}
-
     </div>
   );
 }

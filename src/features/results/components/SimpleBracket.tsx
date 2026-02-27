@@ -87,11 +87,8 @@ export function SimpleBracket({
     return (
       <Card>
         <CardBody className="text-center py-12 text-gray-500">
-          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="font-medium text-lg">No hay combates definidos aún</p>
-          <p className="text-sm mt-1">
-            Genera el bracket o crea combates manualmente para comenzar
-          </p>
+         
         </CardBody>
       </Card>
     );
