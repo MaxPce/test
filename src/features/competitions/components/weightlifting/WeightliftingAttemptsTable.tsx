@@ -61,15 +61,128 @@ const AttemptCell = ({
   );
 };
 
+// ── Helper: agrupar por división ─────────────────────────────────────────────
+function groupByDivision(
+  results: WeightliftingAthleteResult[],
+): Map<string, WeightliftingAthleteResult[]> {
+  const groups = new Map<string, WeightliftingAthleteResult[]>();
+  for (const r of results) {
+    const div = r.participation?.registration?.weightClass ?? "";
+    if (!groups.has(div)) groups.set(div, []);
+    groups.get(div)!.push(r);
+  }
+  return groups;
+}
+
+// ── Fila de atleta ────────────────────────────────────────────────────────────
+function AthleteRow({
+  result,
+  idx,
+  onEdit,
+}: {
+  result: WeightliftingAthleteResult;
+  idx: number;
+  onEdit: (r: WeightliftingAthleteResult) => void;
+}) {
+  const athleteName =
+    result.participation.registration?.athlete?.name ??
+    `Atleta ${result.participation.participationId}`;
+  const institution =
+    result.participation.registration?.athlete?.institution?.name;
+  const seedNumber = result.participation.registration?.seedNumber ?? null;  
+
+  return (
+    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+      {/* Seed */} 
+      <td className="px-2 py-3 text-center">
+        <span className="text-xs font-semibold text-slate-400">
+          {seedNumber ?? "—"}
+        </span>
+      </td>
+
+      {/* # */}
+      <td className="px-3 py-3 text-center">
+        <span className="text-xs text-gray-400 font-medium">{idx + 1}</span>
+      </td>
+
+      {/* El resto igual... */}
+      <td className="px-3 py-3">
+        <p className="font-medium text-gray-900 text-sm">{athleteName}</p>
+        {institution && (
+          <p className="text-xs text-gray-400">{institution}</p>
+        )}
+      </td>
+      <AttemptCell attempts={result.snatchAttempts} num={1} />
+      <AttemptCell attempts={result.snatchAttempts} num={2} />
+      <AttemptCell attempts={result.snatchAttempts} num={3} />
+      <td className="px-3 py-3 text-center border-r border-blue-200">
+        <span className={`font-bold text-sm ${result.bestSnatch ? "text-blue-700" : "text-gray-300"}`}>
+          {result.bestSnatch ?? "—"}
+        </span>
+      </td>
+      <AttemptCell attempts={result.cleanAndJerkAttempts} num={1} />
+      <AttemptCell attempts={result.cleanAndJerkAttempts} num={2} />
+      <AttemptCell attempts={result.cleanAndJerkAttempts} num={3} />
+      <td className="px-3 py-3 text-center border-r border-purple-200">
+        <span className={`font-bold text-sm ${result.bestCleanAndJerk ? "text-purple-700" : "text-gray-300"}`}>
+          {result.bestCleanAndJerk ?? "—"}
+        </span>
+      </td>
+      <td className="px-3 py-3 text-center">
+        <span className={`font-bold text-base ${result.total ? "text-gray-900" : "text-gray-300"}`}>
+          {result.total ?? "—"}
+        </span>
+      </td>
+      <td className="px-3 py-3 text-center">
+        <Button size="sm" variant="ghost" onClick={() => onEdit(result)}>
+          <Edit3 className="h-3.5 w-3.5" />
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
+
+// ── Thead reutilizable ────────────────────────────────────────────────────────
+function TableHead() {
+  return (
+    <thead>
+      <tr className="bg-gray-50 border-b-2 border-gray-200">
+        <th className="px-2 py-3 text-center text-xs font-semibold text-gray-400 w-8">Seed</th> 
+        <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 w-8">#</th>
+        <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 min-w-[160px]">Atleta</th>
+        <th colSpan={3} className="px-2 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-x border-blue-200">
+          ARRANQUE (Snatch)
+        </th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-r border-blue-200">Mejor</th>
+        <th colSpan={3} className="px-2 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-x border-purple-200">
+          ENVIÓN (C&J)
+        </th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-r border-purple-200">Mejor</th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-900 bg-yellow-50">TOTAL</th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 w-20">Acción</th>
+      </tr>
+      <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-400">
+        <th /><th /><th />  {/* ← una th más */}
+        <th className="py-1 text-center font-normal border-r border-gray-100">1°</th>
+        <th className="py-1 text-center font-normal border-r border-gray-100">2°</th>
+        <th className="py-1 text-center font-normal border-r border-blue-200">3°</th>
+        <th className="border-r border-blue-200" />
+        <th className="py-1 text-center font-normal border-r border-gray-100">1°</th>
+        <th className="py-1 text-center font-normal border-r border-gray-100">2°</th>
+        <th className="py-1 text-center font-normal border-r border-purple-200">3°</th>
+        <th className="border-r border-purple-200" />
+        <th /><th />
+      </tr>
+    </thead>
+  );
+}
+
+
+// ── Componente principal ──────────────────────────────────────────────────────
 export function WeightliftingAttemptsTable({ phaseId }: Props) {
-  const {
-    data: results = [],
-    isLoading,
-    refetch,
-  } = useWeightliftingPhaseResults(phaseId);
-  const [editingParticipationId, setEditingParticipationId] = useState<
-    number | null
-  >(null);
+  const { data: results = [], isLoading, refetch } = useWeightliftingPhaseResults(phaseId);
+  const [editingParticipationId, setEditingParticipationId] = useState<number | null>(null);
   const [editingAthleteName, setEditingAthleteName] = useState("");
 
   const openModal = (result: WeightliftingAthleteResult) => {
@@ -97,172 +210,60 @@ export function WeightliftingAttemptsTable({ phaseId }: Props) {
     );
   }
 
+  // ¿Hay divisiones asignadas?
+  const hasDivisions = results.some(
+    (r) => r.participation?.registration?.weightClass,
+  );
+
+  const groups = groupByDivision(results);
+
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b-2 border-gray-200">
-              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 w-8">
-                #
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 min-w-[160px]">
-                Atleta
-              </th>
-              {/* Arranque */}
-              <th
-                colSpan={3}
-                className="px-2 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-x border-blue-200"
-              >
-                ARRANQUE (Snatch)
-              </th>
-              <th className="px-3 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-r border-blue-200">
-                Mejor
-              </th>
-              {/* Envión */}
-              <th
-                colSpan={3}
-                className="px-2 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-x border-purple-200"
-              >
-                ENVIÓN (C&J)
-              </th>
-              <th className="px-3 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-r border-purple-200">
-                Mejor
-              </th>
-              {/* Total */}
-              <th className="px-3 py-3 text-center text-xs font-semibold text-gray-900 bg-yellow-50">
-                TOTAL
-              </th>
-              <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 w-20">
-                Acción
-              </th>
-            </tr>
-            <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-400">
-              <th />
-              <th />
-              <th className="py-1 text-center font-normal border-r border-gray-100">
-                1°
-              </th>
-              <th className="py-1 text-center font-normal border-r border-gray-100">
-                2°
-              </th>
-              <th className="py-1 text-center font-normal border-r border-blue-200">
-                3°
-              </th>
-              <th className="border-r border-blue-200" />
-              <th className="py-1 text-center font-normal border-r border-gray-100">
-                1°
-              </th>
-              <th className="py-1 text-center font-normal border-r border-gray-100">
-                2°
-              </th>
-              <th className="py-1 text-center font-normal border-r border-purple-200">
-                3°
-              </th>
-              <th className="border-r border-purple-200" />
-              <th />
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((result, idx) => {
-              const athleteName =
-                result.participation.registration?.athlete?.name ??
-                `Atleta ${result.participation.participationId}`;
-              const institution =
-                result.participation.registration?.athlete?.institution?.name;
-              const isRanked = result.rank !== null;
-
-              return (
-                <tr
+        {hasDivisions ? (
+          // ── Render agrupado por división ────────────────────────────────
+          Array.from(groups.entries()).map(([div, group]) => (
+            <div key={div} className="mb-6">
+              {/* Separador de división */}
+              <div className="flex items-center gap-3 px-4 py-2 bg-slate-700">
+                <span className="text-xs font-bold text-white uppercase tracking-widest">
+                  {div ? `División ${div} kg` : "Sin división asignada"}
+                </span>
+                <span className="text-xs text-slate-300">
+                  — {group.length} atleta{group.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <table className="w-full text-sm border-collapse">
+                <TableHead />
+                <tbody>
+                  {group.map((result, idx) => (
+                    <AthleteRow
+                      key={result.participation.participationId}
+                      result={result}
+                      idx={idx}
+                      onEdit={openModal}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))
+        ) : (
+          // ── Render simple sin divisiones ─────────────────────────────────
+          <table className="w-full text-sm border-collapse">
+            <TableHead />
+            <tbody>
+              {results.map((result, idx) => (
+                <AthleteRow
                   key={result.participation.participationId}
-                  className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                    idx === 0 && isRanked ? "bg-yellow-50/40" : ""
-                  }`}
-                >
-                  {/* Posición */}
-                  <td className="px-3 py-3 text-center">
-                    {result.rank !== null ? (
-                      <span
-                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                          result.rank === 1
-                            ? "bg-yellow-400 text-white"
-                            : result.rank === 2
-                              ? "bg-gray-300 text-gray-700"
-                              : result.rank === 3
-                                ? "bg-orange-300 text-white"
-                                : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {result.rank}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-
-                  {/* Atleta */}
-                  <td className="px-3 py-3">
-                    <p className="font-medium text-gray-900 text-sm">
-                      {athleteName}
-                    </p>
-                    {institution && (
-                      <p className="text-xs text-gray-400">{institution}</p>
-                    )}
-                  </td>
-
-                  {/* Arranque — 3 intentos */}
-                  <AttemptCell attempts={result.snatchAttempts} num={1} />
-                  <AttemptCell attempts={result.snatchAttempts} num={2} />
-                  <AttemptCell attempts={result.snatchAttempts} num={3} />
-
-                  {/* Mejor Arranque */}
-                  <td className="px-3 py-3 text-center border-r border-blue-200">
-                    <span
-                      className={`font-bold text-sm ${result.bestSnatch ? "text-blue-700" : "text-gray-300"}`}
-                    >
-                      {result.bestSnatch ?? "—"}
-                    </span>
-                  </td>
-
-                  {/* Envión — 3 intentos */}
-                  <AttemptCell attempts={result.cleanAndJerkAttempts} num={1} />
-                  <AttemptCell attempts={result.cleanAndJerkAttempts} num={2} />
-                  <AttemptCell attempts={result.cleanAndJerkAttempts} num={3} />
-
-                  {/* Mejor Envión */}
-                  <td className="px-3 py-3 text-center border-r border-purple-200">
-                    <span
-                      className={`font-bold text-sm ${result.bestCleanAndJerk ? "text-purple-700" : "text-gray-300"}`}
-                    >
-                      {result.bestCleanAndJerk ?? "—"}
-                    </span>
-                  </td>
-
-                  {/* Total */}
-                  <td className="px-3 py-3 text-center">
-                    <span
-                      className={`font-bold text-base ${result.total ? "text-gray-900" : "text-gray-300"}`}
-                    >
-                      {result.total ?? "—"}
-                    </span>
-                  </td>
-
-                  {/* Acción */}
-                  <td className="px-3 py-3 text-center">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openModal(result)}
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                  result={result}
+                  idx={idx}
+                  onEdit={openModal}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Modal de edición de intentos */}

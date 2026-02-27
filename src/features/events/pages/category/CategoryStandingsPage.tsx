@@ -20,7 +20,7 @@ import { WrestlingBracket } from "@/features/competitions/components/wrestling/W
 import { WrestlingRanking } from "@/features/competitions/components/wrestling/WrestlingRanking";
 import { WrestlingEliminationResults } from "@/features/competitions/components/wrestling/WrestlingEliminationResults";
 import { WrestlingEliminationRanking } from "@/features/competitions/components/wrestling/WrestlingEliminationRanking";
-import { TiroDeportivoResultsTable } from "@/features/competitions/components/shooting/TiroDeportivoResultsTable";
+import { WeightliftingResultsTable } from "@/features/competitions/components/weightlifting/WeightliftingResultsTable";
 import { TiroDeportivoStandingsTable } from '@/features/competitions/components/shooting/TiroDeportivoStandingsTable';
 
 
@@ -323,6 +323,12 @@ export function CategoryStandingsPage() {
     sportName.includes("tiro deportivo") ||
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
+
+  const isWeightlifting =
+    sportName.includes("halterofilia") ||
+    sportName.includes("weightlifting") ||
+    sportName.includes("levantamiento de pesas");
+
 
   const getSportConfig = (): SportConfig => {
     if (isJudo) {
@@ -715,8 +721,9 @@ export function CategoryStandingsPage() {
               </h3>
             </div>
           )}
+
           {isTiroDeportivo ? (
-            // ── Tiro Deportivo: tabla de series y totales ──────────────────
+            // ── Tiro Deportivo ────────────────────────────────────────────
             <div className="space-y-4">
               {groupPhases.map((phase) => (
                 <TiroDeportivoStandingsTable
@@ -726,16 +733,33 @@ export function CategoryStandingsPage() {
                 />
               ))}
             </div>
+
+          ) : isWeightlifting ? (
+            // ── Halterofilia: tabla de resultados IWF ─────────────────────
+            <div className="space-y-4">
+              {groupPhases.map((phase) => (
+                <WeightliftingResultsTable
+                  key={phase.phaseId}
+                  phaseId={phase.phaseId}
+                  phaseName={phase.name}
+                />
+              ))}
+            </div>
+
           ) : isTaekwondoPoomsae ? (
+            // ── Taekwondo Poomsae ─────────────────────────────────────────
             <PoomsaeResultsTable
               eventCategoryId={eventCategory.eventCategoryId}
             />
+
           ) : isWushuTaolu ? (
+            // ── Wushu Taolu ───────────────────────────────────────────────
             <WushuTaoluResultsTable
               eventCategoryId={eventCategory.eventCategoryId}
             />
+
           ) : isWrestling ? (
-            // ── Lucha Olímpica: 3 vistas UWW ─────────────────────────────────
+            // ── Lucha Olímpica: 3 vistas UWW ──────────────────────────────
             <div className="space-y-6">
               {/* Header con tabs */}
               <div className="bg-gradient-to-r from-orange-700 to-red-600 rounded-2xl p-6 text-white shadow-lg">
@@ -812,11 +836,13 @@ export function CategoryStandingsPage() {
                   />
                 ))}
             </div>
+
           ) : (
             renderGroupStandings()
           )}
         </div>
       )}
+
     </div>
   );
 }

@@ -69,6 +69,7 @@ export interface Registration {
   external_institution_id?: number;
   teamId?: number;
   seedNumber?: number;
+  weightClass?: string | null;
   createdAt: string;
   updatedAt: string;
   athlete?: Athlete;

@@ -22,10 +22,22 @@ export interface WeightliftingAthleteResult {
   participation: {
     participationId: number;
     registration?: {
+      weightClass?: string | null; 
+      seedNumber?: number | null;
       athlete?: {
         athleteId: number;
         name: string;
-        institution?: { name: string };
+        institution?: {
+          name: string;
+          logoUrl?: string | null;
+        };
+      };
+      team?: {
+        name: string;
+        institution?: {
+          name: string;
+          logoUrl?: string | null;
+        };
       };
     };
   };
@@ -36,6 +48,11 @@ export interface WeightliftingAthleteResult {
   total: number | null;
   totalAchievedAtAttempt: number | null;
   rank: number | null;
+}
+
+export interface WeightliftingPhaseEntry {
+  registrationId: number;
+  weightClass: string | null;
 }
 
 export const weightliftingApi = {
@@ -64,6 +81,17 @@ export const weightliftingApi = {
     const { data } = await apiClient.put(
       `/competitions/weightlifting/participations/${participationId}/attempt`,
       attemptData,
+    );
+    return data;
+  },
+
+  initializePhase: async (
+    phaseId: number,
+    entries: WeightliftingPhaseEntry[],
+  ): Promise<{ message: string; participationsCreated: number }> => {
+    const { data } = await apiClient.post(
+      `/competitions/weightlifting/phases/${phaseId}/initialize`,
+      { entries },
     );
     return data;
   },

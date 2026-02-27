@@ -40,6 +40,9 @@ import { CollectiveScoreModal } from "@/features/competitions/components/collect
 import { WrestlingScoreModal } from "@/features/competitions/components/wrestling/WrestlingScoreModal";
 import { TiroDeportivoResultsTable } from "@/features/competitions/components/shooting/TiroDeportivoResultsTable";
 import { TiroDeportivoScheduleTable } from "@/features/competitions/components/shooting/TiroDeportivoScheduleTable";
+import { GenerateWeightliftingModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingModal";
+import { useInitializeWeightliftingPhase } from "@/features/competitions/api/weightlifting.mutations";
+
 
 import {
   useMatches,
@@ -94,6 +97,11 @@ export function CategorySchedulePage() {
   const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
     useState(false);
   const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
+
+  const [isGenerateWeightliftingModalOpen, setIsGenerateWeightliftingModalOpen] =
+    useState(false);
+  const initializeWeightliftingMutation = useInitializeWeightliftingPhase();
+
 
   const initializeRoundRobinMutation = useInitializeRoundRobin();
   const updateStandingsMutation = useUpdateStandings();
@@ -545,7 +553,7 @@ export function CategorySchedulePage() {
           />
         ) : (
           <div className="space-y-8">
-            {/* Selector de fase (cards en la parte superior) */}
+            {/* Cards de fases */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {phases.map((phase) => {
                 const phaseTypeConfig = getPhaseTypeConfig(phase.type);
@@ -599,7 +607,7 @@ export function CategorySchedulePage() {
               })}
             </div>
 
-            {/* 🏋️ Tabla de intentos de la fase seleccionada */}
+            {/* Tabla de intentos de la fase seleccionada */}
             {selectedPhase && (
               <Card variant="elevated">
                 <CardHeader>
@@ -612,18 +620,26 @@ export function CategorySchedulePage() {
                         <h3 className="text-lg font-bold text-slate-900">
                           {selectedPhase.name}
                         </h3>
-                        <p className="text-sm text-slate-500">
-                          Planilla de intentos IWF — Haz clic en ✏️ para
-                          registrar
-                        </p>
+                        
                       </div>
                     </div>
-                    <button
-                      onClick={() => setSelectedPhase(null)}
-                      className="text-slate-400 hover:text-slate-600 text-sm"
-                    >
-                      × Cerrar
-                    </button>
+                    <div className="flex items-center gap-2">
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<UserPlus className="h-4 w-4" />}
+                        onClick={() => setIsGenerateWeightliftingModalOpen(true)}
+                      >
+                        Asignar atletas
+                      </Button>
+                      <button
+                        onClick={() => setSelectedPhase(null)}
+                        className="text-slate-400 hover:text-slate-600 text-sm"
+                      >
+                        × Cerrar
+                      </button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardBody className="p-0">
@@ -649,9 +665,28 @@ export function CategorySchedulePage() {
             isLoading={createPhaseMutation.isPending}
           />
         </Modal>
+
+        {/*  asignar atletas con división */}
+        {selectedPhase && (
+          <GenerateWeightliftingModal
+            isOpen={isGenerateWeightliftingModalOpen}
+            onClose={() => setIsGenerateWeightliftingModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            registrations={eventCategory.registrations || []}
+            onGenerate={async (entries) => {
+              await initializeWeightliftingMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                entries,
+              });
+              setIsGenerateWeightliftingModalOpen(false);
+            }}
+            isLoading={initializeWeightliftingMutation.isPending}
+          />
+        )}
       </div>
     );
   }
+
 
   return (
     <div className="space-y-6 animate-in">

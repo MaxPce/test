@@ -246,7 +246,7 @@ export function WeightliftingScoreModal({
                       disabled={isSaving}
                       className="w-full"
                     >
-                      {!isSaving && <Save className="h-3 w-3 mr-1" />}
+                      
                       Guardar
                     </Button>
                   </div>
