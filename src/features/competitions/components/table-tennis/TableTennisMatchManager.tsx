@@ -131,63 +131,40 @@ export function TableTennisMatchManager({
   };
 
   const handleGenerateGames = () => {
-    if (requiresLineup && !hasLineups) {
-      alert("Ambos equipos deben configurar su lineup primero");
-      return;
-    }
+    if (requiresLineup && !hasLineups) return;
 
-    const confirmMessage =
-      modality === "team"
-        ? "¿Generar los 5 juegos automáticamente? Esto eliminará juegos existentes."
-        : "¿Generar el juego? Esto eliminará juegos existentes.";
-
-    if (window.confirm(confirmMessage)) {
-      generateGamesMutation.mutate(match.matchId, {
-        onSuccess: () => {
-          setActiveTab(requiresLineup ? "scorecard" : "scorecard");
-        },
-      });
-    }
+    generateGamesMutation.mutate(match.matchId, {
+      onSuccess: () => {
+        setActiveTab("scorecard");
+      },
+    });
   };
 
   const handleFinalizeMatch = () => {
-    if (!result?.winner) {
-      alert("No hay un ganador determinado aún. Completa todos los juegos.");
-      return;
-    }
+    if (!result?.winner) return;
 
-    const winnerName = getWinnerName();
     const resolvedPhase = phase ?? match.phase;
 
-    if (
-      window.confirm(
-        `¿Finalizar el match?\n\nGanador: ${winnerName}\nMarcador: ${result.score}`,
-      )
-    ) {
-      if (resolvedPhase?.type === "eliminacion") {
-        advanceWinnerMutation.mutate(
-          {
-            matchId: match.matchId,
-            winnerRegistrationId: result.winner.registrationId,
-          },
-          {
-            onSuccess: () => {
-              onMatchUpdate?.();
-              onClose?.();
-            },
-            onError: () => alert("Error al finalizar el match"),
-          },
-        );
-      } else {
-        finalizeMatchMutation.mutate(match.matchId, {
+    if (resolvedPhase?.type === "eliminacion") {
+      advanceWinnerMutation.mutate(
+        {
+          matchId: match.matchId,
+          winnerRegistrationId: result.winner.registrationId,
+        },
+        {
           onSuccess: () => {
-            alert("Match finalizado exitosamente");
             onMatchUpdate?.();
             onClose?.();
           },
-          onError: () => alert("Error al finalizar el match"),
-        });
-      }
+        },
+      );
+    } else {
+      finalizeMatchMutation.mutate(match.matchId, {
+        onSuccess: () => {
+          onMatchUpdate?.();
+          onClose?.();
+        },
+      });
     }
   };
 
@@ -205,9 +182,6 @@ export function TableTennisMatchManager({
         onSuccess: () => {
           setShowWalkoverDialog(false);
           onClose?.();
-        },
-        onError: (error: any) => {
-          alert(error.response?.data?.message || "Error al marcar walkover");
         },
       },
     );
@@ -487,9 +461,6 @@ export function TableTennisMatchManager({
 
           {requiresLineup && hasLineups && !hasGames && (
             <Alert variant="info">
-              <div className="ml-2 flex-1">
-                <p className="font-medium">Lineups configurados</p>
-              </div>
               <Button
                 onClick={handleGenerateGames}
                 isLoading={generateGamesMutation.isPending}
@@ -502,13 +473,6 @@ export function TableTennisMatchManager({
 
           {!requiresLineup && !hasGames && (
             <Alert variant="info">
-              <AlertCircle className="h-4 w-4" />
-              <div className="ml-2 flex-1">
-                <p className="font-medium">Listo para generar juego</p>
-                <p className="text-sm">
-                  Genera el juego para comenzar a registrar resultados
-                </p>
-              </div>
               <Button
                 onClick={handleGenerateGames}
                 isLoading={generateGamesMutation.isPending}

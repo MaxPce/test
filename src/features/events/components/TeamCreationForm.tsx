@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
-import { useAccreditedAthletes } from "@/features/institutions/api/sismaster.queries"; 
+import { useAccreditedAthletes } from "@/features/institutions/api/sismaster.queries";
 import type { EventCategory } from "../types";
 
 interface TeamMember {
@@ -15,8 +15,8 @@ interface TeamMember {
 }
 
 interface TeamCreationFormProps {
-  eventId: number; 
-  eventCategory: EventCategory; 
+  eventId: number;
+  eventCategory: EventCategory;
   categoryId: number;
   onSubmit: (data: {
     teamName: string;
@@ -29,8 +29,8 @@ interface TeamCreationFormProps {
 }
 
 export function TeamCreationForm({
-  eventId, 
-  eventCategory, 
+  eventId,
+  eventCategory,
   categoryId,
   onSubmit,
   onCancel,
@@ -42,24 +42,21 @@ export function TeamCreationForm({
   const [selectedAthlete, setSelectedAthlete] = useState<number>(0);
   const [selectedRole, setSelectedRole] = useState<string>("titular");
 
-  
-  const {
-    data: athletesFromSismaster = [],
-    isLoading: isLoadingAthletes,
-  } = useAccreditedAthletes(
-    {
-      idevent: eventId,
-      gender:
-        eventCategory.category?.gender !== "MIXTO"
-          ? (eventCategory.category?.gender as "M" | "F")
-          : undefined,
-    },
-    true, 
-  );
+  const { data: athletesFromSismaster = [], isLoading: isLoadingAthletes } =
+    useAccreditedAthletes(
+      {
+        idevent: eventId,
+        gender:
+          eventCategory.category?.gender !== "MIXTO"
+            ? (eventCategory.category?.gender as "M" | "F")
+            : undefined,
+      },
+      true,
+    );
 
   const institutions = useMemo(() => {
     const institutionMap = new Map<number, { id: number; name: string }>();
-    
+
     athletesFromSismaster.forEach((athlete) => {
       if (athlete.idinstitution && athlete.institutionName) {
         institutionMap.set(athlete.idinstitution, {
@@ -70,7 +67,7 @@ export function TeamCreationForm({
     });
 
     return Array.from(institutionMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
+      a.name.localeCompare(b.name),
     );
   }, [athletesFromSismaster]);
 
@@ -78,7 +75,7 @@ export function TeamCreationForm({
     return athletesFromSismaster.filter(
       (athlete) =>
         athlete.idinstitution === selectedInstitution &&
-        !members.some((m) => m.athleteId === athlete.idperson)
+        !members.some((m) => m.athleteId === athlete.idperson),
     );
   }, [athletesFromSismaster, selectedInstitution, members]);
 
@@ -174,8 +171,6 @@ export function TeamCreationForm({
         </div>
       </div>
 
-      
-
       {/* Paso 1: Información del Equipo */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900">
@@ -186,7 +181,6 @@ export function TeamCreationForm({
           label="Nombre del Equipo *"
           value={teamName}
           onChange={(e) => setTeamName(e.target.value)}
-          
           required
         />
 
@@ -195,7 +189,7 @@ export function TeamCreationForm({
           value={selectedInstitution}
           onChange={(e) => {
             setSelectedInstitution(Number(e.target.value));
-            setMembers([]); 
+            setMembers([]);
           }}
           options={institutionOptions}
           required
@@ -238,7 +232,6 @@ export function TeamCreationForm({
                   disabled={selectedAthlete === 0}
                   className="w-full"
                 >
-                  
                   Agregar
                 </Button>
               </div>
@@ -281,11 +274,7 @@ export function TeamCreationForm({
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              <UserCircle2 className="h-12 w-12 mx-auto mb-2 text-gray-400" />
               <p>No hay integrantes en el equipo</p>
-              <p className="text-sm">
-                Agrega al menos un atleta para continuar
-              </p>
             </div>
           )}
         </div>

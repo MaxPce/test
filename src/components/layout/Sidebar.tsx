@@ -3,18 +3,20 @@ import {
   LayoutDashboard,
   Trophy,
   Users,
-  Calendar,
   Settings,
   ChevronDown,
-  Sparkles,
   Building2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useAuthStore } from "@/app/store/useAuthStore";
 import { useState, useEffect } from "react";
 
 interface SidebarProps {
   isOpen: boolean;
+  isCollapsed: boolean;
   onClose: () => void;
+  onToggleCollapse: () => void;
 }
 
 interface NavItem {
@@ -67,7 +69,12 @@ const navItems: NavItem[] = [
   },
 ];
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({
+  isOpen,
+  isCollapsed,
+  onClose,
+  onToggleCollapse,
+}: SidebarProps) {
   const { hasPermission } = useAuthStore();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<string[]>([
@@ -75,7 +82,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     "Instituciones",
   ]);
 
-  // Auto-expandir la sección que contiene la ruta actual
   useEffect(() => {
     navItems.forEach((item) => {
       if (item.children) {
@@ -102,7 +108,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     );
   };
 
-  // Verificar si algún hijo está activo
   const hasActiveChild = (item: NavItem) => {
     if (!item.children) return false;
     return item.children.some((child) => location.pathname === child.to);
@@ -110,7 +115,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Overlay for mobile con blur */}
+      {/* Overlay móvil con blur */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden animate-in"
@@ -118,15 +123,34 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar con glassmorphism */}
+      {/* Sidebar */}
       <aside
-        className={`fixed top-16 left-0 bottom-0 z-30 w-72 glass border-r border-white/20 shadow-strong transition-transform duration-300 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 overflow-hidden`}
+        className={`
+          fixed top-16 left-0 bottom-0 z-30
+          glass border-r border-white/20 shadow-strong
+          transition-all duration-300 overflow-hidden
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0
+          ${isCollapsed ? "lg:w-16 w-72" : "w-72"}
+        `}
       >
         <div className="h-full flex flex-col">
-          {/* Navigation - scrollable */}
-          <nav className="flex-1 overflow-y-auto py-2 px-3 no-scrollbar">
+          <div className="hidden lg:flex items-center justify-end px-2 py-2 border-b border-white/20">
+            <button
+              onClick={onToggleCollapse}
+              title={isCollapsed ? "Expandir sidebar" : "Colapsar sidebar"}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-white/60 transition-all"
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronLeft className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Navegación scrollable */}
+          <nav className="flex-1 overflow-y-auto py-2 px-2 no-scrollbar">
             <ul className="space-y-1">
               {filteredNavItems.map((item) => {
                 const isParentActive = hasActiveChild(item);
@@ -135,17 +159,30 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <li key={item.label}>
                     {item.children ? (
                       <div>
+                        {/* Ítem con submenú */}
                         <button
-                          onClick={() => toggleExpanded(item.label)}
-                          className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all group ${
-                            isParentActive
-                              ? "bg-blue-50/80 text-blue-700"
-                              : "text-slate-700 hover:bg-white/60 hover:text-slate-900"
-                          }`}
+                          onClick={() => {
+                            if (!isCollapsed) toggleExpanded(item.label);
+                          }}
+                          title={isCollapsed ? item.label : undefined}
+                          className={`
+                            flex items-center w-full px-3 py-3 rounded-xl
+                            text-sm font-semibold transition-all group
+                            ${
+                              isParentActive
+                                ? "bg-blue-50/80 text-blue-700"
+                                : "text-slate-700 hover:bg-white/60 hover:text-slate-900"
+                            }
+                            ${isCollapsed ? "justify-center" : "justify-between"}
+                          `}
                         >
-                          <div className="flex items-center gap-3">
+                          <div
+                            className={`flex items-center ${
+                              isCollapsed ? "" : "gap-3"
+                            }`}
+                          >
                             <span
-                              className={`transition-colors ${
+                              className={`flex-shrink-0 transition-colors ${
                                 isParentActive
                                   ? "text-blue-600"
                                   : "text-slate-600 group-hover:text-blue-600"
@@ -153,17 +190,23 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                             >
                               {item.icon}
                             </span>
-                            {item.label}
+                            {!isCollapsed && (
+                              <span className="truncate">{item.label}</span>
+                            )}
                           </div>
-                          <ChevronDown
-                            className={`h-4 w-4 text-slate-400 transition-transform ${
-                              expandedItems.includes(item.label)
-                                ? "rotate-180"
-                                : ""
-                            }`}
-                          />
+                          {!isCollapsed && (
+                            <ChevronDown
+                              className={`h-4 w-4 text-slate-400 flex-shrink-0 transition-transform ${
+                                expandedItems.includes(item.label)
+                                  ? "rotate-180"
+                                  : ""
+                              }`}
+                            />
+                          )}
                         </button>
-                        {expandedItems.includes(item.label) && (
+
+                        {/* Subítems — ocultos cuando está colapsado */}
+                        {!isCollapsed && expandedItems.includes(item.label) && (
                           <ul className="mt-1 ml-9 space-y-1 animate-slide-down">
                             {item.children.map((child) => (
                               <li key={child.to}>
@@ -187,30 +230,35 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         )}
                       </div>
                     ) : (
+                      /* Ítem simple sin submenú */
                       <NavLink
                         to={item.to!}
                         end
                         onClick={() => onClose()}
+                        title={isCollapsed ? item.label : undefined}
                         className={({ isActive }) =>
-                          `flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all group ${
+                          `flex items-center px-3 py-3 rounded-xl
+                          text-sm font-semibold transition-all group
+                          ${
                             isActive
                               ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md"
                               : "text-slate-700 hover:bg-white/60 hover:text-slate-900"
-                          }`
+                          }
+                          ${isCollapsed ? "justify-center" : "gap-3"}`
                         }
                       >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`group-hover:scale-110 transition-transform`}
-                          >
-                            {item.icon}
-                          </span>
-                          {item.label}
-                        </div>
-                        {item.badge && (
-                          <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
-                            {item.badge}
-                          </span>
+                        <span className="flex-shrink-0 group-hover:scale-110 transition-transform">
+                          {item.icon}
+                        </span>
+                        {!isCollapsed && (
+                          <>
+                            <span className="truncate">{item.label}</span>
+                            {item.badge && (
+                              <span className="ml-auto px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
+                                {item.badge}
+                              </span>
+                            )}
+                          </>
                         )}
                       </NavLink>
                     )}
@@ -221,11 +269,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-white/20 bg-gradient-to-r from-slate-50/50 to-blue-50/30">
-            <div className="text-center">
-              <p className="text-xs text-slate-600 font-bold">FormatoSoft</p>
-              <p className="text-xs text-slate-400 mt-0.5">v1.0.0 • 2026</p>
-            </div>
+          <div
+            className={`border-t border-white/20 bg-gradient-to-r from-slate-50/50 to-blue-50/30 transition-all duration-300 ${
+              isCollapsed ? "p-2" : "p-4"
+            }`}
+          >
+            {isCollapsed ? (
+              <div className="flex justify-center">
+                <span className="text-xs font-bold text-slate-600">FS</span>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-xs text-slate-600 font-bold">FormatoSoft</p>
+                <p className="text-xs text-slate-400 mt-0.5">v1.0.0 • 2026</p>
+              </div>
+            )}
           </div>
         </div>
       </aside>
