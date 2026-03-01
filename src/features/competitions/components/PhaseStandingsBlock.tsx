@@ -1,5 +1,3 @@
-// src/features/competitions/components/PhaseStandingsBlock.tsx
-
 import { useState } from "react";
 import { Trophy, BarChart3, User, Calendar } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
@@ -41,9 +39,12 @@ interface PhaseStandingsBlockProps {
 function getMatchStatusConfig(status: string) {
   const configs: Record<string, { label: string; className: string }> = {
     programado: { label: "Programado", className: "bg-blue-100 text-blue-700" },
-    en_curso:   { label: "En Curso",   className: "bg-green-100 text-green-700 animate-pulse" },
+    en_curso: {
+      label: "En Curso",
+      className: "bg-green-100 text-green-700 animate-pulse",
+    },
     finalizado: { label: "Finalizado", className: "bg-gray-100 text-gray-600" },
-    cancelado:  { label: "Cancelado",  className: "bg-red-100 text-red-600" },
+    cancelado: { label: "Cancelado", className: "bg-red-100 text-red-600" },
   };
   return configs[status] ?? configs.programado;
 }
@@ -60,9 +61,7 @@ function getParticipantName(participation: any): string {
 function getParticipantInstitution(participation: any): string {
   const reg = participation?.registration;
   return (
-    reg?.team?.institution?.abrev ??
-    reg?.athlete?.institution?.abrev ??
-    ""
+    reg?.team?.institution?.abrev ?? reg?.athlete?.institution?.abrev ?? ""
   );
 }
 
@@ -73,9 +72,14 @@ function getParticipantLogo(participation: any): string | undefined {
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function PhaseStandingsBlock({ phase, config }: PhaseStandingsBlockProps) {
+export function PhaseStandingsBlock({
+  phase,
+  config,
+}: PhaseStandingsBlockProps) {
   const { data: standings = [], isLoading } = useStandings(phase.phaseId);
-  const { data: matches = [], isLoading: matchesLoading } = useMatches(phase.phaseId);
+  const { data: matches = [], isLoading: matchesLoading } = useMatches(
+    phase.phaseId,
+  );
 
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [selectedPhase, setSelectedPhase] = useState<any>(null);
@@ -287,10 +291,19 @@ export function PhaseStandingsBlock({ phase, config }: PhaseStandingsBlockProps)
             {/* ── Leyenda ──────────────────────────────────────────────────── */}
             <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-gray-600">
-                <span><strong>PJ:</strong> Partidos Jugados</span>
-                <span><strong>{config.headers.wins}:</strong> {config.legend.wins}</span>
-                <span><strong>{config.headers.draws}:</strong> {config.legend.draws}</span>
-                <span><strong>{config.headers.losses}:</strong> {config.legend.losses}</span>
+                <span>
+                  <strong>PJ:</strong> Partidos Jugados
+                </span>
+                <span>
+                  <strong>{config.headers.wins}:</strong> {config.legend.wins}
+                </span>
+                <span>
+                  <strong>{config.headers.draws}:</strong> {config.legend.draws}
+                </span>
+                <span>
+                  <strong>{config.headers.losses}:</strong>{" "}
+                  {config.legend.losses}
+                </span>
                 {config.showScores && config.legend.scores && (
                   <span>
                     <strong>
@@ -299,7 +312,9 @@ export function PhaseStandingsBlock({ phase, config }: PhaseStandingsBlockProps)
                     {config.legend.scores} A Favor/En Contra
                   </span>
                 )}
-                <span><strong>Pts:</strong> Puntos</span>
+                <span>
+                  <strong>Pts:</strong> Puntos
+                </span>
               </div>
             </div>
 
@@ -350,17 +365,22 @@ export function PhaseStandingsBlock({ phase, config }: PhaseStandingsBlockProps)
                         const isFinished = match.status === "finalizado";
 
                         // ✅ Fix scores: cubre participant1Score y scoreA
-                        const scoreA = match.scoreA ?? match.participant1Score ?? "-";
-                        const scoreB = match.scoreB ?? match.participant2Score ?? "-";
+                        const scoreA =
+                          match.scoreA ?? match.participant1Score ?? "-";
+                        const scoreB =
+                          match.scoreB ?? match.participant2Score ?? "-";
 
                         // ✅ Fix winner: cubre winnerRegistrationId y winnerParticipantId
                         const winnerRegId =
-                          match.winnerRegistrationId ?? match.winnerParticipantId;
+                          match.winnerRegistrationId ??
+                          match.winnerParticipantId;
                         const aWon =
-                          isFinished && winnerRegId != null &&
+                          isFinished &&
+                          winnerRegId != null &&
                           winnerRegId === partA?.registrationId;
                         const bWon =
-                          isFinished && winnerRegId != null &&
+                          isFinished &&
+                          winnerRegId != null &&
                           winnerRegId === partB?.registrationId;
 
                         return (
@@ -431,7 +451,9 @@ export function PhaseStandingsBlock({ phase, config }: PhaseStandingsBlockProps)
                                   <div className="flex items-center gap-1 bg-gray-900 rounded-lg px-2.5 py-1">
                                     <span
                                       className={`text-lg font-black leading-none ${
-                                        aWon ? "text-green-400" : "text-gray-400"
+                                        aWon
+                                          ? "text-green-400"
+                                          : "text-gray-400"
                                       }`}
                                     >
                                       {scoreA}
@@ -441,7 +463,9 @@ export function PhaseStandingsBlock({ phase, config }: PhaseStandingsBlockProps)
                                     </span>
                                     <span
                                       className={`text-lg font-black leading-none ${
-                                        bWon ? "text-green-400" : "text-gray-400"
+                                        bWon
+                                          ? "text-green-400"
+                                          : "text-gray-400"
                                       }`}
                                     >
                                       {scoreB}
@@ -496,15 +520,14 @@ export function PhaseStandingsBlock({ phase, config }: PhaseStandingsBlockProps)
                                 {match.scheduledTime && (
                                   <span>
                                     📅{" "}
-                                    {new Date(match.scheduledTime).toLocaleString(
-                                      "es-PE",
-                                      {
-                                        day: "2-digit",
-                                        month: "short",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      },
-                                    )}
+                                    {new Date(
+                                      match.scheduledTime,
+                                    ).toLocaleString("es-PE", {
+                                      day: "2-digit",
+                                      month: "short",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
                                   </span>
                                 )}
                                 {match.location && (

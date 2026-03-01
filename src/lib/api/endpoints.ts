@@ -6,6 +6,16 @@ export const ENDPOINTS = {
     PROFILE: "/auth/profile",
   },
 
+  // Companies
+  COMPANIES: {
+    LIST: "/companies",
+    CREATE: "/companies",
+    DETAIL: (id: number) => `/companies/${id}`,
+    UPDATE: (id: number) => `/companies/${id}`,
+    DELETE: (id: number) => `/companies/${id}`,
+    UPLOAD_LOGO: (id: number) => `/companies/${id}/upload-logo`,
+  },
+
   // Sports
   SPORTS: {
     TYPES: "/sports/types",

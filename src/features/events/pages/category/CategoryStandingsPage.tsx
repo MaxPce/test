@@ -22,6 +22,7 @@ import { WrestlingEliminationRanking } from "@/features/competitions/components/
 import { WeightliftingResultsTable } from "@/features/competitions/components/weightlifting/WeightliftingResultsTable";
 import { TiroDeportivoStandingsTable } from "@/features/competitions/components/shooting/TiroDeportivoStandingsTable";
 import { PhaseStandingsBlock } from "@/features/competitions/components/PhaseStandingsBlock";
+import { TableTennisPhaseBlock } from "@/features/competitions/components/table-tennis/TableTennisPhaseBlock";
 import type { EventCategory } from "../../types";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -79,8 +80,7 @@ export function CategoryStandingsPage() {
     sportName.includes("atletismo") ||
     sportName.includes("ciclismo");
   const isTableTennis =
-    sportName.includes("tenis de mesa") ||
-    sportName.includes("tenis de campo");
+    sportName.includes("tenis de mesa") || sportName.includes("tenis de campo");
   const isKarate = sportName.includes("karate");
   const isWushu = sportName.includes("wushu");
   const isWrestling =
@@ -189,11 +189,19 @@ export function CategoryStandingsPage() {
     if (isKarate)
       return { sportType: "karate", scoreLabel: "Puntos", showScores: true };
     if (isWushuTaolu)
-      return { sportType: "wushu-taolu", scoreLabel: "Puntos", showScores: true };
+      return {
+        sportType: "wushu-taolu",
+        scoreLabel: "Puntos",
+        showScores: true,
+      };
     if (isWushuSanda)
       return { sportType: "wushu", scoreLabel: "Puntos", showScores: true };
     if (isTableTennis)
-      return { sportType: "table-tennis", scoreLabel: "Sets", showScores: true };
+      return {
+        sportType: "table-tennis",
+        scoreLabel: "Sets",
+        showScores: true,
+      };
     if (isWrestling)
       return { sportType: "wrestling", scoreLabel: "TP", showScores: true };
     return {
@@ -211,8 +219,8 @@ export function CategoryStandingsPage() {
   const renderViewPills = () => {
     const tabs: { key: EliminationView; label: string }[] = [
       { key: "bracket", label: "Llaves" },
-      { key: "podium",  label: "Podio" },
-      { key: "manual",  label: "Manual" },
+      { key: "podium", label: "Podio" },
+      { key: "manual", label: "Manual" },
       ...(isWrestling
         ? [{ key: "resumen" as EliminationView, label: "Resumen" }]
         : []),
@@ -246,14 +254,16 @@ export function CategoryStandingsPage() {
 
     const viewTitles: Record<EliminationView, string> = {
       bracket: "Llave de Eliminación",
-      podium:  "Podio Final",
-      manual:  "Clasificación Manual",
+      podium: "Podio Final",
+      manual: "Clasificación Manual",
       resumen: "Resumen — Fase de Eliminación",
     };
     const viewSubtitles: Record<EliminationView, string> = {
       bracket: "Diagrama de enfrentamientos",
-      podium:  isTaekwondoPoomsae ? "Top 3 de Poomsae" : "Top 3 de la competencia",
-      manual:  "Asignación manual de puestos",
+      podium: isTaekwondoPoomsae
+        ? "Top 3 de Poomsae"
+        : "Top 3 de la competencia",
+      manual: "Asignación manual de puestos",
       resumen: "Resultados y clasificación UWW",
     };
 
@@ -267,7 +277,9 @@ export function CategoryStandingsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">{viewTitles[elimView]}</h3>
-                <p className="text-purple-100 mt-1">{viewSubtitles[elimView]}</p>
+                <p className="text-purple-100 mt-1">
+                  {viewSubtitles[elimView]}
+                </p>
               </div>
             </div>
             {renderViewPills()}
@@ -371,7 +383,6 @@ export function CategoryStandingsPage() {
               <PhaseStandingsBlock
                 phase={phases.find((p) => p.phaseId === selectedPhaseId)!}
                 config={config}
-                
               />
             ) : (
               <div className="space-y-6">
@@ -427,9 +438,7 @@ export function CategoryStandingsPage() {
           <CardBody>
             <div className="text-center py-16 text-gray-500">
               <p className="text-lg font-medium">No hay fases creadas</p>
-              <p className="text-xs mt-2 text-gray-400">
-                Deporte: {sportName}
-              </p>
+              <p className="text-xs mt-2 text-gray-400">Deporte: {sportName}</p>
             </div>
           </CardBody>
         </Card>
@@ -508,7 +517,6 @@ export function CategoryStandingsPage() {
                 />
               ))}
             </div>
-
           ) : isWeightlifting ? (
             <div className="space-y-4">
               {groupPhases.map((phase) => (
@@ -519,17 +527,14 @@ export function CategoryStandingsPage() {
                 />
               ))}
             </div>
-
           ) : isTaekwondoPoomsae ? (
             <PoomsaeResultsTable
               eventCategoryId={eventCategory.eventCategoryId}
             />
-
           ) : isWushuTaolu ? (
             <WushuTaoluResultsTable
               eventCategoryId={eventCategory.eventCategoryId}
             />
-
           ) : isWrestling ? (
             <div className="space-y-6">
               {/* Header Wrestling con tabs */}
@@ -604,7 +609,12 @@ export function CategoryStandingsPage() {
                   />
                 ))}
             </div>
-
+          ) : isTableTennis ? (
+            <div className="space-y-4">
+              {groupPhases.map((phase) => (
+                <TableTennisPhaseBlock key={phase.phaseId} phase={phase} />
+              ))}
+            </div>
           ) : (
             renderGroupStandings()
           )}

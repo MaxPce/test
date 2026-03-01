@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/Select";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Event, CreateEventData } from "../types";
+import { useCompanies } from "@/features/companies/api/companies.queries";
 
 interface EventFormProps {
   event?: Event;
@@ -27,6 +28,8 @@ export function EventForm({
     status: "programado",
     logoUrl: "",
   });
+
+  const { data: companies = [] } = useCompanies();
 
   const [logoFile, setLogoFile] = useState<File | undefined>();
 

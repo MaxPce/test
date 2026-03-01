@@ -24,25 +24,22 @@ export function adaptSismasterEventToLocal(
 
   return {
     eventId: sismasterEvent.idevent,
-    name: sismasterEvent.name || "Sin nombre", // ✅ name
-    startDate: sismasterEvent.startdate, // ✅ startdate
-    endDate: sismasterEvent.enddate, // ✅ enddate
+    name: sismasterEvent.name || "Sin nombre",
+    startDate: sismasterEvent.startdate,
+    endDate: sismasterEvent.enddate,
     location: sismasterEvent.place || "Sin ubicación",
     status,
-    logoUrl: sismasterEvent.logo, // ✅ Ahora sí tiene logo
+    logoUrl: sismasterEvent.logo,
     createdAt: sismasterEvent.created_at || "",
     updatedAt: sismasterEvent.updated_at || "",
     eventCategories: [],
   };
 }
 
-/**
- * Adapta múltiples eventos de Sismaster
- */
 export function adaptSismasterEventsToLocal(
   sismasterEvents: SismasterEvent[],
 ): Event[] {
   return sismasterEvents
-    .filter((event) => event && event.idevent) // Filtrar eventos inválidos
+    .filter((event) => event && event.idevent)
     .map(adaptSismasterEventToLocal);
 }

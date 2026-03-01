@@ -15,6 +15,7 @@ export const eventKeys = {
 
 interface EventsParams {
   status?: EventStatus;
+  companyId?: number;
 }
 
 export const useEvents = (params?: EventsParams) => {

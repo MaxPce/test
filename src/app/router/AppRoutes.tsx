@@ -5,6 +5,8 @@ import { HomePage } from "@/pages/HomePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { AdminLayout } from "@/features/admin/layouts/AdminLayout";
 import { AdminDashboard } from "@/features/admin/pages/AdminDashboard";
+// Companies
+import CompaniesPage from "@/features/companies/pages/CompaniesPage";
 
 // Events
 import { EventsPage } from "@/features/events/pages/EventsPage";
@@ -48,7 +50,6 @@ export function AppRoutes() {
         }
       >
         <Route index element={<AdminDashboard />} />
-
         {/* ==================== EVENTOS LOCALES ==================== */}
         <Route path="events">
           <Route index element={<EventsPage />} />
@@ -84,7 +85,6 @@ export function AppRoutes() {
             </Route>
           </Route>
         </Route>
-
         {/* ==================== EVENTOS DE SISMASTER ==================== */}
         <Route path="sismaster-events">
           {/* Ver deportes de un evento de Sismaster */}
@@ -110,28 +110,27 @@ export function AppRoutes() {
             <Route index element={<CategoryInscriptionsPage />} />
             <Route path="schedule" element={<CategorySchedulePage />} />
             <Route path="standings" element={<CategoryStandingsPage />} />
-            <Route
-              path="institutions"
-              element={<CategoryInstitutionsPage />}
-            />
+            <Route path="institutions" element={<CategoryInstitutionsPage />} />
             <Route path="results" element={<SwimmingResultsPage />} />
           </Route>
         </Route>
-
         {/* ==================== DEPORTES (Gestión Global) ==================== */}
         <Route path="sports">
           <Route index element={<SportsPage />} />
           <Route path="types" element={<SportTypesPage />} />
           <Route path="categories" element={<CategoriesPage />} />
         </Route>
-
         {/* ==================== INSTITUCIONES (Gestión Global) ==================== */}
         <Route path="institutions">
           <Route index element={<InstitutionsPage />} />
           <Route path="athletes" element={<AthletesPage />} />
           <Route path="teams" element={<TeamsPage />} />
         </Route>
-
+        {/* ==================== EMPRESAS (Gestión Global) ==================== */}{" "}
+        <Route path="companies">
+          <Route index element={<CompaniesPage />} />
+          <Route path=":companyId/events" element={<EventsPage />} />
+        </Route>
         {/* ==================== CONFIGURACIÓN ==================== */}
         <Route
           path="settings"

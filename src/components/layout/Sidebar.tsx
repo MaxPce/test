@@ -7,6 +7,7 @@ import {
   Settings,
   ChevronDown,
   Sparkles,
+  Building2,
 } from "lucide-react";
 import { useAuthStore } from "@/app/store/useAuthStore";
 import { useState, useEffect } from "react";
@@ -54,10 +55,9 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    to: "/admin/events",
-    icon: <Calendar className="h-5 w-5" />,
-    label: "Eventos",
-    
+    to: "/admin/companies",
+    icon: <Building2 className="h-5 w-5" />,
+    label: "Organizaciones",
   },
   {
     to: "/admin/settings",
@@ -80,7 +80,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     navItems.forEach((item) => {
       if (item.children) {
         const isChildActive = item.children.some(
-          (child) => location.pathname === child.to
+          (child) => location.pathname === child.to,
         );
         if (isChildActive && !expandedItems.includes(item.label)) {
           setExpandedItems((prev) => [...prev, item.label]);
@@ -125,8 +125,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         } lg:translate-x-0 overflow-hidden`}
       >
         <div className="h-full flex flex-col">
-          
-
           {/* Navigation - scrollable */}
           <nav className="flex-1 overflow-y-auto py-2 px-3 no-scrollbar">
             <ul className="space-y-1">

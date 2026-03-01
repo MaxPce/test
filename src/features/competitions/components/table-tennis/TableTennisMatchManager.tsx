@@ -70,9 +70,6 @@ export function TableTennisMatchManager({
   const team1 = lineups[0];
   const team2 = lineups[1];
 
-  
-
-
   const participation1 = match.participations?.[0];
   const participation2 = match.participations?.[1];
 
@@ -84,7 +81,6 @@ export function TableTennisMatchManager({
     lineups[1]?.participation?.registration?.team?.members ||
     participation2?.registration?.team?.members ||
     [];
-
 
   const getParticipantName = (participationIndex: number): string => {
     const participation = match.participations?.[participationIndex];
@@ -233,7 +229,9 @@ export function TableTennisMatchManager({
       <Card>
         <CardBody className="flex justify-center items-center py-12">
           <Spinner size="lg" />
-          <span className="ml-3 text-gray-600">Cargando datos del match...</span>
+          <span className="ml-3 text-gray-600">
+            Cargando datos del match...
+          </span>
         </CardBody>
       </Card>
     );
@@ -327,7 +325,9 @@ export function TableTennisMatchManager({
                         : `Sets: ${result.team1.wins} - ${result.team2.wins}`}
                     </Badge>
                     {modality !== "team" && (
-                      <p className="text-xs text-gray-500 mt-1">(Sets ganados)</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        (Sets ganados)
+                      </p>
                     )}
                   </div>
                 ) : (
@@ -467,28 +467,11 @@ export function TableTennisMatchManager({
               Lineup {team2.teamName}
             </TabsTrigger>
           )}
-          {hasGames && (
-            <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
-          )}
+          {hasGames && <TabsTrigger value="scorecard">Scorecard</TabsTrigger>}
           {result && <TabsTrigger value="results">Resultados</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {!requiresLineup && (
-            <Alert variant="info">
-              <AlertCircle className="h-4 w-4" />
-              <div className="ml-2">
-                <p className="font-medium">
-                  Modalidad{" "}
-                  {modality === "individual" ? "Individual" : "Dobles"}
-                </p>
-                <p className="text-sm">
-                  Este match se juega a 1 juego (mejor de 5 sets)
-                </p>
-              </div>
-            </Alert>
-          )}
-
           {!hasGames && match.status !== "finalizado" && (
             <Alert variant="warning">
               <Button
@@ -531,7 +514,6 @@ export function TableTennisMatchManager({
                 isLoading={generateGamesMutation.isPending}
                 className="ml-4"
               >
-                <Zap className="h-4 w-4 mr-2" />
                 Generar Juego
               </Button>
             </Alert>
@@ -611,7 +593,10 @@ export function TableTennisMatchManager({
                       {lineup.lineups
                         .filter((l) => l.isSubstitute)
                         .map((l) => (
-                          <div key={l.lineupId} className="text-sm text-gray-600">
+                          <div
+                            key={l.lineupId}
+                            className="text-sm text-gray-600"
+                          >
                             {l.athlete.name}
                           </div>
                         ))}
@@ -673,55 +658,6 @@ export function TableTennisMatchManager({
                 matchId={match.matchId}
                 onGameUpdate={onMatchUpdate}
               />
-              <Card>
-                <CardBody>
-                  <div className="text-center py-8">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      {match.status === "finalizado"
-                        ? "¡Match Finalizado!"
-                        : "Match en Progreso"}
-                    </h2>
-                    <p className="text-5xl font-bold text-gray-900 my-6">
-                      {result.score}
-                    </p>
-                    <div className="flex items-center justify-center gap-8">
-                      <div className="text-center">
-                        <p className="text-lg font-semibold text-gray-900">
-                          {modality === "team"
-                            ? result.team1.teamName
-                            : participant1Name}
-                        </p>
-                        <p className="text-3xl font-bold text-blue-600">
-                          {result.team1.wins}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {modality === "team" ? "juegos ganados" : "sets ganados"}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-lg font-semibold text-gray-900">
-                          {modality === "team"
-                            ? result.team2.teamName
-                            : participant2Name}
-                        </p>
-                        <p className="text-3xl font-bold text-blue-600">
-                          {result.team2.wins}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {modality === "team" ? "juegos ganados" : "sets ganados"}
-                        </p>
-                      </div>
-                    </div>
-                    {result.winner && (
-                      <Alert variant="success" className="mt-6">
-                        <span className="ml-2 font-semibold">
-                          Ganador: {getWinnerName()}
-                        </span>
-                      </Alert>
-                    )}
-                  </div>
-                </CardBody>
-              </Card>
             </div>
           </TabsContent>
         )}

@@ -1,6 +1,7 @@
 import type { EventStatus } from "@/lib/types/common.types";
 import type { Category } from "@/features/sports/types";
 import type { Athlete, Team } from "@/features/institutions/types";
+import type { Company } from "@/features/companies/types";
 
 export interface Event {
   eventId: number;
@@ -10,6 +11,8 @@ export interface Event {
   location: string;
   status: EventStatus;
   logoUrl?: string;
+  companyId?: number;
+  company?: Company;
   createdAt: string;
   updatedAt: string;
   eventCategories?: EventCategory[];
@@ -22,6 +25,7 @@ export interface CreateEventData {
   location: string;
   status: EventStatus;
   logoUrl?: string;
+  companyId?: number;
 }
 
 export interface UpdateEventData {
@@ -31,14 +35,15 @@ export interface UpdateEventData {
   location?: string;
   status?: EventStatus;
   logoUrl?: string;
+  companyId?: number;
 }
 
 export interface EventCategory {
   eventCategoryId: number;
   eventId: number;
   categoryId: number;
-  externalEventId?: number; 
-  externalSportId?: number; 
+  externalEventId?: number;
+  externalSportId?: number;
   status: "pendiente" | "en_curso" | "finalizado";
   createdAt: string;
   updatedAt: string;

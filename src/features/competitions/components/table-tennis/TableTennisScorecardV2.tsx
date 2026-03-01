@@ -121,7 +121,7 @@ export function TableTennisScorecardV2({
         onSuccess: () => {
           setEditingGameId(null);
           setCurrentSets([]);
-          onGameUpdate?.(); 
+          onGameUpdate?.();
         },
         onError: (error: any) => {
           alert(error.response?.data?.message || "Error al guardar");
@@ -129,7 +129,6 @@ export function TableTennisScorecardV2({
       },
     );
   };
-
 
   const handleCancel = () => {
     setEditingGameId(null);
@@ -334,14 +333,12 @@ export function TableTennisScorecardV2({
                         variant="outline"
                         onClick={handleAddSet}
                       >
-                        <Plus className="h-4 w-4 mr-1" />
                         Agregar Set
                       </Button>
                     )}
 
                     <div className="ml-auto flex gap-2">
                       <Button size="sm" variant="ghost" onClick={handleCancel}>
-                        <X className="h-4 w-4 mr-1" />
                         Cancelar
                       </Button>
                       <Button
@@ -349,7 +346,6 @@ export function TableTennisScorecardV2({
                         onClick={handleSave}
                         isLoading={updateGameMutation.isPending}
                       >
-                        <CheckCircle className="h-4 w-4 mr-1" />
                         Guardar
                       </Button>
                     </div>

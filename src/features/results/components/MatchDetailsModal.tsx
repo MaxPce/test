@@ -73,9 +73,9 @@ export function MatchDetailsModal({
           registration: l.participation?.registration,
         }));
 
-  
   // CategorySchedulePage. Se usa solo para el wrapper TT.
-  const matchForWrapper = matchProp ?? fullMatchData ?? { ...match, participations };
+  const matchForWrapper = matchProp ??
+    fullMatchData ?? { ...match, participations };
   // ───────────────────────────────────────────────────────────────────────
 
   const detectSportType = (): string => {
@@ -404,7 +404,7 @@ export function MatchDetailsModal({
                       )}
                       <h4 className="font-bold text-gray-900">
                         {isTableTennis
-                          ? result?.team1?.teamName ?? p1Name
+                          ? (result?.team1?.teamName ?? p1Name)
                           : p1Name}
                       </h4>
                     </div>
@@ -417,7 +417,7 @@ export function MatchDetailsModal({
                         className="text-2xl font-bold px-4"
                       >
                         {isTableTennis
-                          ? result?.team1?.wins ?? 0
+                          ? (result?.team1?.wins ?? 0)
                           : formatScore(match.participant1Score)}
                       </Badge>
                     </div>
@@ -455,7 +455,7 @@ export function MatchDetailsModal({
                       )}
                       <h4 className="font-bold text-gray-900">
                         {isTableTennis
-                          ? result?.team2?.teamName ?? p2Name
+                          ? (result?.team2?.teamName ?? p2Name)
                           : p2Name}
                       </h4>
                     </div>
@@ -468,7 +468,7 @@ export function MatchDetailsModal({
                         className="text-2xl font-bold px-4"
                       >
                         {isTableTennis
-                          ? result?.team2?.wins ?? 0
+                          ? (result?.team2?.wins ?? 0)
                           : formatScore(match.participant2Score)}
                       </Badge>
                     </div>

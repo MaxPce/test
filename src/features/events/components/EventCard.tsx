@@ -1,14 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import {
-  Calendar,
-  MapPin,
-  Edit2,
-  Trash2,
-  ArrowRight,
-  Trophy,
-} from "lucide-react";
+import { Calendar, MapPin, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Event } from "../types";
 import { getImageUrl } from "@/lib/utils/imageUrl";
@@ -17,9 +10,15 @@ interface EventCardProps {
   event: Event;
   onEdit: (event: Event) => void;
   onDelete: (event: Event) => void;
+  companyLogoUrl?: string;
 }
 
-export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
+export function EventCard({
+  event,
+  onEdit,
+  onDelete,
+  companyLogoUrl,
+}: EventCardProps) {
   const navigate = useNavigate();
 
   const getStatusConfig = (status: string) => {
@@ -56,108 +55,114 @@ export function EventCard({ event, onEdit, onDelete }: EventCardProps) {
 
   const statusConfig = getStatusConfig(event.status);
   const logoUrl = getImageUrl(event.logoUrl);
+  const fallbackUrl = getImageUrl(companyLogoUrl);
+
+  // Imagen que se usará como fondo difuminado (evento o compañía)
+  const blurBgUrl = logoUrl || fallbackUrl;
 
   return (
     <Card
       variant="elevated"
       hover
       padding="none"
-      className="group overflow-hidden"
+      className="group overflow-hidden flex flex-col"
     >
-      {/* Header con imagen */}
-      <div className="relative h-48 bg-slate-200 overflow-hidden">
-        {logoUrl ? (
+      {/* ── Banner ── */}
+      <div className="relative h-44 bg-white overflow-hidden shrink-0">
+        {blurBgUrl ? (
           <>
-            <img
-              src={logoUrl}
-              alt={event.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
+            {/* Fondo difuminado */}
+            <div
+              className="absolute inset-0 scale-110 blur-xl opacity-20"
+              style={{
+                backgroundImage: `url(${blurBgUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
               }}
             />
-            {/* Overlay oscuro sutil solo en la parte inferior para el texto */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+            {/* Logo contenido sin recortar */}
+            <div className="absolute inset-0 flex items-center justify-center p-5">
+              <img
+                src={blurBgUrl}
+                alt={logoUrl ? event.name : "Logo organización"}
+                className="max-h-full max-w-full object-contain drop-shadow-sm
+                           group-hover:scale-105 transition-transform duration-500"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            </div>
           </>
         ) : (
+          /* Sin imagen ni logo de compañía */
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
-            <div className="w-20 h-20 rounded-2xl bg-slate-300/50 flex items-center justify-center">
-              <Trophy className="h-10 w-10 text-slate-400" />
+            <div className="w-16 h-16 rounded-2xl bg-slate-300/50 flex items-center justify-center">
+              <Trophy className="h-8 w-8 text-slate-400" />
             </div>
           </div>
         )}
 
-        {/* Badge de estado flotante */}
-        <div className="absolute top-4 right-4">
+        {/* Badge estado */}
+        <div className="absolute top-3 left-3">
           <Badge variant={statusConfig.variant} dot={statusConfig.dot}>
             {statusConfig.label}
           </Badge>
         </div>
-
-        
-
-        {/* Nombre del evento sobre la imagen */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <h3 className="text-xl font-bold text-white drop-shadow-lg line-clamp-2 leading-tight">
-            {event.name}
-          </h3>
-        </div>
       </div>
 
-      {/* Contenido */}
-      <div className="p-6">
-        {/* Info con iconos mejorados */}
-        <div className="space-y-3 mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-              <Calendar className="h-4 w-4 text-blue-600" />
+      {/* ── Franja de acento ── */}
+      <div className={`h-1 bg-gradient-to-r ${statusConfig.gradient}`} />
+
+      {/* ── Contenido ── */}
+      <div className="flex flex-col flex-1 p-5 gap-4">
+        <h3 className="text-base font-bold text-slate-900 line-clamp-2 leading-snug">
+          {event.name}
+        </h3>
+
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+              <Calendar className="h-3.5 w-3.5 text-blue-600" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-slate-500 font-medium mb-0.5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">
                 Fechas
               </p>
-              <p className="text-sm text-slate-900 font-semibold truncate">
-                {formatDate(event.startDate)} - {formatDate(event.endDate)}
+              <p className="text-xs font-semibold text-slate-700 truncate">
+                {formatDate(event.startDate)} — {formatDate(event.endDate)}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-              <MapPin className="h-4 w-4 text-purple-600" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+              <MapPin className="h-3.5 w-3.5 text-purple-600" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-slate-500 font-medium mb-0.5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">
                 Ubicación
               </p>
-              <p className="text-sm text-slate-900 font-semibold truncate">
+              <p className="text-xs font-semibold text-slate-700 truncate">
                 {event.location}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mb-5" />
-
-        {/* Acciones */}
-        <div className="flex gap-2">
+        <div className="mt-auto pt-2 border-t border-slate-100">
           <Button
             size="md"
             variant="gradient"
-            onClick={() => navigate(`/admin/sismaster-events/${event.eventId}/sports`)}
-            className="flex-1 group/btn"
+            className="w-full"
+            onClick={() =>
+              navigate(`/admin/sismaster-events/${event.eventId}/sports`)
+            }
           >
-            
-            <span>Gestionar Deportes</span>
+            Gestionar Deportes
           </Button>
         </div>
       </div>
-
-      {/* Bottom accent */}
-      <div
-        className={`h-1 bg-gradient-to-r ${statusConfig.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
-      />
     </Card>
   );
 }

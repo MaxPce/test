@@ -1,64 +1,59 @@
 import { useState } from "react";
-import {
-  Plus,
-  Calendar,
-  Search,
-  Grid3x3,
-  List,
-  AlertCircle,
-} from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Calendar, Search, Grid3x3, List, ArrowLeft, Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
-import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/PageHeader";
-import { useSismasterEvents } from "@/features/institutions/api/sismaster.queries";
 import { EventCard } from "../components/EventCard";
+import { useCompany } from "@/features/companies/api/companies.queries";
+import { useSismasterEvents } from "@/features/institutions/api/sismaster.queries";
 import { adaptSismasterEventsToLocal } from "../utils/sismasterAdapter";
 import type { Event } from "../types";
 import type { EventStatus } from "@/lib/types/common.types";
 
+const filterOptions = [
+  { value: "", label: "Todos los estados" },
+  { value: "programado", label: "Programados" },
+  { value: "en_curso", label: "En Curso" },
+  { value: "finalizado", label: "Finalizados" },
+];
+
 export function EventsPage() {
+  const { companyId } = useParams<{ companyId?: string }>();
+  const navigate = useNavigate();
+  const numericCompanyId = companyId ? Number(companyId) : undefined;
+
   const [filterStatus, setFilterStatus] = useState<EventStatus | undefined>(
     undefined,
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const { data: sismasterEvents = [], isLoading } = useSismasterEvents();
+  const { data: company, isLoading: isLoadingCompany } = useCompany(
+    numericCompanyId ?? 0,
+  );
 
-  const events = adaptSismasterEventsToLocal(sismasterEvents);
+  const { data: rawSismasterEvents = [], isLoading: isLoadingEvents } =
+    useSismasterEvents();
 
-  // Mostrar alerta de que son eventos de Sismaster (no editables)
-  const handleEdit = (event: Event) => {
-    alert(
-      "Los eventos de Sismaster no pueden ser editados desde esta aplicación.",
-    );
-  };
+  const allEvents: Event[] = adaptSismasterEventsToLocal(rawSismasterEvents);
 
-  const handleDelete = (event: Event) => {
-    alert(
-      "Los eventos de Sismaster no pueden ser eliminados desde esta aplicación.",
-    );
-  };
+  const companyEvents: Event[] = company?.sismasterPrefix
+    ? allEvents.filter((e) => e.name?.startsWith(company.sismasterPrefix!))
+    : [];
 
-  const filterOptions = [
-    { value: "", label: "Todos los estados" },
-    { value: "programado", label: "Programados" },
-    { value: "en_curso", label: "En Curso" },
-    { value: "finalizado", label: "Finalizados" },
-  ];
-
-  // Filtrar eventos por búsqueda y estado
-  const filteredEvents = events.filter((event) => {
+  const filteredEvents = companyEvents.filter((event) => {
     const matchesSearch =
       event.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? true;
     const matchesStatus = !filterStatus || event.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const isLoading = isLoadingCompany || isLoadingEvents;
 
   if (isLoading) {
     return (
@@ -70,14 +65,19 @@ export function EventsPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Header profesional */}
-      <PageHeader title="Eventos" />
+      <button
+        onClick={() => navigate("/admin/companies")}
+        className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Volver a Organizaciones
+      </button>
 
-      {/* Barra de búsqueda y filtros mejorada */}
+      <PageHeader title={company ? `Eventos — ${company.name}` : "Eventos"} />
+
       <Card variant="glass">
         <CardBody>
           <div className="flex flex-col lg:flex-row gap-4">
-            {/* Búsqueda */}
             <div className="flex-1">
               <Input
                 placeholder="Buscar eventos por nombre..."
@@ -87,8 +87,6 @@ export function EventsPage() {
                 variant="modern"
               />
             </div>
-
-            {/* Filtro de estado */}
             <div className="w-full lg:w-64">
               <Select
                 value={filterStatus || ""}
@@ -102,8 +100,6 @@ export function EventsPage() {
                 options={filterOptions}
               />
             </div>
-
-            {/* Vista Grid/List */}
             <div className="flex gap-2">
               <Button
                 variant={viewMode === "grid" ? "primary" : "outline"}
@@ -122,9 +118,6 @@ export function EventsPage() {
             </div>
           </div>
 
-          
-
-          {/* Filtros activos */}
           {(filterStatus || searchQuery) && (
             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
               <span className="text-sm font-semibold text-slate-600">
@@ -155,19 +148,14 @@ export function EventsPage() {
         </CardBody>
       </Card>
 
-      {/* Grid/List de eventos */}
       {filteredEvents.length === 0 ? (
         <EmptyState
-          icon={Calendar}
           title={
-            searchQuery || filterStatus
-              ? "No se encontraron eventos"
-              : "No hay eventos en Sismaster"
-          }
-          description={
-            searchQuery || filterStatus
-              ? "Intenta ajustar los filtros de búsqueda"
-              : "No hay eventos registrados en Sismaster"
+            !company?.sismasterPrefix
+              ? "Sin eventos"
+              : searchQuery || filterStatus
+                ? "No se encontraron eventos"
+                : "Sin eventos"
           }
         />
       ) : (
@@ -182,8 +170,9 @@ export function EventsPage() {
             <EventCard
               key={event.eventId}
               event={event}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              companyLogoUrl={company?.logoUrl}
             />
           ))}
         </div>

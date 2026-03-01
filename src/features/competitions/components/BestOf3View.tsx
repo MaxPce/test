@@ -378,7 +378,6 @@ export function BestOf3View({
                           onClick={() => handleOpenModal(match)}
                           className="w-full font-semibold"
                         >
-                          <Edit className="h-4 w-4 mr-2" />
                           {match.status === "finalizado"
                             ? "Editar Resultado"
                             : "Registrar Resultado"}
