@@ -18,35 +18,34 @@ export function ClimbingScoreTable({ phaseId }: Props) {
   const updateScore = useUpdateClimbingScore(phaseId);
 
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValues, setEditValues] = useState({
-    result: "",
-    rank: "",
-    notes: "",
-  });
+  const [editValues, setEditValues] = useState({ total: "", rank: "" });
 
   const startEdit = (score: (typeof scores)[0]) => {
     setEditingId(score.participationId);
     setEditValues({
-      result: score.result !== null ? String(score.result) : "",
+      total: score.total !== null ? String(score.total) : "",
       rank: score.rank !== null ? String(score.rank) : "",
-      notes: score.notes ?? "",
     });
   };
 
   const cancelEdit = () => setEditingId(null);
 
   const saveEdit = async (participationId: number) => {
-    await updateScore.mutateAsync({
-      participationId,
-      data: {
-        result: editValues.result !== "" ? Number(editValues.result) : null,
-        rank: editValues.rank !== "" ? Number(editValues.rank) : null,
-        notes: editValues.notes || null,
-      },
-    });
-    setEditingId(null);
+    try {
+      await updateScore.mutateAsync({
+        participationId,
+        data: {
+          total: editValues.total !== "" ? Number(editValues.total) : null,
+          rank: editValues.rank !== "" ? Number(editValues.rank) : null,
+        },
+      });
+      setEditingId(null);
+    } catch (err: any) {
+      console.log("CLIMBING ERROR:", err.response?.data || err);
+    }
   };
 
+  // Ordenar: primero los que tienen rank (por rank asc), luego los sin rank
   const sorted = [...scores].sort((a, b) => {
     if (a.rank === null && b.rank === null) return 0;
     if (a.rank === null) return 1;
@@ -78,28 +77,28 @@ export function ClimbingScoreTable({ phaseId }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b-2 border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700 uppercase text-xs tracking-wider">
-                    Pos
+                  <th className="px-4 py-3 text-left font-bold text-gray-700 uppercase text-xs tracking-wider w-12">
+                    N°
                   </th>
                   <th className="px-4 py-3 text-left font-bold text-gray-700 uppercase text-xs tracking-wider">
-                    Atleta
+                    Nombre
                   </th>
-                  <th className="px-4 py-3 text-center font-bold text-gray-700 uppercase text-xs tracking-wider">
-                    Resultado
+                  <th className="px-4 py-3 text-left font-bold text-gray-700 uppercase text-xs tracking-wider">
+                    Universidad
                   </th>
-                  <th className="px-4 py-3 text-center font-bold text-gray-700 uppercase text-xs tracking-wider">
-                    Pts. Ranking
+                  <th className="px-4 py-3 text-center font-bold text-gray-700 uppercase text-xs tracking-wider w-24">
+                    Posición
                   </th>
-                  <th className="px-4 py-3 text-center font-bold text-gray-700 uppercase text-xs tracking-wider">
-                    Notas
+                  <th className="px-4 py-3 text-center font-bold text-gray-700 uppercase text-xs tracking-wider w-28">
+                    Puntaje
                   </th>
-                  <th className="px-4 py-3 text-center font-bold text-gray-700 uppercase text-xs tracking-wider">
+                  <th className="px-4 py-3 text-center font-bold text-gray-700 uppercase text-xs tracking-wider w-20">
                     Acción
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {sorted.map((score) => {
+                {sorted.map((score, idx) => {
                   const isEditing = editingId === score.participationId;
                   return (
                     <tr
@@ -108,33 +107,12 @@ export function ClimbingScoreTable({ phaseId }: Props) {
                         isEditing ? "bg-emerald-50" : "hover:bg-gray-50"
                       }
                     >
-                      {/* Posición */}
-                      <td className="px-4 py-3">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min={1}
-                            className="w-16 border border-gray-300 rounded px-2 py-1 text-sm"
-                            value={editValues.rank}
-                            onChange={(e) =>
-                              setEditValues((v) => ({
-                                ...v,
-                                rank: e.target.value,
-                              }))
-                            }
-                            placeholder="Pos"
-                          />
-                        ) : (
-                          <Badge
-                            variant={score.rank ? "primary" : "default"}
-                            size="sm"
-                          >
-                            {score.rank !== null ? `${score.rank}°` : "—"}
-                          </Badge>
-                        )}
+                      {/* N° de fila */}
+                      <td className="px-4 py-3 text-gray-500 font-medium text-sm">
+                        {idx + 1}
                       </td>
 
-                      {/* Atleta */}
+                      {/* Nombre */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {score.participantPhoto ? (
@@ -148,70 +126,64 @@ export function ClimbingScoreTable({ phaseId }: Props) {
                               {score.participantName.charAt(0)}
                             </div>
                           )}
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              {score.participantName}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {score.institutionAbrev ??
-                                score.institution ??
-                                "—"}
-                            </p>
-                          </div>
+                          <p className="font-semibold text-gray-900">
+                            {score.participantName}
+                          </p>
                         </div>
                       </td>
 
-                      {/* Resultado */}
+                      {/* Universidad */}
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {score.institutionAbrev ?? score.institution ?? "—"}
+                      </td>
+
+                      {/* Posición */}
                       <td className="px-4 py-3 text-center">
                         {isEditing ? (
                           <input
                             type="number"
-                            step="0.001"
-                            className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-center"
-                            value={editValues.result}
+                            min={1}
+                            className="w-16 border border-gray-300 rounded px-2 py-1 text-sm text-center"
+                            value={editValues.rank}
                             onChange={(e) =>
                               setEditValues((v) => ({
                                 ...v,
-                                result: e.target.value,
+                                rank: e.target.value,
                               }))
                             }
-                            placeholder="0.000"
+                            placeholder="—"
                           />
                         ) : (
-                          <span className="font-semibold text-emerald-700">
-                            {score.result !== null ? score.result : "—"}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Puntos ranking */}
-                      <td className="px-4 py-3 text-center">
-                        {score.points !== null ? (
-                          <Badge variant="primary" className="font-bold">
-                            {score.points}
+                          <Badge
+                            variant={score.rank ? "primary" : "default"}
+                            size="sm"
+                          >
+                            {score.rank !== null ? `${score.rank}°` : "—"}
                           </Badge>
-                        ) : (
-                          <span className="text-gray-400">—</span>
                         )}
                       </td>
 
-                      {/* Notas */}
+                      {/* Puntaje */}
                       <td className="px-4 py-3 text-center">
                         {isEditing ? (
                           <input
-                            className="w-32 border border-gray-300 rounded px-2 py-1 text-sm"
-                            value={editValues.notes}
+                            type="number"
+                            step="0.01"
+                            className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-center"
+                            value={editValues.total}
                             onChange={(e) =>
                               setEditValues((v) => ({
                                 ...v,
-                                notes: e.target.value,
+                                total: e.target.value,
                               }))
                             }
-                            placeholder="Tops / Zonas..."
+                            placeholder="0.00"
                           />
                         ) : (
-                          <span className="text-xs text-gray-500">
-                            {score.notes ?? "—"}
+                          <span className="font-semibold text-emerald-700">
+                            {score.total !== null
+                              ? Number(score.total).toFixed(2)
+                              : "—"}
                           </span>
                         )}
                       </td>

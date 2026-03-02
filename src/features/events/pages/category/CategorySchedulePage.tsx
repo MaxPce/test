@@ -365,14 +365,177 @@ export function CategorySchedulePage() {
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
 
-  const isClimbing = () => {
-    const sn = eventCategory.category?.sport?.name?.toLowerCase() || "";
+  const isClimbing = () =>
+    sportName.includes("escalada") ||
+    sportName.includes("climbing") ||
+    sportName.includes("boulder");
+
+  if (isClimbing()) {
     return (
-      sn.includes("escalada") ||
-      sn.includes("climbing") ||
-      sn.includes("boulder")
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Escalada"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Fase
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Trophy}
+            title="No hay fases creadas"
+            description='Crea la primera fase para registrar resultados (ej: "Clasificatoria", "Final")'
+            action={{
+              label: "Crear Primera Fase",
+              onClick: () => setIsPhaseModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="space-y-8">
+            {/* Cards de fases */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {phases.map((phase) => {
+                const phaseTypeConfig = getPhaseTypeConfig(phase.type);
+                const Icon = phaseTypeConfig.icon;
+                return (
+                  <Card
+                    key={phase.phaseId}
+                    hover
+                    variant="elevated"
+                    padding="none"
+                    onClick={() =>
+                      setSelectedPhase(
+                        selectedPhase?.phaseId === phase.phaseId ? null : phase,
+                      )
+                    }
+                    className={`group cursor-pointer overflow-hidden transition-all ${
+                      selectedPhase?.phaseId === phase.phaseId
+                        ? "ring-2 ring-emerald-500 shadow-strong"
+                        : ""
+                    }`}
+                  >
+                    <div
+                      className={`relative h-20 bg-gradient-to-br from-emerald-600 to-teal-700 overflow-hidden`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      <div className="absolute top-3 left-4">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                          <Icon className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePhase(phase.phaseId);
+                        }}
+                        className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors text-sm"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <CardBody>
+                      <h4 className="text-base font-bold text-slate-900 mb-1 group-hover:text-emerald-600 transition-colors">
+                        {phase.name}
+                      </h4>
+                      <Badge variant="primary" size="sm">
+                        {phaseTypeConfig.label}
+                      </Badge>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Tabla de resultados de la fase seleccionada */}
+            {selectedPhase && (
+              <Card variant="elevated">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center">
+                        <Trophy className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          {selectedPhase.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<UserPlus className="h-4 w-4" />}
+                        onClick={() =>
+                          setIsGenerateWeightliftingModalOpen(true)
+                        }
+                      >
+                        Asignar atletas
+                      </Button>
+                      <button
+                        onClick={() => setSelectedPhase(null)}
+                        className="text-slate-400 hover:text-slate-600 text-sm"
+                      >
+                        × Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardBody className="p-0">
+                  <ClimbingScoreTable phaseId={selectedPhase.phaseId} />
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Modal crear fase */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Fase"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
+
+        {/* Modal asignar atletas */}
+        {selectedPhase && (
+          <GenerateWeightliftingModal
+            isOpen={isGenerateWeightliftingModalOpen}
+            onClose={() => setIsGenerateWeightliftingModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            registrations={eventCategory.registrations || []}
+            onGenerate={async (entries) => {
+              await initializeWeightliftingMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                entries,
+              });
+              setIsGenerateWeightliftingModalOpen(false);
+            }}
+            isLoading={initializeWeightliftingMutation.isPending}
+          />
+        )}
+      </div>
     );
-  };
+  }
 
   if (isTimedSport) {
     return (
@@ -908,16 +1071,13 @@ export function CategorySchedulePage() {
                   // ── Tiro Deportivo: tabla de series y totales ──────────────────────
                   <TiroDeportivoScheduleTable phaseId={selectedPhase.phaseId} />
                 ) : (getTaekwondoType() === "poomsae" ||
-                    getWushuType() === "taolu" ||
-                    isClimbing()) &&
+                    getWushuType() === "taolu") &&
                   selectedPhase.type !== "eliminacion" &&
                   selectedPhase.type !== "mejor_de_3" ? (
                   getTaekwondoType() === "poomsae" ? (
                     <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
-                  ) : getWushuType() === "taolu" ? (
-                    <WushuTaoluScoreTable phaseId={selectedPhase.phaseId} />
                   ) : (
-                    <ClimbingScoreTable phaseId={selectedPhase.phaseId} />
+                    <WushuTaoluScoreTable phaseId={selectedPhase.phaseId} />
                   )
                 ) : selectedPhase.type === "mejor_de_3" ? (
                   <BestOf3View
