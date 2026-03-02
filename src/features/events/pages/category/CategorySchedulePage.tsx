@@ -42,7 +42,7 @@ import { TiroDeportivoResultsTable } from "@/features/competitions/components/sh
 import { TiroDeportivoScheduleTable } from "@/features/competitions/components/shooting/TiroDeportivoScheduleTable";
 import { GenerateWeightliftingModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingModal";
 import { useInitializeWeightliftingPhase } from "@/features/competitions/api/weightlifting.mutations";
-
+import { ClimbingScoreTable } from "@/features/competitions/components/climbing/ClimbingScoreTable";
 
 import {
   useMatches,
@@ -97,10 +97,11 @@ export function CategorySchedulePage() {
     useState(false);
   const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
 
-  const [isGenerateWeightliftingModalOpen, setIsGenerateWeightliftingModalOpen] =
-    useState(false);
+  const [
+    isGenerateWeightliftingModalOpen,
+    setIsGenerateWeightliftingModalOpen,
+  ] = useState(false);
   const initializeWeightliftingMutation = useInitializeWeightliftingPhase();
-
 
   const initializeRoundRobinMutation = useInitializeRoundRobin();
   const updateStandingsMutation = useUpdateStandings();
@@ -364,6 +365,15 @@ export function CategorySchedulePage() {
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
 
+  const isClimbing = () => {
+    const sn = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sn.includes("escalada") ||
+      sn.includes("climbing") ||
+      sn.includes("boulder")
+    );
+  };
+
   if (isTimedSport) {
     return (
       <div className="space-y-6 animate-in">
@@ -519,6 +529,9 @@ export function CategorySchedulePage() {
     );
   }
 
+  console.log("isWeightlifting():", isWeightlifting());
+  console.log("isClimbing():", isClimbing());
+
   if (isWeightlifting()) {
     return (
       <div className="space-y-6 animate-in">
@@ -619,16 +632,16 @@ export function CategorySchedulePage() {
                         <h3 className="text-lg font-bold text-slate-900">
                           {selectedPhase.name}
                         </h3>
-                        
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      
                       <Button
                         variant="outline"
                         size="sm"
                         icon={<UserPlus className="h-4 w-4" />}
-                        onClick={() => setIsGenerateWeightliftingModalOpen(true)}
+                        onClick={() =>
+                          setIsGenerateWeightliftingModalOpen(true)
+                        }
                       >
                         Asignar atletas
                       </Button>
@@ -686,7 +699,6 @@ export function CategorySchedulePage() {
     );
   }
 
-
   return (
     <div className="space-y-6 animate-in">
       {/* Header */}
@@ -705,9 +717,7 @@ export function CategorySchedulePage() {
       />
 
       {phases.length === 0 ? (
-        <EmptyState
-          title="No hay fases creadas"
-        />
+        <EmptyState title="No hay fases creadas" />
       ) : (
         <>
           {/* Grid de Fases */}
@@ -823,14 +833,23 @@ export function CategorySchedulePage() {
                   {/* Acciones */}
                   <div className="flex flex-wrap gap-2">
                     {/* Generar Bracket → solo eliminacion sin partidos */}
-                    {selectedPhase.type === "eliminacion" && matches.length === 0 && (
-                      <Button variant="outline" size="sm" onClick={() => setIsGenerateBracketModalOpen(true)}>
-                        Generar Bracket
-                      </Button>
-                    )}
+                    {selectedPhase.type === "eliminacion" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsGenerateBracketModalOpen(true)}
+                        >
+                          Generar Bracket
+                        </Button>
+                      )}
 
                     {/* Generar Partidos → solo grupo, sin poomsae/taolu/tiro y sin partidos */}
-                    {!( getTaekwondoType() === "poomsae" || getWushuType() === "taolu" || isTiroDeportivo ) &&
+                    {!(
+                      getTaekwondoType() === "poomsae" ||
+                      getWushuType() === "taolu" ||
+                      isTiroDeportivo
+                    ) &&
                       selectedPhase.type === "grupo" &&
                       matches.length === 0 && (
                         <Button onClick={() => setIsGenerateModalOpen(true)}>
@@ -839,15 +858,25 @@ export function CategorySchedulePage() {
                       )}
 
                     {/* Generar Serie → mejor_de_3 sin partidos */}
-                    {selectedPhase.type === "mejor_de_3" && matches.length === 0 && (
-                      <Button variant="outline" size="sm" onClick={() => setIsGenerateBestOf3ModalOpen(true)}>
-                        Generar Serie
-                      </Button>
-                    )}
+                    {selectedPhase.type === "mejor_de_3" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsGenerateBestOf3ModalOpen(true)}
+                        >
+                          Generar Serie
+                        </Button>
+                      )}
 
                     {/* Nuevo Partido → para grupo y eliminacion, excluyendo poomsae/taolu/tiro */}
-                    {!( getTaekwondoType() === "poomsae" || getWushuType() === "taolu" || isTiroDeportivo ) &&
-                      ( selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion" ) && (
+                    {!(
+                      getTaekwondoType() === "poomsae" ||
+                      getWushuType() === "taolu" ||
+                      isTiroDeportivo
+                    ) &&
+                      (selectedPhase.type === "grupo" ||
+                        selectedPhase.type === "eliminacion") && (
                         <Button
                           size="sm"
                           variant="gradient"
@@ -858,18 +887,18 @@ export function CategorySchedulePage() {
                         </Button>
                       )}
                   </div>
-
                 </div>
               </CardHeader>
 
               <CardBody>
                 {(() => {
-                  console.log("isTiroDeportivo:", isTiroDeportivo);
-                  console.log("sportName:", sportName);
+                  console.log("isClimbing():", isClimbing());
+                  console.log("getTaekwondoType():", getTaekwondoType());
+                  console.log("getWushuType():", getWushuType());
                   console.log("selectedPhase.type:", selectedPhase.type);
-                  console.log("matches.length:", matches.length);
                   return null;
                 })()}
+
                 {matchesLoading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
@@ -879,13 +908,16 @@ export function CategorySchedulePage() {
                   // ── Tiro Deportivo: tabla de series y totales ──────────────────────
                   <TiroDeportivoScheduleTable phaseId={selectedPhase.phaseId} />
                 ) : (getTaekwondoType() === "poomsae" ||
-                    getWushuType() === "taolu") &&
+                    getWushuType() === "taolu" ||
+                    isClimbing()) &&
                   selectedPhase.type !== "eliminacion" &&
                   selectedPhase.type !== "mejor_de_3" ? (
                   getTaekwondoType() === "poomsae" ? (
                     <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
-                  ) : (
+                  ) : getWushuType() === "taolu" ? (
                     <WushuTaoluScoreTable phaseId={selectedPhase.phaseId} />
+                  ) : (
+                    <ClimbingScoreTable phaseId={selectedPhase.phaseId} />
                   )
                 ) : selectedPhase.type === "mejor_de_3" ? (
                   <BestOf3View
@@ -894,10 +926,7 @@ export function CategorySchedulePage() {
                     eventCategory={eventCategory}
                   />
                 ) : matches.length === 0 ? (
-                  <EmptyState
-                    title="No hay partidos"
-                    
-                  />
+                  <EmptyState title="No hay partidos" />
                 ) : (
                   <div className="space-y-4">
                     {matches.map((match) => {

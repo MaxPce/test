@@ -12,10 +12,13 @@ interface PoomsaeResultsTableProps {
   eventCategoryId: number;
 }
 
-export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProps) {
+export function PoomsaeResultsTable({
+  eventCategoryId,
+}: PoomsaeResultsTableProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
 
-  const { data: phases = [], isLoading: phasesLoading } = usePhases(eventCategoryId);
+  const { data: phases = [], isLoading: phasesLoading } =
+    usePhases(eventCategoryId);
 
   const groupPhases = phases.filter((p) => p.type === "grupo");
   const effectivePhaseId =
@@ -64,11 +67,26 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
   const getMedalColor = (position: number) => {
     switch (position) {
       case 1:
-        return { bg: "bg-yellow-50", border: "border-yellow-400", text: "text-yellow-700", icon: "🥇" };
+        return {
+          bg: "bg-yellow-50",
+          border: "border-yellow-400",
+          text: "text-yellow-700",
+          icon: "🥇",
+        };
       case 2:
-        return { bg: "bg-gray-50", border: "border-gray-400", text: "text-gray-700", icon: "🥈" };
+        return {
+          bg: "bg-gray-50",
+          border: "border-gray-400",
+          text: "text-gray-700",
+          icon: "🥈",
+        };
       case 3:
-        return { bg: "bg-orange-50", border: "border-orange-400", text: "text-orange-700", icon: "🥉" };
+        return {
+          bg: "bg-orange-50",
+          border: "border-orange-400",
+          text: "text-orange-700",
+          icon: "🥉",
+        };
       default:
         return null;
     }
@@ -78,14 +96,8 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-            <Star className="h-8 w-8" />
-          </div>
           <div>
-            <h3 className="text-2xl font-bold">Resultados de Poomsae</h3>
-            <p className="text-purple-100 mt-1">
-              Calificaciones de Precisión y Presentación
-            </p>
+            <h3 className="text-2xl font-bold">Resultados Poomsae</h3>
           </div>
         </div>
       </div>
@@ -115,7 +127,9 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
                 <h4 className="font-bold text-gray-900 text-lg">
                   {selectedPhase.name}
                 </h4>
-                <Badge variant="primary">{standings.length} participantes</Badge>
+                <Badge variant="primary">
+                  {standings.length} participantes
+                </Badge>
               </div>
             </CardHeader>
           )}
@@ -129,7 +143,8 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
               <div className="text-center py-12 text-gray-500">
                 <p className="font-medium">No hay participantes en esta fase</p>
                 <p className="text-sm mt-1">
-                  Los participantes aparecerán cuando se inscriban en la categoría
+                  Los participantes aparecerán cuando se inscriban en la
+                  categoría
                 </p>
               </div>
             ) : (
@@ -163,7 +178,9 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
                       {standings.map((score: any, index: number) => {
                         const position = index + 1;
                         const isMedalist = allScoresRegistered && position <= 3;
-                        const medalColor = isMedalist ? getMedalColor(position) : null;
+                        const medalColor = isMedalist
+                          ? getMedalColor(position)
+                          : null;
 
                         return (
                           <tr
@@ -177,7 +194,9 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
                             <td className="px-4 py-4">
                               <div className="flex items-center gap-2">
                                 {isMedalist && (
-                                  <span className="text-xl">{medalColor?.icon}</span>
+                                  <span className="text-xl">
+                                    {medalColor?.icon}
+                                  </span>
                                 )}
                                 <Badge
                                   variant={isMedalist ? "primary" : "default"}
@@ -197,9 +216,11 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
                                     className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
                                     onError={(e) => {
                                       e.currentTarget.style.display = "none";
-                                      const parent = e.currentTarget.parentElement;
+                                      const parent =
+                                        e.currentTarget.parentElement;
                                       if (parent) {
-                                        const placeholder = document.createElement("div");
+                                        const placeholder =
+                                          document.createElement("div");
                                         placeholder.className =
                                           "w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold border-2 border-white shadow";
                                         placeholder.textContent =
@@ -226,11 +247,14 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
                                     <div className="flex items-center gap-2 mt-0.5">
                                       {score.institutionLogo && (
                                         <img
-                                          src={getImageUrl(score.institutionLogo)}
+                                          src={getImageUrl(
+                                            score.institutionLogo,
+                                          )}
                                           alt={score.institution}
                                           className="h-4 w-4 object-contain"
                                           onError={(e) => {
-                                            e.currentTarget.style.display = "none";
+                                            e.currentTarget.style.display =
+                                              "none";
                                           }}
                                         />
                                       )}
@@ -244,7 +268,9 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
                             </td>
                             <td className="px-4 py-4 text-center">
                               <span className="text-sm font-semibold text-purple-700">
-                                {score.accuracy > 0 ? score.accuracy.toFixed(2) : "—"}
+                                {score.accuracy > 0
+                                  ? score.accuracy.toFixed(2)
+                                  : "—"}
                               </span>
                             </td>
                             <td className="px-4 py-4 text-center">
@@ -286,7 +312,8 @@ export function PoomsaeResultsTable({ eventCategoryId }: PoomsaeResultsTableProp
                       <strong>Presentation:</strong> Presentación y ejecución
                     </span>
                     <span>
-                      <strong>Total:</strong> Puntuación final (Accuracy + Presentation)
+                      <strong>Total:</strong> Puntuación final (Accuracy +
+                      Presentation)
                     </span>
                   </div>
                 </div>

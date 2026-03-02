@@ -23,6 +23,7 @@ import { WeightliftingResultsTable } from "@/features/competitions/components/we
 import { TiroDeportivoStandingsTable } from "@/features/competitions/components/shooting/TiroDeportivoStandingsTable";
 import { PhaseStandingsBlock } from "@/features/competitions/components/PhaseStandingsBlock";
 import { TableTennisPhaseBlock } from "@/features/competitions/components/table-tennis/TableTennisPhaseBlock";
+import { ClimbingResultsTable } from "@/features/competitions/components/climbing/ClimbingResultsTable";
 import type { EventCategory } from "../../types";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -99,6 +100,11 @@ export function CategoryStandingsPage() {
     sportName.includes("halterofilia") ||
     sportName.includes("weightlifting") ||
     sportName.includes("levantamiento de pesas");
+
+  const isClimbing =
+    sportName.includes("escalada") ||
+    sportName.includes("climbing") ||
+    sportName.includes("boulder");
 
   // ── Config de tabla por deporte ────────────────────────────────────────────
 
@@ -615,6 +621,10 @@ export function CategoryStandingsPage() {
                 <TableTennisPhaseBlock key={phase.phaseId} phase={phase} />
               ))}
             </div>
+          ) : isClimbing ? (
+            <ClimbingResultsTable
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
           ) : (
             renderGroupStandings()
           )}
