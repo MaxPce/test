@@ -7,6 +7,7 @@ import {
   Timer,
   Trophy,
   Users,
+  
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -19,6 +20,7 @@ import {
   useSismasterEventCategories,
 } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
+import { Star } from "lucide-react";
 
 export function CategoryDetailLayout() {
   const { eventId, externalEventId, sportId, categoryId } = useParams<{
@@ -35,7 +37,6 @@ export function CategoryDetailLayout() {
     : undefined;
   const isExternalEvent = !!externalEventId;
 
-  // ✅ Usar el hook correcto según el tipo de evento
   const { data: localEventCategories = [], isLoading: localLoading } =
     useEventCategories(
       { eventId: eventIdNum },
@@ -152,6 +153,11 @@ export function CategoryDetailLayout() {
       to: `${baseUrl}/standings`,
       icon: <BarChart3 className="h-4 w-4" />,
     },
+    {
+      label: "Destacados",             
+      to: `${baseUrl}/featured`,
+      icon: <Star className="h-4 w-4" />,
+    },
     // ...(isTeam
     //   ? [
     //       {
@@ -169,7 +175,7 @@ export function CategoryDetailLayout() {
     <div className="space-y-6 animate-in">
       {/* PageHeader con botón de volver */}
       <PageHeader
-        title={`${eventCategory.category?.name || "Categoría"} ${isExternalEvent ? "(Sismaster)" : ""}`}
+        title={`${eventCategory.category?.name || "Categoría"} ${isExternalEvent ? "(Sisdeu)" : ""}`}
         showBack
         onBack={() => navigate(backPath)}
       />

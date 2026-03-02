@@ -462,7 +462,7 @@ function MatchCard({
       if (score !== null && score !== undefined) {
         return String(Math.floor(Number(score)));
       }
-      return "-";
+      return "";
     }
 
     if (score === null || score === undefined) return "";

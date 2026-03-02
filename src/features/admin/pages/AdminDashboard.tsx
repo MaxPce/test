@@ -23,7 +23,7 @@ export function AdminDashboard() {
   // Datos de ejemplo - estos vendrían de tu API
   const stats = [
     {
-      title: "Eventos Activos",
+      title: "Evento Activos",
       value: "12",
       icon: Calendar,
       trend: { value: 8, isPositive: true },
@@ -145,142 +145,18 @@ export function AdminDashboard() {
             </div>
           </div>
           <p className="text-white/90 text-lg max-w-2xl mt-4">
-            Bienvenido al centro de administración. Gestione eventos, atletas e
-            instituciones desde aquí.
+            Bienvenido al centro de administración. Gestion de formatos deportivoss.
           </p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <StatsCard key={idx} {...stat} />
-        ))}
-      </div>
+      
 
-      {/* Quick Actions */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Acciones Rápidas
-            </h2>
-            <p className="text-slate-600 text-sm mt-1">
-              Accesos directos a funciones principales
-            </p>
-          </div>
-        </div>
+      
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action, idx) => (
-            <Link key={idx} to={action.href}>
-              <QuickActionCard {...action} />
-            </Link>
-          ))}
-        </div>
-      </div>
+      
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Events */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">
-                    Eventos Recientes
-                  </h3>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Competencias activas y próximas
-                  </p>
-                </div>
-                <Link
-                  to="/admin/events"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
-                >
-                  Ver todos
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-3">
-                {recentEvents.map((event, idx) => (
-                  <EventCard key={idx} {...event} />
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-blue-600" />
-                <h3 className="text-xl font-bold text-slate-900">
-                  Actividad Reciente
-                </h3>
-              </div>
-            </CardHeader>
-            <CardBody>
-              <div className="space-y-4">
-                {recentActivity.map((activity, idx) => (
-                  <ActivityItem key={idx} {...activity} />
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
-
-      {/* Performance Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GradientCard
-          title="Rendimiento del Sistema"
-          description="Estadísticas y métricas de uso de la plataforma"
-          icon={BarChart3}
-          gradient="blue"
-        >
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
-              <p className="text-white/80 text-sm font-medium mb-1">
-                Eventos este mes
-              </p>
-              <p className="text-2xl font-bold text-white">24</p>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
-              <p className="text-white/80 text-sm font-medium mb-1">
-                Nuevos atletas
-              </p>
-              <p className="text-2xl font-bold text-white">156</p>
-            </div>
-          </div>
-        </GradientCard>
-
-        <GradientCard
-          title="Alertas y Notificaciones"
-          description="Información importante que requiere atención"
-          icon={AlertCircle}
-          gradient="amber"
-        >
-          <div className="space-y-3 mt-4">
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-              <p className="text-white text-sm font-medium flex-1">
-                3 eventos pendientes de aprobación
-              </p>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-              <p className="text-white text-sm font-medium flex-1">
-                12 inscripciones por validar
-              </p>
-            </div>
-          </div>
-        </GradientCard>
-      </div>
+      
     </div>
   );
 }

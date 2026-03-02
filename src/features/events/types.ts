@@ -95,3 +95,29 @@ export interface BulkRegistrationData {
   athleteIds?: number[];
   external_athlete_ids?: number[];
 }
+
+export interface FeaturedAthlete {
+  featuredAthleteId: number;
+  eventCategoryId: number;
+  registrationId: number;
+  reason: string;
+  createdAt: string;
+  updatedAt: string;
+  registration?: {
+    registrationId: number;
+    athleteId?: number;
+    teamId?: number;
+    athlete?: Athlete;
+    team?: Team;
+  };
+}
+
+export interface CreateFeaturedAthleteData {
+  eventCategoryId: number;
+  registrationId: number;
+  reason: string;
+}
+
+export interface UpdateFeaturedAthleteData {
+  reason?: string;
+}

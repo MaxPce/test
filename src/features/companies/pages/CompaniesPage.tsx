@@ -151,21 +151,7 @@ export default function CompaniesPage() {
         </Button> */}
       </div>
 
-      {/* ── Buscador ── */}
-      <Card variant="glass">
-        <CardBody>
-          <div className="relative">
-            <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre, RUC o dirección..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white/80 text-sm shadow-soft
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
-          </div>
-        </CardBody>
-      </Card>
+      
 
       {/* ── Skeletons ── */}
       {isLoading && (
@@ -271,15 +257,7 @@ export default function CompaniesPage() {
                     </div>
                   )}
 
-                  {/* Badge prefijo Sismaster */}
-                  {c.sismasterPrefix && (
-                    <div className="absolute top-3 left-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600/90 backdrop-blur-sm text-white text-xs font-bold">
-                        <Tag className="h-3 w-3" />
-                        {c.sismasterPrefix}
-                      </span>
-                    </div>
-                  )}
+                  
                 </div>
 
                 {/* Franja degradada azul-púrpura debajo del banner */}

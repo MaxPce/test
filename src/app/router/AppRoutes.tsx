@@ -18,6 +18,8 @@ import { CategoryInscriptionsPage } from "@/features/events/pages/category/Categ
 import { CategorySchedulePage } from "@/features/events/pages/category/CategorySchedulePage";
 import { CategoryStandingsPage } from "@/features/events/pages/category/CategoryStandingsPage";
 import { CategoryInstitutionsPage } from "@/features/events/pages/category/CategoryInstitutionsPage";
+import { FeaturedAthletesPage } from "@/features/events/pages/FeaturedAthletesPage";
+
 import { AddSportToEventPage } from "@/features/events/pages/AddSportToEventPage";
 
 // Sports (Gestión Global)
@@ -82,6 +84,7 @@ export function AppRoutes() {
                 element={<CategoryInstitutionsPage />}
               />
               <Route path="results" element={<SwimmingResultsPage />} />
+              <Route path="featured" element={<FeaturedAthletesPage />} />
             </Route>
           </Route>
         </Route>
@@ -112,6 +115,7 @@ export function AppRoutes() {
             <Route path="standings" element={<CategoryStandingsPage />} />
             <Route path="institutions" element={<CategoryInstitutionsPage />} />
             <Route path="results" element={<SwimmingResultsPage />} />
+            <Route path="featured" element={<FeaturedAthletesPage />} />
           </Route>
         </Route>
         {/* ==================== DEPORTES (Gestión Global) ==================== */}
