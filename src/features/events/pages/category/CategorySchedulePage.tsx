@@ -392,15 +392,7 @@ export function CategorySchedulePage() {
             <div className="animate-spin w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full" />
           </div>
         ) : phases.length === 0 ? (
-          <EmptyState
-            icon={Trophy}
-            title="No hay fases creadas"
-            description='Crea la primera fase para registrar resultados (ej: "Clasificatoria", "Final")'
-            action={{
-              label: "Crear Primera Fase",
-              onClick: () => setIsPhaseModalOpen(true),
-            }}
-          />
+          <EmptyState title="No hay fases creadas" />
         ) : (
           <div className="space-y-8">
             {/* Cards de fases */}
@@ -717,15 +709,7 @@ export function CategorySchedulePage() {
             <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full" />
           </div>
         ) : phases.length === 0 ? (
-          <EmptyState
-            icon={Trophy}
-            title="No hay fases creadas"
-            description='Crea la primera fase para registrar intentos (ej: "Grupo A", "Final")'
-            action={{
-              label: "Crear Primera Fase",
-              onClick: () => setIsPhaseModalOpen(true),
-            }}
-          />
+          <EmptyState title="No hay fases creadas" />
         ) : (
           <div className="space-y-8">
             {/* Cards de fases */}

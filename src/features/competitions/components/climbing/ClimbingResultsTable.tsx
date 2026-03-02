@@ -113,24 +113,17 @@ export function ClimbingResultsTable({
               </h3>
               <p className="text-emerald-100 text-sm mt-0.5">
                 {scores.length > 0
-                  ? `${scores.length} atleta${scores.length !== 1 ? "s" : ""} registrado${scores.length !== 1 ? "s" : ""}`
-                  : "Ranking individual"}
+                  ? `${scores.length} participación${
+                      scores.length !== 1 ? "es" : ""
+                    }`
+                  : "Ranking"}
               </p>
             </div>
           </div>
-          {allRanked && (
-            <Badge
-              variant="success"
-              size="sm"
-              className="bg-white/20 text-white border-white/30"
-            >
-              Resultados finales
-            </Badge>
-          )}
         </div>
       </div>
 
-      {/* Selector de fase (solo si hay más de una) */}
+      {/* Selector de fase */}
       {groupPhases.length > 1 && (
         <Card>
           <CardBody className="py-4">
@@ -155,9 +148,10 @@ export function ClimbingResultsTable({
           <CardHeader>
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-gray-900 text-lg">
-                Ranking Individual
+                Ranking{" "}
+                {/** se usa la misma tabla para individuales o equipos */}
               </h4>
-              <Badge variant="primary">{scores.length} atletas</Badge>
+              <Badge variant="primary">{scores.length} filas</Badge>
             </div>
           </CardHeader>
           <CardBody className="p-0">
@@ -168,7 +162,7 @@ export function ClimbingResultsTable({
             ) : scores.length === 0 ? (
               <div className="text-center py-16 text-gray-500">
                 <Mountain className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="font-medium">No hay participantes en esta fase</p>
+                <p className="font-medium">No hay resultados en esta fase</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -178,12 +172,17 @@ export function ClimbingResultsTable({
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-24">
                         Posición
                       </th>
+                      {/* Para equipos, solo queremos universidad → esta columna será “Equipo / Universidad” */}
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                        Atleta
+                        {/** Cambia el label según si es equipo o atleta; tomamos el primero como referencia */}
+                        {scores[0]?.isTeam ? "Equipo / Universidad" : "Atleta"}
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                        Universidad
-                      </th>
+                      {/* Universidad solo para individuales, para equipos ya va en la columna anterior */}
+                      {!scores[0]?.isTeam && (
+                        <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                          Universidad
+                        </th>
+                      )}
                       <th className="px-6 py-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider w-36">
                         Puntaje
                       </th>
@@ -246,30 +245,65 @@ export function ClimbingResultsTable({
                             </div>
                           </td>
 
-                          {/* Atleta */}
+                          {/* Columna principal: 
+                              - Si es equipo: mostrar institución + (opcional) nombre del equipo en la misma línea
+                              - Si es individual: nombre del atleta y avatar */}
                           <td className="px-6 py-5">
-                            <div className="flex items-center gap-3">
-                              {score.participantPhoto ? (
-                                <img
-                                  src={getImageUrl(score.participantPhoto)}
-                                  alt={score.participantName}
-                                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                  {score.participantName.charAt(0)}
+                            {score.isTeam ? (
+                              <div className="flex items-center gap-3">
+                                {/** Logo de la universidad si existe */}
+                                {score.institutionAbrev || score.institution ? (
+                                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700 font-bold text-sm">
+                                    {(
+                                      score.institutionAbrev ??
+                                      score.institution ??
+                                      "?"
+                                    ).charAt(0)}
+                                  </div>
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
+                                    <Mountain className="h-5 w-5 text-slate-400" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-semibold text-gray-900">
+                                    {score.institutionAbrev ??
+                                      score.institution ??
+                                      "Equipo"}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {score.participantName}
+                                  </p>
                                 </div>
-                              )}
-                              <p className="font-semibold text-gray-900">
-                                {score.participantName}
-                              </p>
-                            </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                {score.participantPhoto ? (
+                                  <img
+                                    src={getImageUrl(score.participantPhoto)}
+                                    alt={score.participantName}
+                                    className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                    {score.participantName.charAt(0)}
+                                  </div>
+                                )}
+                                <p className="font-semibold text-gray-900">
+                                  {score.participantName}
+                                </p>
+                              </div>
+                            )}
                           </td>
 
-                          {/* Universidad */}
-                          <td className="px-6 py-5 text-sm text-gray-600">
-                            {score.institutionAbrev ?? score.institution ?? "—"}
-                          </td>
+                          {/* Universidad separada solo para individuales */}
+                          {!score.isTeam && (
+                            <td className="px-6 py-5 text-sm text-gray-600">
+                              {score.institutionAbrev ??
+                                score.institution ??
+                                "—"}
+                            </td>
+                          )}
 
                           {/* Puntaje */}
                           <td className="px-6 py-5 text-center">
