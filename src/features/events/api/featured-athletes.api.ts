@@ -3,6 +3,7 @@ import type {
   FeaturedAthlete,
   CreateFeaturedAthleteData,
   UpdateFeaturedAthleteData,
+  UpsertFeaturedAthleteByPhasePayload,
 } from '../types';
 
 export const featuredAthletesApi = {
@@ -21,4 +22,21 @@ export const featuredAthletesApi = {
 
   remove: (id: number) =>
     apiClient.delete(`/featured-athletes/${id}`).then((r) => r.data),
+
+  getByPhase: async (phaseId: number): Promise<FeaturedAthlete[]> => {
+    const { data } = await apiClient.get<FeaturedAthlete[]>(
+        `/featured-athletes/phase/${phaseId}`,
+    );
+    return data;
+    },
+
+    upsertByPhase: async (
+    payload: UpsertFeaturedAthleteByPhasePayload,
+    ): Promise<FeaturedAthlete> => {
+    const { data } = await apiClient.post<FeaturedAthlete>(
+        '/featured-athletes/phase',
+        payload,
+    );
+    return data;
+    },
 };

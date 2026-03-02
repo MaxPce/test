@@ -101,6 +101,7 @@ export interface FeaturedAthlete {
   eventCategoryId: number;
   registrationId: number;
   reason: string;
+  phaseId: number | null;
   createdAt: string;
   updatedAt: string;
   registration?: {
@@ -120,4 +121,11 @@ export interface CreateFeaturedAthleteData {
 
 export interface UpdateFeaturedAthleteData {
   reason?: string;
+}
+
+export interface UpsertFeaturedAthleteByPhasePayload {
+  phaseId:         number;
+  eventCategoryId: number;
+  registrationId:  number;
+  reason?:         string;
 }

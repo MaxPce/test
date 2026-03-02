@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { featuredAthletesApi } from './featured-athletes.api';
+import type { FeaturedAthlete } from '../types';
 
 export const featuredAthletesKeys = {
   byCategory: (eventCategoryId: number) =>
@@ -13,3 +14,12 @@ export const useFeaturedAthletesByCategory = (eventCategoryId: number) => {
     enabled: !!eventCategoryId,
   });
 };
+
+export function useFeaturedAthletesByPhase(phaseId: number | null) {
+  return useQuery<FeaturedAthlete[]>({
+    queryKey: ['featured-athletes', 'phase', phaseId],
+    queryFn: () => featuredAthletesApi.getByPhase(phaseId!),
+    enabled: phaseId !== null && phaseId > 0,
+  });
+}
+

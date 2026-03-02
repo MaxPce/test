@@ -24,6 +24,7 @@ import { TiroDeportivoStandingsTable } from "@/features/competitions/components/
 import { PhaseStandingsBlock } from "@/features/competitions/components/PhaseStandingsBlock";
 import { TableTennisPhaseBlock } from "@/features/competitions/components/table-tennis/TableTennisPhaseBlock";
 import { ClimbingResultsTable } from "@/features/competitions/components/climbing/ClimbingResultsTable";
+import { PhaseFeaturedAthlete } from '@/features/events/components/PhaseFeaturedAthlete';
 import type { EventCategory } from "../../types";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -485,6 +486,10 @@ export function CategoryStandingsPage() {
             phaseId={bestOf3Phase.phaseId}
             eventCategory={eventCategory}
           />
+          <PhaseFeaturedAthlete
+            phaseId={bestOf3Phase.phaseId}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
         </div>
       ))}
 
@@ -499,6 +504,10 @@ export function CategoryStandingsPage() {
             </div>
           )}
           {renderBracketWithToggle(eliminationPhase)}
+          <PhaseFeaturedAthlete
+            phaseId={eliminationPhase.phaseId}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
         </div>
       )}
 
@@ -516,31 +525,35 @@ export function CategoryStandingsPage() {
           {isTiroDeportivo ? (
             <div className="space-y-4">
               {groupPhases.map((phase) => (
-                <TiroDeportivoStandingsTable
-                  key={phase.phaseId}
-                  phaseId={phase.phaseId}
-                  phaseName={phase.name}
-                />
+                <div key={phase.phaseId}>
+                  <TiroDeportivoStandingsTable phaseId={phase.phaseId} phaseName={phase.name} />
+                  <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                </div>
               ))}
             </div>
           ) : isWeightlifting ? (
             <div className="space-y-4">
               {groupPhases.map((phase) => (
-                <WeightliftingResultsTable
-                  key={phase.phaseId}
-                  phaseId={phase.phaseId}
-                  phaseName={phase.name}
-                />
+                <div key={phase.phaseId}>
+                  <WeightliftingResultsTable phaseId={phase.phaseId} phaseName={phase.name} />
+                  <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                </div>
               ))}
             </div>
           ) : isTaekwondoPoomsae ? (
-            <PoomsaeResultsTable
-              eventCategoryId={eventCategory.eventCategoryId}
-            />
+            <>
+              <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+              {groupPhases[0] && (
+                <PhaseFeaturedAthlete phaseId={groupPhases[0].phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+              )}
+            </>
           ) : isWushuTaolu ? (
-            <WushuTaoluResultsTable
-              eventCategoryId={eventCategory.eventCategoryId}
-            />
+            <>
+              <WushuTaoluResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+              {groupPhases[0] && (
+                <PhaseFeaturedAthlete phaseId={groupPhases[0].phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+              )}
+            </>
           ) : isWrestling ? (
             <div className="space-y-6">
               {/* Header Wrestling con tabs */}
@@ -593,38 +606,42 @@ export function CategoryStandingsPage() {
 
               {wrestlingView === "results" &&
                 groupPhases.map((phase) => (
-                  <WrestlingResultsTable
-                    key={phase.phaseId}
-                    phaseId={phase.phaseId}
-                    title={phase.name}
-                    categoryLabel={eventCategory?.category?.name}
-                  />
+                  <div key={phase.phaseId}>
+                    <WrestlingResultsTable phaseId={phase.phaseId} title={phase.name} categoryLabel={eventCategory?.category?.name} />
+                    <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                  </div>
                 ))}
               {wrestlingView === "bracket" &&
                 groupPhases.map((phase) => (
-                  <WrestlingBracket
-                    key={phase.phaseId}
-                    phaseId={phase.phaseId}
-                  />
+                  <div key={phase.phaseId}>
+                    <WrestlingBracket phaseId={phase.phaseId} />
+                    <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                  </div>
                 ))}
               {wrestlingView === "ranking" &&
                 groupPhases.map((phase) => (
-                  <WrestlingRanking
-                    key={phase.phaseId}
-                    phaseId={phase.phaseId}
-                  />
+                  <div key={phase.phaseId}>
+                    <WrestlingRanking phaseId={phase.phaseId} />
+                    <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                  </div>
                 ))}
             </div>
           ) : isTableTennis ? (
             <div className="space-y-4">
               {groupPhases.map((phase) => (
-                <TableTennisPhaseBlock key={phase.phaseId} phase={phase} />
+                <div key={phase.phaseId}>
+                  <TableTennisPhaseBlock phase={phase} />
+                  <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                </div>
               ))}
             </div>
           ) : isClimbing ? (
-            <ClimbingResultsTable
-              eventCategoryId={eventCategory.eventCategoryId}
-            />
+            <>
+              <ClimbingResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+              {groupPhases[0] && (
+                <PhaseFeaturedAthlete phaseId={groupPhases[0].phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+              )}
+            </>
           ) : (
             renderGroupStandings()
           )}
