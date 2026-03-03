@@ -1,32 +1,32 @@
-// src/features/events/components/PhaseFeaturedAthlete.tsx
 import { Star } from 'lucide-react';
 import { useFeaturedAthletesByPhase } from '@/features/events/api/featured-athletes.queries';
-import { usePhaseRegistrations }       from '@/features/competitions/api/phaseRegistrations.queries';
 
 interface Props {
   phaseId:         number;
-  eventCategoryId: number; // se mantiene en la firma para no tocar CategoryStandingsPage
+  eventCategoryId: number;
 }
 
 function getAthleteName(registration: any): string {
-  const a = registration?.athlete;
+  if (!registration) return '—';
+  const a = registration.athlete;
   if (a) {
     const full = [a.firstName, a.lastName].filter(Boolean).join(' ');
     return full || a.name || `#${registration.registrationId}`;
   }
-  return registration?.team?.name ?? `Inscripción #${registration?.registrationId ?? '?'}`;
+  return registration.team?.name ?? `Inscripción #${registration.registrationId ?? '?'}`;
 }
 
 export function PhaseFeaturedAthlete({ phaseId }: Props) {
+  // ← Ya no necesitamos usePhaseRegistrations para nada
   const { data: featuredList = [], isLoading } = useFeaturedAthletesByPhase(phaseId);
-  const { data: phaseRegs    = [] }            = usePhaseRegistrations(phaseId);
 
-  // ← Si no hay destacado asignado, no renderiza NADA
   if (isLoading || featuredList.length === 0) return null;
 
-  const current     = featuredList[0];
-  const athleteReg  = phaseRegs.find((pr) => pr.registrationId === current.registrationId);
-  const athleteName = getAthleteName(athleteReg?.registration);
+  const current = featuredList[0];
+
+  // ✅ FIX: usar current.registration directamente
+  //         el backend ya lo carga con registration.athlete
+  const athleteName = getAthleteName(current.registration);
 
   return (
     <div className="flex items-center gap-2 bg-amber-50 border border-amber-200

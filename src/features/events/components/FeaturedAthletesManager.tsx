@@ -14,13 +14,53 @@ import {
 } from '../api/featured-athletes.mutations';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Sub-componente: fila de gestión de destacado por fase
-// (necesita ser componente separado para poder usar hooks por cada fase)
+// Normalización: unifica PhaseRegistration[] y Registration[] en una sola forma
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface PhaseRowProps {
-  phase: { phaseId: number; name: string; type: string };
-  eventCategoryId: number;
+interface NormalizedReg {
+  key: number;
+  registrationId: number;
+  registration: any;
+}
+
+function toNormalizedRegs(
+  phaseRegs: any[],
+  fallback: any[],
+): NormalizedReg[] {
+  // Si la fase tiene registrations asignadas, usarlas
+  if (phaseRegs.length > 0) {
+    return phaseRegs.map((pr) => ({
+      key:            pr.phaseRegistrationId,
+      registrationId: pr.registrationId,
+      registration:   pr.registration,
+    }));
+  }
+  // Si no, usar todas las registrations de la categoría como fallback
+  return fallback.map((reg) => ({
+    key:            reg.registrationId,
+    registrationId: reg.registrationId,
+    registration:   reg,
+  }));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper para mostrar el nombre de un atleta/equipo dado su Registration
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getNameFromRegistration(registration: any): string {
+  if (!registration) return '—';
+  const a = registration.athlete;
+  if (a) {
+    // Soportar tanto firstName+lastName como campo name único
+    if (a.firstName) {
+      return `${a.firstName}${a.lastName ? ' ' + a.lastName : ''}`.trim();
+    }
+    if (a.name) return a.name;
+    return `#${registration.registrationId}`;
+  }
+  const t = registration.team;
+  if (t) return t.name ?? `#${registration.registrationId}`;
+  return `Inscripción #${registration?.registrationId ?? '?'}`;
 }
 
 const phaseTypeLabel: Record<string, string> = {
@@ -29,15 +69,17 @@ const phaseTypeLabel: Record<string, string> = {
   mejor_de_3:  'Mejor de 3',
 };
 
-function getNameFromRegistration(registration: any): string {
-  const a = registration?.athlete;
-  if (a) return [a.firstName, a.lastName, a.name].filter(Boolean)[0] ?? `#${registration.registrationId}`;
-  const t = registration?.team;
-  if (t) return t.name ?? `#${registration.registrationId}`;
-  return `Inscripción #${registration?.registrationId ?? '?'}`;
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-componente: fila de gestión de destacado por fase
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PhaseRowProps {
+  phase:                   { phaseId: number; name: string; type: string };
+  eventCategoryId:         number;
+  fallbackRegistrations:   any[];  // ← registrations de la categoría completa
 }
 
-function PhaseFeaturedAthleteRow({ phase, eventCategoryId }: PhaseRowProps) {
+function PhaseFeaturedAthleteRow({ phase, eventCategoryId, fallbackRegistrations }: PhaseRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [regId,     setRegId]     = useState('');
   const [reason,    setReason]    = useState('');
@@ -47,9 +89,15 @@ function PhaseFeaturedAthleteRow({ phase, eventCategoryId }: PhaseRowProps) {
   const upsert = useUpsertFeaturedAthleteByPhase();
   const remove = useDeleteFeaturedAthleteByPhase(phase.phaseId);
 
-  const current    = featuredList[0] ?? null;
-  const athleteReg = current
-    ? phaseRegs.find((pr) => pr.registrationId === current.registrationId)
+  // ← FIX #1: Si la fase no tiene registrations asignadas,
+  //           usar las registrations de la categoría como fallback
+  const normalizedRegs = toNormalizedRegs(phaseRegs, fallbackRegistrations);
+
+  const current = featuredList[0] ?? null;
+
+  // ← FIX #2: Buscar en normalizedRegs (no en phaseRegs vacío)
+  const currentRegistration = current
+    ? normalizedRegs.find((r) => r.registrationId === current.registrationId)?.registration ?? null
     : null;
 
   const handleOpenEdit = () => {
@@ -103,8 +151,9 @@ function PhaseFeaturedAthleteRow({ phase, eventCategoryId }: PhaseRowProps) {
         <div className="flex items-center justify-between bg-amber-50
                         border border-amber-200 rounded-lg px-3 py-2">
           <div className="min-w-0">
+            {/* ← FIX #2: Ahora usa currentRegistration en lugar de athleteReg?.registration */}
             <p className="text-sm font-medium text-amber-900 truncate">
-              ⭐ {getNameFromRegistration(athleteReg?.registration)}
+              ⭐ {getNameFromRegistration(currentRegistration)}
             </p>
             {current.reason && (
               <p className="text-xs text-amber-700 mt-0.5 truncate max-w-xs">
@@ -133,9 +182,10 @@ function PhaseFeaturedAthleteRow({ phase, eventCategoryId }: PhaseRowProps) {
                        focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
             <option value="">— Seleccionar atleta —</option>
-            {phaseRegs.map((pr) => (
-              <option key={pr.phaseRegistrationId} value={String(pr.registrationId)}>
-                {getNameFromRegistration(pr.registration)}
+            {/* ← FIX #1: Ahora usa normalizedRegs (nunca vacío si hay inscritos) */}
+            {normalizedRegs.map((nr) => (
+              <option key={nr.key} value={String(nr.registrationId)}>
+                {getNameFromRegistration(nr.registration)}
               </option>
             ))}
           </select>
@@ -295,6 +345,7 @@ export function FeaturedAthletesManager({ eventCategoryId }: Props) {
                 key={phase.phaseId}
                 phase={phase}
                 eventCategoryId={eventCategoryId}
+                fallbackRegistrations={registrations} 
               />
             ))}
           </ul>
