@@ -15,8 +15,12 @@ export const eventCategoryKeys = {
 interface EventCategoriesParams {
   eventId?: number;
 }
+interface EventCategoriesOptions {
+  enabled?: boolean;
+}
 
-export const useEventCategories = (params?: EventCategoriesParams) => {
+
+export const useEventCategories = (params?: EventCategoriesParams, options?: EventCategoriesOptions,) => {
   return useQuery({
     queryKey: eventCategoryKeys.list(params),
     queryFn: async () => {
@@ -26,6 +30,7 @@ export const useEventCategories = (params?: EventCategoriesParams) => {
       );
       return data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 0,
   });
 };

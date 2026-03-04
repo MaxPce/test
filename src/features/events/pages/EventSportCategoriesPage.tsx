@@ -21,7 +21,6 @@ export function EventSportCategoriesPage() {
   const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
   const isExternalEvent = !!externalEventId;
 
-  // ✅ Usar el hook correcto según el tipo de evento
   const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
     { eventId: eventIdNum },
     { enabled: !isExternalEvent && !!eventIdNum }
@@ -101,7 +100,7 @@ export function EventSportCategoriesPage() {
     <div className="space-y-6 animate-in">
       {/* Header profesional */}
       <PageHeader
-        title={`Categorías de ${sportName} ${isExternalEvent ? '(Sismaster)' : ''}`}
+        title={`Categorías de ${sportName} ${isExternalEvent ? '(Sisdeu)' : ''}`}
         showBack
         onBack={() => navigate(backPath)}
       />

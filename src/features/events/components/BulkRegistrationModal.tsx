@@ -1,3 +1,4 @@
+// src/features/events/components/BulkRegistrationModal.tsx
 import { useState, useMemo } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -36,11 +37,11 @@ export function BulkRegistrationModal({
     {
       idevent: eventId,
       gender:
-      eventCategory.category?.gender !== 'MIXTO'
-          ? (eventCategory.category?.gender as 'M' | 'F')
+        eventCategory.category?.gender !== "MIXTO"
+          ? (eventCategory.category?.gender as "M" | "F")
           : undefined,
-      localSportId: eventCategory.category?.sport?.sportId,
-      },
+      localSportId: eventCategory.category?.sport?.sportId, // ← filtro por deporte
+    },
     isOpen,
   );
 
@@ -124,26 +125,18 @@ export function BulkRegistrationModal({
   const handleSubmit = async () => {
     if (selectedAthletes.length === 0) return;
 
-    
-
     try {
-      // Ejecutar mutation
       const result = await bulkMutation.mutateAsync({
         eventCategoryId: eventCategory.eventCategoryId,
         external_athlete_ids: selectedAthletes,
       });
 
-
       if (result && result.length > 0) {
-        result.forEach((reg: any, index: number) => {
-        });
+        result.forEach((_reg: any, _index: number) => {});
       }
 
-      // Limpiar estado
       setSelectedAthletes([]);
       handleClearFilters();
-
-      
       onClose();
     } catch (error) {
       console.error("Error al inscribir atletas:", error);
@@ -164,6 +157,8 @@ export function BulkRegistrationModal({
     ...institutions.map((inst) => ({ value: inst, label: inst })),
   ];
 
+  const sportName = eventCategory.category?.sport?.name;
+
   return (
     <Modal
       isOpen={isOpen}
@@ -180,7 +175,7 @@ export function BulkRegistrationModal({
                 {eventCategory.category?.name}
               </h4>
               <p className="text-sm text-blue-700 mt-1">
-                {eventCategory.category?.sport?.name}
+                {sportName}
                 {eventCategory.category?.type === "individual"
                   ? " • Individual"
                   : " • Equipo"}
@@ -262,8 +257,12 @@ export function BulkRegistrationModal({
                   </button>
                 </div>
               )}
+
+              {/* Badge de resultados con deporte */}
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                <strong>{athletesFromSismaster.length}</strong>{" acreditados "}
+                <p className="text-sm text-green-800">
+                 <strong>{athletesFromSismaster.length}</strong>{" "} atletas
+                 </p>
               </div>
             </div>
 
