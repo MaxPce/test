@@ -262,10 +262,7 @@ export function BulkRegistrationModal({
                 </div>
               )}
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                <p className="text-sm text-green-800">
-                  ✓ Mostrando <strong>{athletesFromSismaster.length}</strong>{" "}
-                  atletas acreditados en este evento
-                </p>
+                <strong>{athletesFromSismaster.length}</strong>{" acreditados "}
               </div>
             </div>
 
