@@ -63,3 +63,38 @@ export const useSismasterEventCategories = (externalEventId?: number) => {
     staleTime: 0,
   });
 };
+
+export const useSismasterSportsByEvent = (sismasterEventId?: number) => {
+  return useQuery({
+    queryKey: ["sismaster-sports", sismasterEventId],
+    queryFn: async () => {
+      if (!sismasterEventId) return [];
+      // Usa tu endpoint existente que SÍ funciona
+      const { data: sports } = await apiClient.get(`/sismaster/events/${sismasterEventId}/sports`);
+      const allCategories: any[] = [];
+      
+      // Carga categorías por deporte en paralelo
+      await Promise.all(
+        sports.map(async (sport: any) => {
+          const { data: categories } = await apiClient.get(
+            `/sismaster/sports/local/${sport.sport_id}/params/by-event/${sismasterEventId}`
+          );
+          categories.forEach((cat: any) => {
+            allCategories.push({
+              category: {
+                sport: { ...sport, sportId: sport.sport_id },
+                name: cat.name,
+              },
+              registrations: [], // Placeholder
+            });
+          });
+        })
+      );
+      
+      return allCategories;
+    },
+    enabled: !!sismasterEventId,
+    staleTime: 5 * 60 * 1000, // 5 min
+  });
+};
+
