@@ -36,10 +36,11 @@ export function BulkRegistrationModal({
     {
       idevent: eventId,
       gender:
-        eventCategory.category?.gender !== "MIXTO"
-          ? (eventCategory.category?.gender as "M" | "F")
+      eventCategory.category?.gender !== 'MIXTO'
+          ? (eventCategory.category?.gender as 'M' | 'F')
           : undefined,
-    },
+      localSportId: eventCategory.category?.sport?.sportId,
+      },
     isOpen,
   );
 

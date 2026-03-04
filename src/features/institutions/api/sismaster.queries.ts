@@ -121,11 +121,11 @@ export const sismasterKeys = {
       [...sismasterKeys.athletes.all, "detail", id] as const,
     byDocument: (dni: string) =>
       [...sismasterKeys.athletes.all, "document", dni] as const,
-    accredited: (idevent?: number, idinstitution?: number, gender?: string) =>
+    accredited: (idevent?: number, idinstitution?: number, gender?: string, localSportId?: number) =>
       [
         ...sismasterKeys.athletes.all,
         "accredited",
-        { idevent, idinstitution, gender },
+        { idevent, idinstitution, gender, localSportId },
       ] as const,
     count: () => [...sismasterKeys.athletes.all, "count"] as const,
   },
@@ -228,20 +228,22 @@ interface AccreditedAthletesOptions {
   idevent: number;
   idinstitution?: number;
   gender?: "M" | "F";
+  localSportId?: number;
 }
 
 export const useAccreditedAthletes = (
   options: AccreditedAthletesOptions,
   enabled = true,
 ) => {
-  const { idevent, idinstitution, gender } = options;
+  const { idevent, idinstitution, gender, localSportId } = options;
 
   return useQuery({
-    queryKey: sismasterKeys.athletes.accredited(idevent, idinstitution, gender),
+    queryKey: sismasterKeys.athletes.accredited(idevent, idinstitution, gender, localSportId),
     queryFn: async () => {
       const params: Record<string, any> = { idevent };
       if (idinstitution) params.idinstitution = idinstitution;
       if (gender) params.gender = gender;
+      if (localSportId) params.localSportId = localSportId; 
 
       const { data } = await apiClient.get<SismasterAthlete[]>(
         SISMASTER_ENDPOINTS.ATHLETES.ACCREDITED,
@@ -250,9 +252,10 @@ export const useAccreditedAthletes = (
       return data;
     },
     enabled: enabled && !!idevent,
-    staleTime: 1000 * 60 * 2, // Cache 2 minutos
+    staleTime: 1000 * 60 * 2,
   });
 };
+
 
 /**
  * Obtener un atleta por ID
