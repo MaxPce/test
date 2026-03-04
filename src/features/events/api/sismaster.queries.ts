@@ -45,6 +45,15 @@ export interface AthleteByCategoryDto {
   idinstitution: number;
 }
 
+export interface SismasterParam {
+  idparam: number;
+  code: string;
+  name: string;
+  idsport: number;
+  athleteCount: number;
+}
+
+
 // ── Hooks existentes (sin cambios) ─────────────────────────────
 
 export const useSismasterEvents = () =>

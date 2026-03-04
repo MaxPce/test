@@ -309,3 +309,41 @@ export const useAthletesCount = () => {
     staleTime: 1000 * 60 * 10, // Cache 10 minutos
   });
 };
+
+export interface SismasterAthleteByCategory extends SismasterAthlete {
+  idacreditation?: number;
+  idsport?: number;
+  division_inscrita?: string;
+  idparam?: number;
+  gender_text?: string;
+}
+
+interface AthletesByCategoryNameOptions {
+  sismasterEventId: number;
+  localSportId: number;
+  categoryName: string;
+}
+
+export const useAthletesByCategoryName = (
+  options: AthletesByCategoryNameOptions,
+  enabled = true,
+) => {
+  const { sismasterEventId, localSportId, categoryName } = options;
+
+  return useQuery({
+    queryKey: [
+      ...sismasterKeys.athletes.all,
+      'by-category-name',
+      { sismasterEventId, localSportId, categoryName },
+    ] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<SismasterAthleteByCategory[]>(
+        '/sismaster/athletes/by-category-name',
+        { params: { sismasterEventId, localSportId, categoryName } },
+      );
+      return data;
+    },
+    enabled: enabled && !!sismasterEventId && !!localSportId && !!categoryName,
+    staleTime: 1000 * 60 * 2,
+  });
+};
