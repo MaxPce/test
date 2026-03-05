@@ -76,6 +76,8 @@ import {
 } from "@/features/competitions/api/phaseRegistrations.queries";
 import { AssignSeriesParticipantModal } from "@/features/competitions/components/AssignSeriesParticipantModal";
 import { WeightliftingAttemptsTable } from "@/features/competitions/components/weightlifting/WeightliftingAttemptsTable";
+import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
+
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -175,55 +177,52 @@ export function CategorySchedulePage() {
     );
   };
 
-  const isWeightlifting = () =>
-    sportName.includes("halterofilia") ||
-    sportName.includes("weightlifting") ||
-    sportName.includes("levantamiento de pesas");
-
-  const getTaekwondoType = () => {
-    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
-    if (!sportName.includes("taekwondo")) return null;
-
-    const categoryName = eventCategory.category?.name?.toLowerCase() || "";
-    if (
-      categoryName.includes("poomsae") ||
-      categoryName.includes("formas") ||
-      categoryName.includes("forma")
-    ) {
-      return "poomsae";
-    }
-
-    if (
-      categoryName.includes("kyorugi") ||
-      categoryName.includes("kyorugui") ||
-      categoryName.includes("combate") ||
-      categoryName.includes("pelea") ||
-      categoryName.includes("lucha")
-    ) {
-      return "kyorugui";
-    }
-    if (
-      selectedPhase?.type === "eliminacion" ||
-      selectedPhase?.type === "grupo"
-    ) {
-      return "kyorugui";
-    }
+  const isWeightlifting = () => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sport.includes("halterofilia") ||
+      sport.includes("weightlifting") ||
+      sport.includes("levantamiento de pesas")
+    );
   };
 
-  const getWushuType = () => {
-    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
-    if (!sportName.includes("wushu")) return null;
 
-    const categoryName = eventCategory.category?.name?.toLowerCase() || "";
-    if (
-      categoryName.includes("taolu") ||
-      categoryName.includes("formas") ||
-      categoryName.includes("forma")
-    ) {
-      return "taolu";
+  const getTaekwondoType = (): "poomsae" | "kyorugui" | null => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    if (!sport.includes("taekwondo")) return null;
+
+    const resultType = eventCategory.category?.resultType;
+
+    if (resultType === "score")  return "poomsae";
+    if (resultType === "combat") return "kyorugui";
+
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (name.includes("poomsae") || name.includes("forma")) return "poomsae";
+    if (name.includes("kyorugi") || name.includes("combate")) return "kyorugui";
+
+    if (selectedPhase?.type === "eliminacion" || selectedPhase?.type === "grupo") {
+      return "kyorugui";
     }
-    return "sanda"; // combate por defecto
+
+    return null;
   };
+
+
+  const getWushuType = (): "taolu" | "sanda" | null => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    if (!sport.includes("wushu")) return null;
+
+    const resultType = eventCategory.category?.resultType;
+
+    if (resultType === "score")  return "taolu";
+    if (resultType === "combat") return "sanda";
+
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (name.includes("taolu") || name.includes("forma")) return "taolu";
+
+    return "sanda"; 
+  };
+
 
   const handleCreatePhase = async (data: any) => {
     await createPhaseMutation.mutateAsync(data);

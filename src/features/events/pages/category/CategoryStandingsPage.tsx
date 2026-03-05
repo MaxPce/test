@@ -70,10 +70,20 @@ export function CategoryStandingsPage() {
 
   // ── Flags de deporte ───────────────────────────────────────────────────────
 
-  const isTaekwondoKyorugi =
-    sportName.includes("taekwondo") && categoryName.includes("kyorugi");
-  const isTaekwondoPoomsae =
-    sportName.includes("taekwondo") && categoryName.includes("poomsae");
+  const resultType = eventCategory?.category?.resultType;
+
+  const getTaekwondoType = (): "poomsae" | "kyorugui" | null => {
+    if (!sportName.includes("taekwondo")) return null;
+    if (resultType === "score")   return "poomsae";
+    if (resultType === "combat")  return "kyorugui";
+    if (categoryName.includes("poomsae") || categoryName.includes("forma")) return "poomsae";
+    if (categoryName.includes("kyorugi") || categoryName.includes("combate")) return "kyorugui";
+    return null;
+  };
+
+  const taekwondoType = getTaekwondoType();
+  const isTaekwondoKyorugi = taekwondoType === "kyorugui";
+  const isTaekwondoPoomsae  = taekwondoType === "poomsae";
   const isJudo = sportName.includes("judo");
   const isTimedSport =
     sportName.includes("natación") ||
@@ -189,7 +199,7 @@ export function CategoryStandingsPage() {
     if (isTaekwondoPoomsae)
       return { sportType: "poomsae", scoreLabel: "Puntos", showScores: true };
     if (isTaekwondoKyorugi)
-      return { sportType: "kyorugi", scoreLabel: "Puntos", showScores: true };
+      return { sportType: " ", scoreLabel: "Puntos", showScores: true };
     if (isJudo)
       return { sportType: "judo", scoreLabel: "Puntos", showScores: true };
     if (isKarate)

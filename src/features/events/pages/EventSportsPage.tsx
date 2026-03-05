@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, Trophy, ChevronRight, Users } from "lucide-react";
+
+import { Plus, Trophy, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import { toast } from "react-hot-toast";
 import { 
   useEventCategories, 
-  useSismasterEventCategories 
+  useSismasterEventCategories,
+  useRegisterEventCategories,
 } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
@@ -29,6 +32,28 @@ export function EventSportsPage() {
   const { data: externalEventCategories = [], isLoading: externalLoading } = useSismasterEventCategories(
     externalEventIdNum
   );
+
+  const { mutate: registerCategories, isPending: isRegistering } =
+    useRegisterEventCategories();
+
+  const handleRegisterCategories = () => {
+    if (!externalEventIdNum) return;
+
+    registerCategories(externalEventIdNum, {
+      onSuccess: (data) => {
+        if (data.created === 0 && data.alreadyExists > 0) {
+          toast.success(`Todas las categorías ya estaban registradas (${data.alreadyExists})`);
+        } else {
+          toast.success(
+            `${data.created} categorías registradas` +
+            (data.alreadyExists > 0 ? ` · ${data.alreadyExists} ya existían` : "") +
+            (data.skipped > 0 ? ` · ${data.skipped} sin mapeo local` : "")
+          );
+        }
+      },
+      onError: () => toast.error("Error al registrar las categorías"),
+    });
+  };
 
   const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
   const isLoading = isExternalEvent ? externalLoading : localLoading;
@@ -76,18 +101,38 @@ export function EventSportsPage() {
     <div className="space-y-6 animate-in">
       {/* Header con badge Sismaster */}
       <PageHeader
-        title={`Deportes del Evento ${isExternalEvent ? '(Sismaster)' : ''}`}
+        title={`Deportes del Evento ${isExternalEvent ? '(Sisdeu)' : ''}`}
         showBack
         actions={
-          <Button
-            onClick={() => navigate(addSportPath)}
-            variant="gradient"
-            size="lg"
-            icon={<Plus className="h-5 w-5" />}
-          >
-            Agregar Deporte
-          </Button>
+          <div className="flex items-center gap-3">
+            
+            {isExternalEvent && (
+              <Button
+                onClick={handleRegisterCategories}
+                disabled={isRegistering}
+                variant="outline"
+                size="lg"
+                icon={
+                  isRegistering
+                    ? <RefreshCw className="h-4 w-4 animate-spin" />
+                    : <RefreshCw className="h-4 w-4" />
+                }
+              >
+                {isRegistering ? "Registrando..." : "Registrar Categorías"}
+              </Button>
+            )}
+            {/* ─────────────────────────────────────────────── */}
+            <Button
+              onClick={() => navigate(addSportPath)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Agregar Deporte
+            </Button>
+          </div>
         }
+
       />
 
       {/* Grid de Deportes - TU DISEÑO EXACTO */}

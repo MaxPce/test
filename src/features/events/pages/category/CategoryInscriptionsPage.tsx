@@ -165,15 +165,7 @@ export function CategoryInscriptionsPage() {
         </div>
       </div>
 
-      {!hasSismasterIntegration && !isTeamCategory && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">
-            ⚠️ Esta categoría no está integrada con Sismaster. Configura el
-            evento de Sismaster en la categoría para habilitar la inscripción
-            masiva de atletas acreditados.
-          </p>
-        </div>
-      )}
+      
 
       {/* Lista de Inscripciones */}
       {registrations.length === 0 ? (

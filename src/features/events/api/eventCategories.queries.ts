@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { ENDPOINTS } from "@/lib/api/endpoints";
 import type { EventCategory } from "../types";
@@ -98,3 +98,29 @@ export const useSismasterSportsByEvent = (sismasterEventId?: number) => {
   });
 };
 
+interface RegisterCategoriesResult {
+  localEventId: null;
+  sismasterEventId: number;
+  sportsProcessed: number;
+  created: number;
+  skipped: number;
+  alreadyExists: number;
+}
+
+export const useRegisterEventCategories = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (sismasterEventId: number) =>
+      apiClient
+        .post(`/events/sismaster/${sismasterEventId}/register-categories`)
+        .then((r) => r.data as RegisterCategoriesResult),
+
+    onSuccess: (data) => {
+      // Invalida las categorías del evento para que se refresquen automáticamente
+      queryClient.invalidateQueries({
+        queryKey: ["sismaster-event-categories", data.sismasterEventId],
+      });
+    },
+  });
+};

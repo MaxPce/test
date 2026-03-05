@@ -12,6 +12,32 @@ interface TableTennisScorecardProps {
   onGameUpdate?: () => void;
 }
 
+function resolvePlayerDisplay(player: any): {
+  name: string;
+  members: { name: string; institutionCode?: string }[] | null;
+  institutionCode?: string;
+} {
+  const members = player?.members;
+
+  // Dobles: tiene array de 2 miembros
+  if (Array.isArray(members) && members.length === 2) {
+    return {
+      name: members.map((m: any) => m?.name ?? m?.athlete?.name ?? "?").join(" / "),
+      members: members.map((m: any) => ({
+        name: m?.name ?? m?.athlete?.name ?? "?",
+        institutionCode: m?.institution?.code ?? m?.athlete?.institution?.code,
+      })),
+      institutionCode: undefined, 
+    };
+  }
+
+  return {
+    name: player?.name ?? "—",
+    members: null,
+    institutionCode: player?.institution?.code,
+  };
+}
+
 export function TableTennisScorecardV2({
   games,
   matchId,
@@ -208,35 +234,93 @@ export function TableTennisScorecardV2({
                 </div>
 
                 {/* Jugadores */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">
-                      {game.player1.name}
-                    </span>
-                    {game.winnerId === game.player1Id && (
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                    )}
-                    {game.player1.institution && (
-                      <span className="text-xs text-gray-500">
-                        ({game.player1.institution.code})
-                      </span>
-                    )}
-                  </div>
+                {(() => {
+                const p1 = resolvePlayerDisplay(game.player1);
+                const p2 = resolvePlayerDisplay(game.player2);
+                const isDoubles = p1.members !== null;
 
-                  <div className="flex items-center justify-end gap-2">
-                    {game.player2.institution && (
-                      <span className="text-xs text-gray-500">
-                        ({game.player2.institution.code})
-                      </span>
-                    )}
-                    {game.winnerId === game.player2Id && (
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                    )}
-                    <span className="text-sm font-medium text-gray-900">
-                      {game.player2.name}
-                    </span>
+                if (isDoubles) {
+                  return (
+                    <div className="mb-4 space-y-2">
+                      {/* Pareja 1 */}
+                      <div className="flex items-center justify-between p-2 bg-violet-50 rounded-lg border border-violet-100">
+                        <div className="flex items-center gap-2">
+                          {game.winnerId === game.player1Id && (
+                            <Trophy className="h-4 w-4 text-yellow-500 shrink-0" />
+                          )}
+                          <div>
+                            {p1.members!.map((m, i) => (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <span className="text-sm font-semibold text-gray-900">
+                                  {m.name}
+                                </span>
+                                {m.institutionCode && (
+                                  <span className="text-xs text-gray-400">
+                                    ({m.institutionCode})
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-violet-500 bg-violet-100 px-2 py-0.5 rounded-full">
+                          Pareja 1
+                        </span>
+                      </div>
+
+                      {/* Pareja 2 */}
+                      <div className="flex items-center justify-between p-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          Pareja 2
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            {p2.members!.map((m, i) => (
+                              <div key={i} className="flex items-center justify-end gap-1.5">
+                                {m.institutionCode && (
+                                  <span className="text-xs text-gray-400">
+                                    ({m.institutionCode})
+                                  </span>
+                                )}
+                                <span className="text-sm font-semibold text-gray-900">
+                                  {m.name}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {game.winnerId === game.player2Id && (
+                            <Trophy className="h-4 w-4 text-yellow-500 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // ── Vista individual / equipo: comportamiento original ───────────
+                return (
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">{p1.name}</span>
+                      {game.winnerId === game.player1Id && (
+                        <Trophy className="h-4 w-4 text-yellow-500" />
+                      )}
+                      {p1.institutionCode && (
+                        <span className="text-xs text-gray-500">({p1.institutionCode})</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                      {p2.institutionCode && (
+                        <span className="text-xs text-gray-500">({p2.institutionCode})</span>
+                      )}
+                      {game.winnerId === game.player2Id && (
+                        <Trophy className="h-4 w-4 text-yellow-500" />
+                      )}
+                      <span className="text-sm font-medium text-gray-900">{p2.name}</span>
+                    </div>
                   </div>
-                </div>
+                );
+              })()}
                 {/* Sets */}
                 {displaySets.length > 0 && (
                   <div className="space-y-2">
