@@ -6,8 +6,9 @@ export function useCreateParticipation() {
 
   return useMutation({
     mutationFn: participationsApi.create,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["matches", data.matchId] });
+    onSuccess: () => {
+      // Invalida todos los queries de matches (cualquier fase)
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
     },
   });
 }

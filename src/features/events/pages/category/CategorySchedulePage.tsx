@@ -336,10 +336,12 @@ export function CategorySchedulePage() {
   const handleGenerateRoundRobin = async (data: {
     phaseId: number;
     registrationIds: number[];
+    emptyParticipantCount?: number;
   }) => {
     await initializeRoundRobinMutation.mutateAsync(data);
     setIsGenerateModalOpen(false);
   };
+
 
   const totalMatches = phases.reduce(
     (sum, phase) => sum + (phase.matches?.length || 0),
@@ -1448,6 +1450,7 @@ export function CategorySchedulePage() {
           >
             <MatchForm
               phase={selectedPhase}
+              existingMatches={matches}
               onSubmit={handleCreateMatch}
               onCancel={() => setIsMatchModalOpen(false)}
               isLoading={createMatchMutation.isPending}
@@ -1459,9 +1462,12 @@ export function CategorySchedulePage() {
               isOpen={isGenerateModalOpen}
               onClose={() => setIsGenerateModalOpen(false)}
               phase={selectedPhase}
-              registrations={eventCategory.registrations || []}
+              registrations={eventCategory.registrations ?? []}
               onGenerate={handleGenerateRoundRobin}
               isLoading={initializeRoundRobinMutation.isPending}
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
 
@@ -1470,9 +1476,12 @@ export function CategorySchedulePage() {
               isOpen={isGenerateBestOf3ModalOpen}
               onClose={() => setIsGenerateBestOf3ModalOpen(false)}
               phase={selectedPhase}
-              registrations={eventCategory.registrations || []}
+              registrations={eventCategory.registrations ?? []}
               onGenerate={handleGenerateBestOf3}
               isLoading={initializeBestOf3Mutation.isPending}
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
 
@@ -1481,7 +1490,11 @@ export function CategorySchedulePage() {
               isOpen={isGenerateBracketModalOpen}
               onClose={() => setIsGenerateBracketModalOpen(false)}
               phase={selectedPhase}
-              availableRegistrations={availableRegistrations}  
+              availableRegistrations={availableRegistrations}
+              // Nuevas props — opcionales, activan el modo Sismaster si están presentes
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
 

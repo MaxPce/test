@@ -292,10 +292,8 @@ export function CategoryStandingsPage() {
                 <Trophy className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold">{viewTitles[elimView]}</h3>
-                <p className="text-purple-100 mt-1">
-                  {viewSubtitles[elimView]}
-                </p>
+                <h3 className="text-2xl font-bold">{eliminationPhase.name}</h3>
+                <p className="text-purple-100 mt-1">{viewTitles[elimView]} · {viewSubtitles[elimView]}</p>
               </div>
             </div>
             {renderViewPills()}
@@ -427,12 +425,12 @@ export function CategoryStandingsPage() {
     );
   }
 
-  const eliminationPhase = phases.find((p) => p.type === "eliminacion");
+  const eliminationPhases = phases.filter((p) => p.type === "eliminacion");
   const groupPhases = phases.filter((p) => p.type === "grupo");
   const bestOf3Phases = phases.filter((p) => p.type === "mejor_de_3");
 
   const hasAnyPhase =
-    bestOf3Phases.length > 0 || !!eliminationPhase || groupPhases.length > 0;
+    bestOf3Phases.length > 0 || !!eliminationPhases || groupPhases.length > 0;
 
   if (!hasAnyPhase) {
     return (
@@ -465,7 +463,7 @@ export function CategoryStandingsPage() {
   const multipleTypes =
     [
       bestOf3Phases.length > 0,
-      !!eliminationPhase,
+      !!eliminationPhases,
       groupPhases.length > 0,
     ].filter(Boolean).length > 1;
 
@@ -499,8 +497,8 @@ export function CategoryStandingsPage() {
       ))}
 
       {/* ── Eliminación ───────────────────────────────────────────────────── */}
-      {eliminationPhase && (
-        <div className="space-y-6">
+      {eliminationPhases.map((eliminationPhase) => (
+        <div key={eliminationPhase.phaseId} className="space-y-6">
           {multipleTypes && bestOf3Phases.length > 0 && (
             <div className="border-t-2 border-gray-200 pt-6">
               <h3 className="text-xl font-bold text-gray-800 mb-2">
@@ -510,7 +508,7 @@ export function CategoryStandingsPage() {
           )}
           {renderBracketWithToggle(eliminationPhase)}
         </div>
-      )}
+      ))}
 
       {/* ── Grupos ────────────────────────────────────────────────────────── */}
       {groupPhases.length > 0 && (

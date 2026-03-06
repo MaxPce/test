@@ -6,6 +6,7 @@ import type { Phase } from "../types";
 
 interface MatchFormProps {
   phase: Phase;
+  existingMatches?: { matchNumber?: number }[];
   onSubmit: (data: {
     phaseId: number;
     matchNumber?: number;
@@ -19,12 +20,18 @@ interface MatchFormProps {
 
 export function MatchForm({
   phase,
+  existingMatches = [],
   onSubmit,
   onCancel,
   isLoading,
 }: MatchFormProps) {
+  const nextMatchNumber =
+    existingMatches.length > 0
+      ? Math.max(...existingMatches.map((m) => m.matchNumber || 0)) + 1
+      : 1;
+
   const [formData, setFormData] = useState({
-    matchNumber: "",
+    matchNumber: String(nextMatchNumber),
     round: "",
     scheduledTime: "",
     platformNumber: "",
@@ -50,10 +57,15 @@ export function MatchForm({
       ? [
           { value: "", label: "Seleccione una ronda" },
           { value: "final", label: "Final" },
+          { value: "tercer_lugar", label: "Tercer Lugar" },
           { value: "semifinal", label: "Semifinal" },
           { value: "cuartos", label: "Cuartos de Final" },
           { value: "octavos", label: "Octavos de Final" },
           { value: "dieciseisavos", label: "Dieciseisavos de Final" },
+          { value: "repechaje", label: "Repechaje" },
+          { value: "repechaje_semifinal", label: "Repechaje Semifinal" },
+          { value: "repechaje_cuartos", label: "Repechaje Cuartos" },
+          { value: "repechaje_octavos", label: "Repechaje Octavos" },
         ]
       : [];
 
@@ -71,13 +83,10 @@ export function MatchForm({
       <Input
         label="Número de Partido"
         type="number"
-        min="1"
         value={formData.matchNumber}
-        onChange={(e) =>
-          setFormData({ ...formData, matchNumber: e.target.value })
-        }
-        placeholder="1"
-        helperText="Número secuencial del partido"
+        readOnly
+        className="bg-gray-50 text-gray-500"
+        helperText={`Auto-asignado (siguiente: #${nextMatchNumber})`}
       />
 
       {phase.type === "eliminacion" && (
@@ -88,27 +97,6 @@ export function MatchForm({
           options={roundOptions}
         />
       )}
-
-      <Input
-        label="Fecha y Hora"
-        type="datetime-local"
-        value={formData.scheduledTime}
-        onChange={(e) =>
-          setFormData({ ...formData, scheduledTime: e.target.value })
-        }
-      />
-
-      <Input
-        label="Plataforma/Tatami"
-        type="number"
-        min="1"
-        value={formData.platformNumber}
-        onChange={(e) =>
-          setFormData({ ...formData, platformNumber: e.target.value })
-        }
-        placeholder="1"
-        helperText="Número de plataforma, tatami o cancha"
-      />
 
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="ghost" onClick={onCancel}>

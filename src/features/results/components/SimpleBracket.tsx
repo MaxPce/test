@@ -36,12 +36,16 @@ type RoundType =
   | "semis"
   | "final"
   | "third"
+  | "repechaje"
   | "other";
 
-function classifyRound(rawRound?: string | null): RoundType {
+function classifyRound(rawRound?: string | number | null): RoundType {
   const r = (rawRound || "").toLowerCase().trim();
 
   if (!r) return "other";
+
+  // repechaje PRIMERO para que "repechaje_semifinal" no caiga en "semis"
+  if (r.includes("repechaje")) return "repechaje";
 
   if (r.includes("dieciseisavo") || r.includes("16avos") || r.includes("1/16"))
     return "sixteenths";
@@ -56,15 +60,13 @@ function classifyRound(rawRound?: string | null): RoundType {
   return "other";
 }
 
+
+
 export function SimpleBracket({
   phaseId,
   phase,
   sportConfig,
 }: SimpleBracketProps) {
-  console.log("SimpleBracket props:", {
-    phase: !!phase,
-    sportType: sportConfig?.sportType,
-  });
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
 
   const { data: matches = [], isLoading } = useMatches(phaseId);
@@ -88,12 +90,12 @@ export function SimpleBracket({
       <Card>
         <CardBody className="text-center py-12 text-gray-500">
           <p className="font-medium text-lg">No hay combates definidos aún</p>
-         
         </CardBody>
       </Card>
     );
   }
 
+  // ── Eliminatoria ────────────────────────────────────────
   const sixteenths = realMatches.filter(
     (m) => classifyRound(m.round) === "sixteenths",
   );
@@ -109,6 +111,29 @@ export function SimpleBracket({
     (m) => classifyRound(m.round) === "third",
   );
   const others = realMatches.filter((m) => classifyRound(m.round) === "other");
+
+  // ── Repechaje por columna ────────────────────────────────
+  const repechajeDieciseisavos = realMatches.filter((m) =>
+    String(m.round ?? "").toLowerCase().includes("repechaje_dieciseisavo") ||
+    String(m.round ?? "").toLowerCase().includes("repechaje_16"),
+  );
+  const repechajeOctavos = realMatches.filter((m) =>
+    String(m.round ?? "").toLowerCase().includes("repechaje_octavo") ||
+    String(m.round ?? "").toLowerCase().includes("repechaje_8"),
+  );
+  const repechajeCuartos = realMatches.filter((m) =>
+    String(m.round ?? "").toLowerCase().includes("repechaje_cuarto"),
+  );
+  const repechajeSemis = realMatches.filter((m) =>
+    String(m.round ?? "").toLowerCase().includes("repechaje_semi"),
+  );
+  const repechajeFinal = realMatches.filter(
+    (m) => String(m.round ?? "").toLowerCase().trim() === "repechaje",
+  );
+  // todos los de repechaje (para el fallback)
+  const repechaje = realMatches.filter(
+    (m) => classifyRound(m.round) === "repechaje",
+  );
 
   const final = finals[0] || null;
   const third = thirdMatches[0] || null;
@@ -186,6 +211,7 @@ export function SimpleBracket({
           onClose={() => setSelectedMatchId(null)}
         />
       )}
+
       {selectedMatchId && isCollective && resolvedMatch && phase && (
         <CollectiveMatchDetailsModal
           match={resolvedMatch as any}
@@ -226,6 +252,8 @@ export function SimpleBracket({
         {hasBracketLayout ? (
           <div className="bg-white rounded-2xl shadow-lg p-6 overflow-x-auto">
             <div className="min-w-max">
+
+              {/* ── Bracket principal (horizontal) — idéntico al original ── */}
               <div className="flex gap-6 items-center justify-center">
                 {sixteenths.length > 0 && (
                   <div className="space-y-3">
@@ -233,108 +261,139 @@ export function SimpleBracket({
                       Dieciseisavos
                     </h3>
                     {sixteenths.map((match) => (
-                      <MatchCard
-                        key={match.matchId}
-                        match={match}
-                        size="sm"
-                        sportConfig={sportConfig}
-                        onClick={() => setSelectedMatchId(match.matchId)}
-                      />
+                      <MatchCard key={match.matchId} match={match} size="sm" sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
                     ))}
                   </div>
                 )}
-
                 {sixteenths.length > 0 && eighths.length > 0 && (
-                  <div className="flex items-center">
-                    <div className="h-px w-6 bg-gray-300" />
-                  </div>
+                  <div className="flex items-center"><div className="h-px w-6 bg-gray-300" /></div>
                 )}
-
                 {eighths.length > 0 && (
                   <div className="space-y-6">
-                    <h3 className="text-center font-bold text-gray-700 mb-2">
-                      Octavos de Final
-                    </h3>
+                    <h3 className="text-center font-bold text-gray-700 mb-2">Octavos de Final</h3>
                     {eighths.map((match) => (
-                      <MatchCard
-                        key={match.matchId}
-                        match={match}
-                        size="sm"
-                        sportConfig={sportConfig}
-                        onClick={() => setSelectedMatchId(match.matchId)}
-                      />
+                      <MatchCard key={match.matchId} match={match} size="sm" sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
                     ))}
                   </div>
                 )}
-
                 {eighths.length > 0 && quarters.length > 0 && (
-                  <div className="flex items-center">
-                    <div className="h-px w-6 bg-gray-300" />
-                  </div>
+                  <div className="flex items-center"><div className="h-px w-6 bg-gray-300" /></div>
                 )}
-
                 {quarters.length > 0 && (
                   <div className="space-y-12">
-                    <h3 className="text-center font-bold text-gray-700 mb-2">
-                      Cuartos de Final
-                    </h3>
+                    <h3 className="text-center font-bold text-gray-700 mb-2">Cuartos de Final</h3>
                     {quarters.map((match) => (
-                      <MatchCard
-                        key={match.matchId}
-                        match={match}
-                        sportConfig={sportConfig}
-                        onClick={() => setSelectedMatchId(match.matchId)}
-                      />
+                      <MatchCard key={match.matchId} match={match} sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
                     ))}
                   </div>
                 )}
-
                 {quarters.length > 0 && semis.length > 0 && (
-                  <div className="flex items-center">
-                    <div className="h-px w-8 bg-gray-300" />
-                  </div>
+                  <div className="flex items-center"><div className="h-px w-8 bg-gray-300" /></div>
                 )}
-
                 {semis.length > 0 && (
                   <div className="space-y-24">
-                    <h3 className="text-center font-bold text-gray-700 mb-2">
-                      Semifinales
-                    </h3>
+                    <h3 className="text-center font-bold text-gray-700 mb-2">Semifinales</h3>
                     {semis.map((match) => (
-                      <MatchCard
-                        key={match.matchId}
-                        match={match}
-                        size="lg"
-                        sportConfig={sportConfig}
-                        onClick={() => setSelectedMatchId(match.matchId)}
-                      />
+                      <MatchCard key={match.matchId} match={match} size="lg" sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
                     ))}
                   </div>
                 )}
-
                 {semis.length > 0 && final && (
-                  <div className="flex items-center">
-                    <div className="h-px w-8 bg-gray-300" />
-                  </div>
+                  <div className="flex items-center"><div className="h-px w-8 bg-gray-300" /></div>
                 )}
-
                 {final && (
                   <div>
                     <h3 className="text-center font-bold text-yellow-600 mb-2 flex items-center justify-center gap-2">
                       <Trophy className="w-5 h-5" />
                       FINAL
                     </h3>
-                    <MatchCard
-                      match={final}
-                      size="xl"
-                      isFinal
-                      sportConfig={sportConfig}
-                      onClick={() => setSelectedMatchId(final.matchId)}
-                    />
+                    <MatchCard match={final} size="xl" isFinal sportConfig={sportConfig} onClick={() => setSelectedMatchId(final.matchId)} />
                   </div>
                 )}
               </div>
 
+              {/* ── Fila de Repechaje (debajo del bracket, alineada por columna) ── */}
+              {repechaje.length > 0 && (
+                <div className="mt-8">
+                  {/* Separador */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="flex-1 h-px bg-amber-200" />
+                    <span className="text-xs font-semibold text-amber-600 uppercase tracking-widest flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      Repechaje
+                    </span>
+                    <div className="flex-1 h-px bg-amber-200" />
+                  </div>
+
+                  {/* Columnas de repechaje alineadas con el bracket */}
+                  <div className="flex gap-6 justify-center items-start">
+                    {/* Columna: Rep. Dieciseisavos */}
+                    {repechajeDieciseisavos.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-center text-xs font-semibold text-amber-600 mb-1">Rep. Dieciseisavos</h4>
+                        {repechajeDieciseisavos.map((match) => (
+                          <MatchCard key={match.matchId} match={match} size="sm" sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
+                        ))}
+                      </div>
+                    )}
+                    {/* Relleno para octavos si no hay rep. dieciseisavos pero sí hay sixteenths */}
+                    {repechajeDieciseisavos.length === 0 && sixteenths.length > 0 && eighths.length > 0 && (
+                      <div style={{ width: "256px" }} />
+                    )}
+
+                    {/* Columna: Rep. Octavos */}
+                    {repechajeOctavos.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-center text-xs font-semibold text-amber-600 mb-1">Rep. Octavos</h4>
+                        {repechajeOctavos.map((match) => (
+                          <MatchCard key={match.matchId} match={match} size="sm" sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
+                        ))}
+                      </div>
+                    )}
+                    {repechajeOctavos.length === 0 && eighths.length > 0 && quarters.length > 0 && (
+                      <div style={{ width: "256px" }} />
+                    )}
+
+                    {/* Columna: Rep. Cuartos */}
+                    {repechajeCuartos.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-center text-xs font-semibold text-amber-600 mb-1">Rep. Cuartos</h4>
+                        {repechajeCuartos.map((match) => (
+                          <MatchCard key={match.matchId} match={match} sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
+                        ))}
+                      </div>
+                    )}
+                    {repechajeCuartos.length === 0 && quarters.length > 0 && semis.length > 0 && (
+                      <div style={{ width: "256px" }} />
+                    )}
+
+                    {/* Columna: Rep. Semifinales */}
+                    {repechajeSemis.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-center text-xs font-semibold text-amber-600 mb-1">Rep. Semifinales</h4>
+                        {repechajeSemis.map((match) => (
+                          <MatchCard key={match.matchId} match={match} size="lg" sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
+                        ))}
+                      </div>
+                    )}
+                    {repechajeSemis.length === 0 && semis.length > 0 && final && (
+                      <div style={{ width: "288px" }} />
+                    )}
+
+                    {/* Columna: Rep. Final */}
+                    {repechajeFinal.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-center text-xs font-semibold text-amber-600 mb-1">Rep. Final</h4>
+                        {repechajeFinal.map((match) => (
+                          <MatchCard key={match.matchId} match={match} size="xl" sportConfig={sportConfig} onClick={() => setSelectedMatchId(match.matchId)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tercer Lugar */}
               {third && (
                 <div className="mt-10 flex justify-center">
                   <div className="max-w-md">
@@ -349,30 +408,60 @@ export function SimpleBracket({
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         ) : (
-          <Card>
-            <CardHeader>
-              <h3 className="font-bold text-gray-800">
-                Combates de eliminación
-              </h3>
-            </CardHeader>
-            <CardBody>
-              <div className="grid gap-4 md:grid-cols-2">
-                {realMatches.map((match) => (
-                  <MatchCard
-                    key={match.matchId}
-                    match={match}
-                    sportConfig={sportConfig}
-                    onClick={() => setSelectedMatchId(match.matchId)}
-                  />
-                ))}
-              </div>
-            </CardBody>
-          </Card>
+          /* Fallback: sin layout de bracket */
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <Card>
+              <CardHeader>
+                <h3 className="font-bold text-gray-800">
+                  Combates de eliminación
+                </h3>
+              </CardHeader>
+              <CardBody>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {realMatches
+                    .filter((m) => classifyRound(m.round) !== "repechaje")
+                    .map((match) => (
+                      <MatchCard
+                        key={match.matchId}
+                        match={match}
+                        sportConfig={sportConfig}
+                        onClick={() => setSelectedMatchId(match.matchId)}
+                      />
+                    ))}
+                </div>
+
+                {repechaje.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-4 my-6">
+                      <div className="flex-1 h-px bg-amber-200" />
+                      <span className="text-xs font-semibold text-amber-600 uppercase tracking-widest flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        Repechaje
+                      </span>
+                      <div className="flex-1 h-px bg-amber-200" />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {repechaje.map((match) => (
+                        <MatchCard
+                          key={match.matchId}
+                          match={match}
+                          sportConfig={sportConfig}
+                          onClick={() => setSelectedMatchId(match.matchId)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </CardBody>
+            </Card>
+          </div>
         )}
 
+        {/* Otras rondas */}
         {others.length > 0 && (
           <Card>
             <CardHeader>
@@ -425,7 +514,7 @@ function MatchCard({
   const isEmpty = participations.length === 0;
   const hasOnlyOne = participations.length === 1 && p1Data;
 
-  const roundName = (match.round || "").toLowerCase();
+  const roundName = String(match.round ?? "").toLowerCase();
   const isFirstRound =
     roundName.includes("cuarto") ||
     roundName.includes("octavo") ||
