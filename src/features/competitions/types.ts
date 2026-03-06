@@ -191,3 +191,8 @@ export interface StandingsRow {
   played: number;
   goalDifference: number;
 }
+
+export interface AvailableRegistration {
+  registrationId: number;
+  displayName: string; 
+}

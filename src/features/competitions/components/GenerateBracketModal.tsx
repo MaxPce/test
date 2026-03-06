@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { useGenerateBracket } from "../api/bracket.mutations";
 import type { Phase } from "../types";
 
+export interface AvailableRegistration {
+  registrationId: number;
+  displayName: string;
+}
+
 interface GenerateBracketModalProps {
   isOpen: boolean;
   onClose: () => void;
   phase: Phase;
-  availableRegistrations: number[];
+  availableRegistrations: AvailableRegistration[]; 
 }
 
 export function GenerateBracketModal({
@@ -22,32 +27,58 @@ export function GenerateBracketModal({
   );
   const [bracketSize, setBracketSize] = useState<number>(8);
   const [includeThirdPlace, setIncludeThirdPlace] = useState(true);
+
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(
+    () => new Set(availableRegistrations.map((r) => r.registrationId)),
+  );
+
   const generateBracket = useGenerateBracket();
+
+  // Resetear selección cada vez que se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedIds(
+        new Set(availableRegistrations.map((r) => r.registrationId)),
+      );
+    }
+  }, [isOpen, availableRegistrations]);
+
+  const toggleParticipant = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () =>
+    setSelectedIds(new Set(availableRegistrations.map((r) => r.registrationId)));
+  const deselectAll = () => setSelectedIds(new Set());
 
   const handleGenerate = () => {
     const payload =
       bracketType === "empty"
-        ? {
-            phaseId: phase.phaseId,
-            bracketSize: bracketSize,
-            includeThirdPlace,
-          }
+        ? { phaseId: phase.phaseId, bracketSize, includeThirdPlace }
         : {
             phaseId: phase.phaseId,
-            registrationIds: availableRegistrations,
+            registrationIds: Array.from(selectedIds), 
             includeThirdPlace,
           };
 
     generateBracket.mutate(payload, {
-      onSuccess: () => {
-        onClose();
-      },
+      onSuccess: () => onClose(),
     });
   };
 
   const numParticipants =
-    bracketType === "empty" ? bracketSize : availableRegistrations.length;
-  const nextPowerOf2 = Math.pow(2, Math.ceil(Math.log2(numParticipants)));
+    bracketType === "empty" ? bracketSize : selectedIds.size;
+
+  const canGenerate = bracketType === "empty" || selectedIds.size >= 2;
+
+  const nextPowerOf2 =
+    numParticipants >= 2
+      ? Math.pow(2, Math.ceil(Math.log2(numParticipants)))
+      : 2;
   const totalRounds = Math.log2(nextPowerOf2);
   const byeCount = nextPowerOf2 - numParticipants;
 
@@ -59,7 +90,8 @@ export function GenerateBracketModal({
       size="md"
     >
       <div className="space-y-6">
-        {/* Toggle: Con participantes o Vacío */}
+
+        {/* Toggle tipo de bracket */}
         <div className="space-y-3">
           <p className="text-sm font-medium text-gray-700">Tipo de bracket</p>
           <div className="space-y-2">
@@ -69,9 +101,7 @@ export function GenerateBracketModal({
                 value="with-participants"
                 checked={bracketType === "with-participants"}
                 onChange={(e) =>
-                  setBracketType(
-                    e.target.value as "with-participants" | "empty",
-                  )
+                  setBracketType(e.target.value as "with-participants" | "empty")
                 }
                 className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
               />
@@ -89,9 +119,7 @@ export function GenerateBracketModal({
                 value="empty"
                 checked={bracketType === "empty"}
                 onChange={(e) =>
-                  setBracketType(
-                    e.target.value as "with-participants" | "empty",
-                  )
+                  setBracketType(e.target.value as "with-participants" | "empty")
                 }
                 className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
               />
@@ -105,7 +133,60 @@ export function GenerateBracketModal({
           </div>
         </div>
 
-        {/* Selector de tamaño (solo si es vacío) */}
+        {bracketType === "with-participants" && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700">
+                Participantes{" "}
+                <span className="font-semibold text-blue-600">
+                  ({selectedIds.size} seleccionados)
+                </span>
+              </p>
+              <div className="flex gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="text-blue-600 hover:underline"
+                >
+                  Todos
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={deselectAll}
+                  className="text-red-500 hover:underline"
+                >
+                  Ninguno
+                </button>
+              </div>
+            </div>
+
+            <div className="border rounded-lg divide-y max-h-52 overflow-y-auto">
+              {availableRegistrations.map((reg) => (
+                <label
+                  key={reg.registrationId}
+                  className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(reg.registrationId)}
+                    onChange={() => toggleParticipant(reg.registrationId)}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-800">{reg.displayName}</span>
+                </label>
+              ))}
+            </div>
+
+            {selectedIds.size < 2 && (
+              <p className="text-xs text-red-500">
+                Selecciona al menos 2 participantes.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Selector de tamaño (solo bracket vacío) */}
         {bracketType === "empty" && (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
@@ -125,7 +206,7 @@ export function GenerateBracketModal({
         )}
 
         {/* Tercer lugar */}
-        <div className="space-y-3">
+        <div>
           <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
             <input
               type="checkbox"
@@ -133,30 +214,35 @@ export function GenerateBracketModal({
               onChange={(e) => setIncludeThirdPlace(e.target.checked)}
               className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <div>
-              <p className="font-medium text-gray-900">
-                Incluir partido de tercer lugar
-              </p>
-            </div>
+            <p className="font-medium text-gray-900">
+              Incluir partido de tercer lugar
+            </p>
           </label>
         </div>
 
-        {/* Preview */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <p className="text-sm font-medium text-gray-700 mb-2">
-            Se generarán:
-          </p>
-          <ul className="text-sm text-gray-600 space-y-1">
-            {getRoundNames(totalRounds).map((round, index) => (
-              <li key={index}>
-                • {round.name}: {round.matches} partido(s)
-              </li>
-            ))}
-            {includeThirdPlace && (
-              <li className="text-amber-700">• Tercer lugar: 1 partido</li>
-            )}
-          </ul>
-        </div>
+        {/* Preview dinámico */}
+        {canGenerate && (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Se generarán:
+            </p>
+            <ul className="text-sm text-gray-600 space-y-1">
+              {byeCount > 0 && (
+                <li className="text-amber-600">
+                  • BYEs automáticos: {byeCount}
+                </li>
+              )}
+              {getRoundNames(totalRounds).map((round, index) => (
+                <li key={index}>
+                  • {round.name}: {round.matches} partido(s)
+                </li>
+              ))}
+              {includeThirdPlace && (
+                <li className="text-amber-700">• Tercer lugar: 1 partido</li>
+              )}
+            </ul>
+          </div>
+        )}
 
         {/* Acciones */}
         <div className="flex justify-end gap-3 pt-4 border-t">
@@ -166,6 +252,7 @@ export function GenerateBracketModal({
           <Button
             onClick={handleGenerate}
             isLoading={generateBracket.isPending}
+            disabled={!canGenerate}
           >
             Generar Bracket
           </Button>
@@ -175,7 +262,7 @@ export function GenerateBracketModal({
   );
 }
 
-// Helper function
+// Helper — sin cambios
 function getRoundNames(totalRounds: number) {
   const rounds = [];
   let matchesInRound = Math.pow(2, totalRounds - 1);

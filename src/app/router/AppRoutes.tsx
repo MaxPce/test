@@ -39,7 +39,7 @@ export function AppRoutes() {
   return (
     <Routes>
       {/* Rutas públicas */}
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
 
       {/* Rutas protegidas del Admin */}

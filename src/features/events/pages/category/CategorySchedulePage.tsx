@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo  } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import {
   Plus,
@@ -363,6 +363,18 @@ export function CategorySchedulePage() {
     sportName.includes("tiro deportivo") ||
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
+
+  const availableRegistrations = useMemo(
+    () =>
+      eventCategory.registrations?.map((r) => ({
+        registrationId: r.registrationId,
+        displayName:
+          r.athlete
+            ? r.athlete.name                          
+            : r.team?.name ?? `Registro #${r.registrationId}`, 
+      })) ?? [],
+    [eventCategory.registrations],
+  );
 
   const isClimbing = () =>
     sportName.includes("escalada") ||
@@ -1469,9 +1481,7 @@ export function CategorySchedulePage() {
               isOpen={isGenerateBracketModalOpen}
               onClose={() => setIsGenerateBracketModalOpen(false)}
               phase={selectedPhase}
-              availableRegistrations={
-                eventCategory.registrations?.map((r) => r.registrationId) || []
-              }
+              availableRegistrations={availableRegistrations}  
             />
           )}
 
