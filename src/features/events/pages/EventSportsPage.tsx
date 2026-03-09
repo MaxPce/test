@@ -93,7 +93,7 @@ export function EventSportsPage() {
 
   const getSportDetailPath = (sportId: number) => {
     return isExternalEvent
-      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`  // ← SISMASTER ROUTE
+      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`  
       : `/admin/events/${eventId}/sports/${sportId}`;
   };
 

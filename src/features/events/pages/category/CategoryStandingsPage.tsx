@@ -277,8 +277,8 @@ export function CategoryStandingsPage() {
     const viewSubtitles: Record<EliminationView, string> = {
       bracket: "Diagrama de enfrentamientos",
       podium: isTaekwondoPoomsae
-        ? "Top 3 de Poomsae"
-        : "Top 3 de la competencia",
+        ? "Top de Poomsae"
+        : "Top de la competencia",
       manual: "Asignación manual de puestos",
       resumen: "Resultados y clasificación UWW",
     };

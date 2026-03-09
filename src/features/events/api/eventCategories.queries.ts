@@ -69,7 +69,6 @@ export const useSismasterSportsByEvent = (sismasterEventId?: number) => {
     queryKey: ["sismaster-sports", sismasterEventId],
     queryFn: async () => {
       if (!sismasterEventId) return [];
-      // Usa tu endpoint existente que SÍ funciona
       const { data: sports } = await apiClient.get(`/sismaster/events/${sismasterEventId}/sports`);
       const allCategories: any[] = [];
       
