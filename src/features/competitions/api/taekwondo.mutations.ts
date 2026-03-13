@@ -7,6 +7,7 @@ import {
   updateKyoruguiSingleRound,
   updateKyoruguiRounds,
   deleteKyoruguiRound,
+  initializePoomsaeGroupPhase,
 } from "./taekwondo.api";
 import type { KyoruguiScore, PoomsaeScore } from "../types/taekwondo.types";
 import { toast } from "sonner";
@@ -246,6 +247,22 @@ export const useUpdatePoomsaeBracketScore = () => {
       toast.error(
         error.response?.data?.message || "Error al actualizar puntaje",
       );
+    },
+  });
+};
+
+export const useInitializePoomsaeGroupPhase = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ phaseId, registrationIds }: { phaseId: number; registrationIds: number[] }) =>
+      initializePoomsaeGroupPhase(phaseId, registrationIds),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["poomsae-scores", variables.phaseId] });
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      toast.success("Fase Poomsae inicializada correctamente");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Error al inicializar fase");
     },
   });
 };

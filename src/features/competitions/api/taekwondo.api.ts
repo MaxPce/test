@@ -192,3 +192,13 @@ export const deleteKyoruguiRound = async (
   return response.data;
 };
 
+export const initializePoomsaeGroupPhase = async (
+  phaseId: number,
+  registrationIds: number[],
+) => {
+  const response = await apiClient.post(
+    `/competitions/taekwondo/poomsae/phases/${phaseId}/initialize-group`,
+    { registrationIds },
+  );
+  return response.data;
+};

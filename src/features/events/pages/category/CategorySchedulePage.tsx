@@ -1,5 +1,6 @@
 import { useState, useMemo  } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import {
   Plus,
   Calendar,
@@ -43,6 +44,8 @@ import { TiroDeportivoScheduleTable } from "@/features/competitions/components/s
 import { GenerateWeightliftingModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingModal";
 import { useInitializeWeightliftingPhase } from "@/features/competitions/api/weightlifting.mutations";
 import { ClimbingScoreTable } from "@/features/competitions/components/climbing/ClimbingScoreTable";
+import { InitializePoomsaeGroupModal } from "@/features/competitions/components/InitializePoomsaeGroupModal";
+import { InitializeShootingGroupModal } from "@/features/competitions/components/InitializeShootingGroupModal";
 
 import {
   useMatches,
@@ -78,6 +81,9 @@ import { AssignSeriesParticipantModal } from "@/features/competitions/components
 import { WeightliftingAttemptsTable } from "@/features/competitions/components/weightlifting/WeightliftingAttemptsTable";
 import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
 
+import { useInitializePoomsaeGroupPhase } from "@/features/competitions/api/taekwondo.mutations";
+
+
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -98,6 +104,8 @@ export function CategorySchedulePage() {
   const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
     useState(false);
   const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
+  const [isInitPoomsaeModalOpen, setIsInitPoomsaeModalOpen] = useState(false);
+  const [isInitShootingModalOpen, setIsInitShootingModalOpen] = useState(false);
 
   const [
     isGenerateWeightliftingModalOpen,
@@ -700,6 +708,11 @@ export function CategorySchedulePage() {
   console.log("isWeightlifting():", isWeightlifting());
   console.log("isClimbing():", isClimbing());
 
+  console.log("category.name:", eventCategory.category?.name);
+  console.log("category.resultType:", eventCategory.category?.resultType);
+  console.log("selectedPhase.type:", selectedPhase?.type);
+  console.log("getTaekwondoType():", getTaekwondoType());
+
   if (isWeightlifting()) {
     return (
       <div className="space-y-6 animate-in">
@@ -992,6 +1005,33 @@ export function CategorySchedulePage() {
 
                   {/* Acciones */}
                   <div className="flex flex-wrap gap-2">
+                    {/* Inicializar Poomsae Grupos → solo poomsae en grupo sin matches */}
+                    {getTaekwondoType() === "poomsae" &&
+                      selectedPhase.type === "grupo" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="gradient"
+                          size="sm"
+                          icon={<Zap className="h-4 w-4" />}
+                          onClick={() => setIsInitPoomsaeModalOpen(true)}
+                        >
+                          Inicializar Fase Poomsae
+                        </Button>
+                      )}
+
+                      {isTiroDeportivo &&
+                        selectedPhase.type === "grupo" &&
+                        matches.length === 0 && (
+                          <Button
+                            variant="gradient"
+                            size="sm"
+                            icon={<Zap className="h-4 w-4" />}
+                            onClick={() => setIsInitShootingModalOpen(true)}
+                          >
+                            Inicializar Fase Tiro
+                          </Button>
+                        )}
+
                     {/* Generar Bracket → solo eliminacion sin partidos */}
                     {selectedPhase.type === "eliminacion" &&
                       matches.length === 0 && (
@@ -1047,6 +1087,7 @@ export function CategorySchedulePage() {
                         </Button>
                       )}
                   </div>
+
                 </div>
               </CardHeader>
 
@@ -1497,6 +1538,26 @@ export function CategorySchedulePage() {
               eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
+
+          <InitializePoomsaeGroupModal
+            isOpen={isInitPoomsaeModalOpen}
+            onClose={() => setIsInitPoomsaeModalOpen(false)}
+            phase={selectedPhase}
+            availableRegistrations={availableRegistrations}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+
+          <InitializeShootingGroupModal
+            isOpen={isInitShootingModalOpen}
+            onClose={() => setIsInitShootingModalOpen(false)}
+            phase={selectedPhase}
+            availableRegistrations={availableRegistrations}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
 
           {selectedMatch && (
             <>
