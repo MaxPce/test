@@ -79,20 +79,5 @@ export function SismasterSportDetailPage() {
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
-  return (
-    <div className="space-y-6 animate-in">
-      <PageHeader
-        title={sport.name}
-        showBack
-        onBack={() => navigate(backPath)}
-      />
-
-      <CategoryAthleteSelector
-        localSportId={localSportId}
-        sismasterEventId={sismasterEventId}
-        sportName={sport.name}
-        onAthletesReady={handleAthletesReady}
-      />
-    </div>
-  );
+  
 }

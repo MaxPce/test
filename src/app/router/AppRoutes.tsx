@@ -96,13 +96,13 @@ export function AppRoutes() {
           />
 
           {/*
-           * ← CAMBIO CLAVE: antes era EventSportCategoriesPage.
+           * 
            *   Ahora muestra el selector de categorías + atletas de Sismaster.
            *   Ruta: /admin/sismaster-events/:externalEventId/sports/:sportId
            */}
           <Route
             path=":externalEventId/sports/:sportId"
-            element={<SismasterSportDetailPage />}
+            element={<EventSportCategoriesPage />}
           />
 
           {/*

@@ -46,6 +46,8 @@ import { useInitializeWeightliftingPhase } from "@/features/competitions/api/wei
 import { ClimbingScoreTable } from "@/features/competitions/components/climbing/ClimbingScoreTable";
 import { InitializePoomsaeGroupModal } from "@/features/competitions/components/InitializePoomsaeGroupModal";
 import { InitializeShootingGroupModal } from "@/features/competitions/components/InitializeShootingGroupModal";
+import AthleticsResultsTable from '../../../competitions/components/athletics/AthleticsResultsTable';
+
 
 import {
   useMatches,
@@ -363,11 +365,12 @@ export function CategorySchedulePage() {
   );
 
   const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
-  const isTimedSport =
-    sportName.includes("natación") ||
-    sportName.includes("natacion") ||
-    sportName.includes("atletismo") ||
-    sportName.includes("ciclismo");
+  const isAtletismo = sportName.includes('atletismo')
+
+  const isTimedSport = sportName.includes('natación') ||
+    sportName.includes('natacion') ||
+    sportName.includes('ciclismo')
+
 
   const isTiroDeportivo =
     sportName.includes("tiro deportivo") ||
@@ -549,6 +552,132 @@ export function CategorySchedulePage() {
       </div>
     );
   }
+
+  if (isAtletismo) return (
+    <div className="space-y-6 animate-in">
+      <PageHeader
+        title="Atletismo"
+        actions={
+          <Button
+            onClick={() => setIsPhaseModalOpen(true)}
+            variant="gradient"
+            size="lg"
+            className="h-5 w-5"
+          >
+            Nueva Serie
+          </Button>
+        }
+      />
+
+      {phasesLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full" />
+        </div>
+      ) : phases.length === 0 ? (
+        <EmptyState
+          icon={Calendar}
+          title="No hay series creadas"
+          description="Crea la primera serie. Ej: '100m Serie A', '4x100m Relevos'"
+          action={{ label: 'Crear Primera Serie', onClick: () => setIsPhaseModalOpen(true) }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {phases.map((phase) => (
+            <Card
+              key={phase.phaseId}
+              variant="elevated"
+              padding="none"
+              hover
+              onClick={() => setSelectedPhase(phase)}
+              className={`cursor-pointer transition-all ${
+                selectedPhase?.phaseId === phase.phaseId
+                  ? 'ring-2 ring-orange-500 shadow-strong'
+                  : ''
+              }`}
+            >
+              <div className="relative h-24 bg-gradient-to-br from-orange-500 to-red-600 overflow-hidden rounded-t-xl">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <div className="absolute top-4 left-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <Timer className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeletePhase(phase.phaseId); }}
+                  className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+              <CardBody>
+                <h4 className="text-lg font-bold text-slate-900 mb-2">{phase.name}</h4>
+                <div className="flex items-center justify-between">
+                  <Badge variant="primary" size="sm">Serie / Sección</Badge>
+                  <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {selectedPhase && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <Timer className="h-5 w-5 text-orange-500" />
+              <h4 className="text-lg font-bold text-slate-800">{selectedPhase.name}</h4>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-4 w-4"
+                onClick={() => setIsAssignSeriesModalOpen(true)}
+              >
+                Asignar Participante
+              </Button>
+              <button
+                onClick={() => setSelectedPhase(null)}
+                className="text-slate-400 hover:text-slate-600 text-sm"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+
+          <AthleticsResultsTable phaseId={selectedPhase.phaseId} />
+        </div>
+      )}
+
+      {/* Modal crear serie */}
+      <Modal
+        isOpen={isPhaseModalOpen}
+        onClose={() => setIsPhaseModalOpen(false)}
+        title="Crear Nueva Serie"
+        size="md"
+      >
+        <PhaseForm
+          eventCategoryId={eventCategory.eventCategoryId}
+          existingPhases={phases.length}
+          onSubmit={handleCreatePhase}
+          onCancel={() => setIsPhaseModalOpen(false)}
+          isLoading={createPhaseMutation.isPending}
+        />
+      </Modal>
+
+      {selectedPhase && (
+        <AssignSeriesParticipantModal
+          isOpen={isAssignSeriesModalOpen}
+          onClose={() => setIsAssignSeriesModalOpen(false)}
+          phaseId={selectedPhase.phaseId}
+          phaseName={selectedPhase.name}
+          allRegistrations={eventCategory.registrations}
+        />
+      )}
+    </div>
+  );
+
 
   if (isTimedSport) {
     return (

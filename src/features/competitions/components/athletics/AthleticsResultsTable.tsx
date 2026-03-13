@@ -1,228 +1,203 @@
-import { useState } from "react";
-import { useAthleticsResultsTable } from "../../api/athletics.queries";
-import { useUpdateAthleticsTime } from "../../api/athletics.mutations";
-import { AthleticsTimeInput } from "./AthleticsTimeInput";
-import { getImageUrl } from "@/lib/utils/imageUrl";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { apiClient } from '@/lib/api/client'; 
+
+interface AthleticsRow {
+  phaseRegistrationId: number;
+  registrationId: number;
+  athleteName: string;
+  institutionName: string;
+  athleticsResultId: number | null;
+  lane: number | null;
+  section: string | null;
+  time: string | null;
+  notes: string | null;
+  isDirty?: boolean;
+}
 
 interface Props {
   phaseId: number;
 }
 
-export const AthleticsResultsTable = ({ phaseId }: Props) => {
-  const { data: participants = [], isLoading } =
-    useAthleticsResultsTable(phaseId);
-  const updateTimeMutation = useUpdateAthleticsTime();
-  const [editingId, setEditingId] = useState<number | null>(null);
+export default function AthleticsResultsTable({ phaseId }: Props) {
+  const queryClient = useQueryClient();
+  const [rows, setRows] = useState<AthleticsRow[]>([]);
 
-  const handleSave = (
-    participationId: number,
-    time: string,
-    mark: string,
-    lane: number | null,
-  ) => {
-    updateTimeMutation.mutate(
-      {
-        participationId,
-        data: {
-          time: time || null,
-          mark: mark || null,
-          lane,
-        },
-      },
-      {
-        onSuccess: () => {
-          setEditingId(null);
-          toast.success("Resultado guardado");
-        },
-        onError: () => {
-          toast.error("Error al guardar el resultado");
-        },
-      },
+  const { data = [], isLoading } = useQuery<AthleticsRow[]>({
+    queryKey: ['athletics-track-table', phaseId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/competitions/phases/${phaseId}/athletics-track-table`);
+      return res.data;
+    },
+    enabled: !!phaseId,
+  });
+
+  useEffect(() => {
+    setRows(data.map((r) => ({ ...r, isDirty: false })));
+  }, [data]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (row: AthleticsRow) => {
+      const payload = {
+        phaseRegistrationId: row.phaseRegistrationId,
+        lane: row.lane ?? null,
+        section: row.section ?? null,
+        time: row.time ?? null,
+        notes: row.notes ?? null,
+      };
+      if (row.athleticsResultId) {
+        await apiClient.patch(`/competitions/athletics/${row.athleticsResultId}`, payload);
+      } else {
+        await apiClient.post('/competitions/athletics', payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['athletics-track-table', phaseId] });
+      toast.success('Resultado guardado');
+    },
+    onError: () => {
+      toast.error('Error al guardar el resultado');
+    },
+  });
+
+  const handleChange = (id: number, patch: Partial<AthleticsRow>) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.phaseRegistrationId === id ? { ...r, ...patch, isDirty: true } : r,
+      ),
+    );
+  };
+
+  const handleSave = async (row: AthleticsRow) => {
+    await saveMutation.mutateAsync(row);
+    setRows((prev) =>
+      prev.map((r) =>
+        r.phaseRegistrationId === row.phaseRegistrationId
+          ? { ...r, isDirty: false }
+          : r,
+      ),
     );
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+      <div className="flex justify-center items-center h-32">
+        <div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  if (participants.length === 0) {
+  if (rows.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p>No hay participantes inscritos en esta fase</p>
-        <p className="text-sm mt-2">
-          Usa el botón "Agregar Participantes" para añadirlos
-        </p>
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+        No hay participantes asignados a esta serie. Usa "Asignar Participante" para agregar atletas.
       </div>
     );
   }
+
+  // Ordenar por sección → tiempo
+  const sorted = [...rows].sort((a, b) => {
+    const sA = a.section ?? '';
+    const sB = b.section ?? '';
+    if (sA !== sB) return sA.localeCompare(sB);
+    if (!a.time && !b.time) return 0;
+    if (!a.time) return 1;
+    if (!b.time) return -1;
+    return a.time.localeCompare(b.time);
+  });
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">
-              #
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Participante
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Institución
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">
-              Calle
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Tiempo / Marca
-            </th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {participants.map((participant, index) => {
-            const isEditing = editingId === participant.participationId;
-
-            if (isEditing) {
-              return (
-                <tr
-                  key={participant.participationId}
-                  className="bg-orange-50 transition-colors"
-                >
-                  <td className="px-4 py-3 text-center text-sm text-gray-500">
-                    {index + 1}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {participant.participantName}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {participant.gender}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      {participant.institutionLogo && (
-                        <img
-                          src={getImageUrl(participant.institutionLogo)}
-                          alt={participant.institution}
-                          className="h-6 w-6 object-contain"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      )}
-                      <div className="text-sm text-gray-700">
-                        {participant.institution}
-                      </div>
-                    </div>
-                  </td>
-                  <td colSpan={3} className="px-4 py-3">
-                    <AthleticsTimeInput
-                      participationId={participant.participationId}
-                      initialTime={participant.time || ""}
-                      initialMark={participant.mark || ""}
-                      initialLane={participant.lane}
-                      onSave={handleSave}
-                      onCancel={() => setEditingId(null)}
-                    />
-                  </td>
-                </tr>
-              );
-            }
-
-            return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50 text-xs text-slate-600 uppercase tracking-wide">
+            <tr>
+              <th className="px-4 py-3 text-left">Sección</th>
+              <th className="px-4 py-3 text-left">Carril</th>
+              <th className="px-4 py-3 text-left">Atleta</th>
+              <th className="px-4 py-3 text-left">Institución</th>
+              <th className="px-4 py-3 text-left">Tiempo</th>
+              <th className="px-4 py-3 text-left"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {sorted.map((row) => (
               <tr
-                key={participant.participationId}
-                className="hover:bg-gray-50 transition-colors"
+                key={row.phaseRegistrationId}
+                className={row.isDirty ? 'bg-amber-50' : 'hover:bg-slate-50 transition-colors'}
               >
-                <td className="px-4 py-3 text-center">
-                  {participant.rank != null ? (
-                    <span
-                      className={`text-sm font-bold ${
-                        participant.rank === 1
-                          ? "text-yellow-600"
-                          : participant.rank === 2
-                            ? "text-gray-500"
-                            : participant.rank === 3
-                              ? "text-amber-700"
-                              : "text-gray-700"
-                      }`}
-                    >
-                      {participant.rank}°
-                    </span>
-                  ) : (
-                    <span className="text-sm text-gray-400">—</span>
-                  )}
+                <td className="px-4 py-3">
+                  <input
+                    type="text"
+                    value={row.section ?? ''}
+                    placeholder="A"
+                    maxLength={10}
+                    onChange={(e) =>
+                      handleChange(row.phaseRegistrationId, {
+                        section: e.target.value || null,
+                      })
+                    }
+                    className="w-16 rounded border border-slate-300 px-2 py-1 text-sm focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                  />
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {participant.participantName}
-                    {participant.isTeam && (
-                      <span className="ml-1 text-xs text-blue-600">
-                        (Equipo)
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {participant.gender}
-                  </div>
+
+                <td className="px-4 py-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={row.lane ?? ''}
+                    placeholder="1"
+                    onChange={(e) =>
+                      handleChange(row.phaseRegistrationId, {
+                        lane: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                    className="w-16 rounded border border-slate-300 px-2 py-1 text-sm focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                  />
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    {participant.institutionLogo && (
-                      <img
-                        src={getImageUrl(participant.institutionLogo)}
-                        alt={participant.institution}
-                        className="h-6 w-6 object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    )}
-                    <div className="text-sm text-gray-700">
-                      {participant.institution}
-                    </div>
-                  </div>
+
+                <td className="px-4 py-3 font-semibold text-slate-900">
+                  {row.athleteName}
                 </td>
-                <td className="px-4 py-3 text-center">
-                  <span className="text-sm font-medium text-gray-700">
-                    {participant.lane ?? "—"}
-                  </span>
+
+                <td className="px-4 py-3 text-slate-500">
+                  {row.institutionName || '—'}
                 </td>
-                <td className="px-4 py-3 text-center">
-                  {participant.time ? (
-                    <span className="text-lg font-bold text-orange-600 font-mono">
-                      {participant.time}
-                    </span>
-                  ) : participant.mark ? (
-                    <span className="text-lg font-bold text-orange-600">
-                      {participant.mark}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-gray-400">—</span>
-                  )}
+
+                <td className="px-4 py-3">
+                  <input
+                    type="text"
+                    value={row.time ?? ''}
+                    placeholder="00:10.45"
+                    onChange={(e) =>
+                      handleChange(row.phaseRegistrationId, {
+                        time: e.target.value || null,
+                      })
+                    }
+                    className="w-28 rounded border border-slate-300 px-2 py-1 text-sm font-mono focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                  />
                 </td>
-                <td className="px-4 py-3 text-center">
+
+                <td className="px-4 py-3">
                   <button
-                    onClick={() => setEditingId(participant.participationId)}
-                    className="text-sm text-orange-600 hover:text-orange-800 font-medium"
+                    onClick={() => handleSave(row)}
+                    disabled={saveMutation.isPending}
+                    className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      row.isDirty
+                        ? 'bg-orange-500 text-white hover:bg-orange-600'
+                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                    }`}
                   >
-                    Editar
+                    {saveMutation.isPending ? '...' : 'Guardar'}
                   </button>
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
-};
+}
