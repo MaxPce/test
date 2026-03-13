@@ -73,12 +73,12 @@ export const KyoruguiMatchDetailsModal = ({ match, isOpen, onClose }: Props) => 
   const canRegisterScore = participant1 && participant2;
   const hasRounds = rounds && rounds.length > 0;
   
-  // 🆕 Verificar si solo hay 1 participante para poder pasar automáticamente
+  // Verificar si solo hay 1 participante para poder pasar automáticamente
   const participations = match.participations || [];
   const hasOnlyOneParticipant = participations.length === 1;
   const canAdvance = hasOnlyOneParticipant && match.status !== "finalizado";
 
-  // 🆕 Función para avanzar participante automáticamente
+  // Función para avanzar participante automáticamente
   const handleAdvanceParticipant = async () => {
     if (!participations[0]) return;
     

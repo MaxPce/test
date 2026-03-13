@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { ENDPOINTS } from "@/lib/api/endpoints";
 import type { EventCategory } from "../types";
@@ -15,8 +15,12 @@ export const eventCategoryKeys = {
 interface EventCategoriesParams {
   eventId?: number;
 }
+interface EventCategoriesOptions {
+  enabled?: boolean;
+}
 
-export const useEventCategories = (params?: EventCategoriesParams) => {
+
+export const useEventCategories = (params?: EventCategoriesParams, options?: EventCategoriesOptions,) => {
   return useQuery({
     queryKey: eventCategoryKeys.list(params),
     queryFn: async () => {
@@ -26,6 +30,7 @@ export const useEventCategories = (params?: EventCategoriesParams) => {
       );
       return data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 0,
   });
 };
@@ -56,5 +61,65 @@ export const useSismasterEventCategories = (externalEventId?: number) => {
     },
     enabled: !!externalEventId,
     staleTime: 0,
+  });
+};
+
+export const useSismasterSportsByEvent = (sismasterEventId?: number) => {
+  return useQuery({
+    queryKey: ["sismaster-sports", sismasterEventId],
+    queryFn: async () => {
+      if (!sismasterEventId) return [];
+      const { data: sports } = await apiClient.get(`/sismaster/events/${sismasterEventId}/sports`);
+      const allCategories: any[] = [];
+      
+      // Carga categorías por deporte en paralelo
+      await Promise.all(
+        sports.map(async (sport: any) => {
+          const { data: categories } = await apiClient.get(
+            `/sismaster/sports/local/${sport.sport_id}/params/by-event/${sismasterEventId}`
+          );
+          categories.forEach((cat: any) => {
+            allCategories.push({
+              category: {
+                sport: { ...sport, sportId: sport.sport_id },
+                name: cat.name,
+              },
+              registrations: [], // Placeholder
+            });
+          });
+        })
+      );
+      
+      return allCategories;
+    },
+    enabled: !!sismasterEventId,
+    staleTime: 5 * 60 * 1000, // 5 min
+  });
+};
+
+interface RegisterCategoriesResult {
+  localEventId: null;
+  sismasterEventId: number;
+  sportsProcessed: number;
+  created: number;
+  skipped: number;
+  alreadyExists: number;
+}
+
+export const useRegisterEventCategories = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (sismasterEventId: number) =>
+      apiClient
+        .post(`/events/sismaster/${sismasterEventId}/register-categories`)
+        .then((r) => r.data as RegisterCategoriesResult),
+
+    onSuccess: (data) => {
+      // Invalida las categorías del evento para que se refresquen automáticamente
+      queryClient.invalidateQueries({
+        queryKey: ["sismaster-event-categories", data.sismasterEventId],
+      });
+    },
   });
 };

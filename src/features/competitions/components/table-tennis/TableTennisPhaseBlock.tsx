@@ -11,18 +11,33 @@ interface TableTennisPhaseBlockProps {
   phase: any;
 }
 
-type MatchFilter = "all" | "individual" | "team";
+type MatchFilter = "all" | "individual" | "doubles" | "team";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getParticipantName(participation: any): string {
   const reg = participation?.registration;
+  const members = reg?.team?.members;
+
+  // Dobles: concatenar los dos nombres con " / "
+  if (Array.isArray(members) && members.length === 2) {
+    const n1 = members[0]?.athlete?.name ?? members[0]?.athleteName ?? "?";
+    const n2 = members[1]?.athlete?.name ?? members[1]?.athleteName ?? "?";
+    return `${n1} / ${n2}`;
+  }
+
   return (
     reg?.team?.name ??
     reg?.athlete?.name ??
     `Participante #${participation?.participationId ?? "?"}`
   );
 }
+
+function getDoublesPhotos(participation: any): [string | undefined, string | undefined] {
+  const members = participation?.registration?.team?.members ?? [];
+  return [members[0]?.athlete?.photoUrl, members[1]?.athlete?.photoUrl];
+}
+
 
 function getInstitutionAbrev(participation: any): string {
   const reg = participation?.registration;
@@ -40,13 +55,16 @@ function getAthletePhoto(participation: any): string | undefined {
   return participation?.registration?.athlete?.photoUrl;
 }
 
-// true = individual (atleta), false = equipo
-function isIndividual(match: any): boolean {
+type ParticipantType = "individual" | "doubles" | "team";
+
+function getParticipantType(match: any): ParticipantType {
   const reg = match.participations?.[0]?.registration;
-  return !!reg?.athlete && !reg?.team;
+  if (!reg?.team) return "individual";
+  const memberCount = reg.team?.members?.length ?? 0;
+  return memberCount === 2 ? "doubles" : "team";
 }
 
-// ── Sub-componente: detalle inline ───────────────────────────────────────────
+const isIndividual = (match: any) => getParticipantType(match) === "individual";
 
 interface MatchInlineDetailProps {
   matchId: number;
@@ -321,6 +339,44 @@ interface MatchCardProps {
   onToggle: (id: number) => void;
 }
 
+function DoublesAvatars({
+  photos,
+  names,
+  won,
+}: {
+  photos: [string | undefined, string | undefined];
+  names: string; // "Nombre1 / Nombre2"
+  won: boolean;
+}) {
+  const [photo1, photo2] = photos;
+  const [name1, name2] = names.split(" / ");
+
+  const Avatar = ({ photo, name }: { photo?: string; name: string }) =>
+    photo ? (
+      <img
+        src={getImageUrl(photo)}
+        alt={name}
+        className="h-7 w-7 rounded-full object-cover border-2 border-white shadow"
+        onError={(e) => { e.currentTarget.style.display = "none"; }}
+      />
+    ) : (
+      <div className="h-7 w-7 rounded-full bg-emerald-100 flex items-center justify-center border-2 border-white shadow">
+        <User className="h-3.5 w-3.5 text-emerald-500" />
+      </div>
+    );
+
+  return (
+    <div className={`flex flex-col items-end gap-1 ${!won ? "opacity-40" : ""}`}>
+      {/* Avatares superpuestos */}
+      <div className="flex -space-x-2">
+        <Avatar photo={photo1} name={name1} />
+        <Avatar photo={photo2} name={name2} />
+      </div>
+    </div>
+  );
+}
+
+
 function MatchCard({
   match,
   roundLabel,
@@ -342,6 +398,13 @@ function MatchCard({
   const photoA = getAthletePhoto(partA);
   const photoB = getAthletePhoto(partB);
 
+  const participantType = getParticipantType(match);
+  const isDoubles = participantType === "doubles";
+  const doublesPhotosA = isDoubles ? getDoublesPhotos(partA) : [undefined, undefined] as [undefined, undefined];
+  const doublesPhotosB = isDoubles ? getDoublesPhotos(partB) : [undefined, undefined] as [undefined, undefined];
+
+  
+
   const individual = isIndividual(match);
   const isFinished = match.status === "finalizado";
   const isInProgress = match.status === "en_curso";
@@ -359,7 +422,7 @@ function MatchCard({
   const bWon =
     isFinished && winnerRegId != null && winnerRegId === partB?.registrationId;
 
-  const scoreLabel = individual ? "sets ganados" : "partidos ganados";
+  const scoreLabel = (!individual && !isDoubles) ? "partidos ganados" : "sets ganados";
 
   return (
     <div
@@ -382,14 +445,12 @@ function MatchCard({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             {/* Pill individual / equipo */}
-            <span
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                individual
-                  ? "bg-violet-100 text-violet-600"
-                  : "bg-amber-100 text-amber-600"
-              }`}
-            >
-              {individual ? "Individual" : "Equipos"}
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+              individual  ? "bg-violet-100 text-violet-600" :
+              isDoubles   ? "bg-emerald-100 text-emerald-600" :
+                            "bg-amber-100 text-amber-600"
+            }`}>
+              {individual ? "Individual" : isDoubles ? "Dobles" : "Equipos"}
             </span>
             <span className="text-xs font-semibold text-slate-400">
               {roundLabel}
@@ -427,29 +488,26 @@ function MatchCard({
             className={`flex flex-col items-end gap-1 transition-opacity ${isFinished && !aWon ? "opacity-40" : ""}`}
           >
             {individual ? (
-              photoA ? (
-                <img
-                  src={getImageUrl(photoA)}
-                  alt={nameA}
-                  className="h-9 w-9 rounded-full object-cover border-2 border-white shadow"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-violet-100 flex items-center justify-center border-2 border-white shadow">
-                  <User className="h-4 w-4 text-violet-500" />
-                </div>
-              )
+              photoA
+                ? <img src={getImageUrl(photoA)} alt={nameA} className="h-9 w-9 rounded-full object-cover border-2 border-white shadow" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                : <div className="h-9 w-9 rounded-full bg-violet-100 flex items-center justify-center border-2 border-white shadow"><User className="h-4 w-4 text-violet-500" /></div>
+            ) : isDoubles ? (
+              <div className="flex -space-x-2">
+                {doublesPhotosA.map((p, i) =>
+                  p ? (
+                    <img key={i} src={getImageUrl(p)} alt={nameA}
+                      className="h-7 w-7 rounded-full object-cover border-2 border-white shadow"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  ) : (
+                    <div key={i} className="h-7 w-7 rounded-full bg-emerald-100 flex items-center justify-center border-2 border-white shadow">
+                      <User className="h-3.5 w-3.5 text-emerald-500" />
+                    </div>
+                  )
+                )}
+              </div>
             ) : logoA ? (
-              <img
-                src={getImageUrl(logoA)}
-                alt={instA}
-                className="h-8 w-8 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
+              <img src={getImageUrl(logoA)} alt={instA} className="h-8 w-8 object-contain"
+                onError={(e) => { e.currentTarget.style.display = "none"; }} />
             ) : null}
             <p
               className={`text-sm font-bold text-right leading-tight ${aWon ? "text-blue-700" : "text-slate-800"}`}
@@ -492,29 +550,27 @@ function MatchCard({
             className={`flex flex-col items-start gap-1 transition-opacity ${isFinished && !bWon ? "opacity-40" : ""}`}
           >
             {individual ? (
-              photoB ? (
-                <img
-                  src={getImageUrl(photoB)}
-                  alt={nameB}
-                  className="h-9 w-9 rounded-full object-cover border-2 border-white shadow"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              ) : (
-                <div className="h-9 w-9 rounded-full bg-violet-100 flex items-center justify-center border-2 border-white shadow">
-                  <User className="h-4 w-4 text-violet-500" />
-                </div>
-              )
+              photoB
+                ? <img src={getImageUrl(photoB)} alt={nameB} className="h-9 w-9 rounded-full object-cover border-2 border-white shadow" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                : <div className="h-9 w-9 rounded-full bg-violet-100 flex items-center justify-center border-2 border-white shadow"><User className="h-4 w-4 text-violet-500" /></div>
+            ) : isDoubles ? (
+
+              <div className="flex -space-x-2">
+                {doublesPhotosB.map((p, i) =>
+                  p ? (
+                    <img key={i} src={getImageUrl(p)} alt={nameB}
+                      className="h-7 w-7 rounded-full object-cover border-2 border-white shadow"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  ) : (
+                    <div key={i} className="h-7 w-7 rounded-full bg-emerald-100 flex items-center justify-center border-2 border-white shadow">
+                      <User className="h-3.5 w-3.5 text-emerald-500" />
+                    </div>
+                  )
+                )}
+              </div>
             ) : logoB ? (
-              <img
-                src={getImageUrl(logoB)}
-                alt={instB}
-                className="h-8 w-8 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
+              <img src={getImageUrl(logoB)} alt={instA} className="h-8 w-8 object-contain"
+                onError={(e) => { e.currentTarget.style.display = "none"; }} />
             ) : null}
             <p
               className={`text-sm font-bold leading-tight ${bWon ? "text-blue-700" : "text-slate-800"}`}
@@ -533,7 +589,7 @@ function MatchCard({
         <div className="overflow-hidden">
           <MatchInlineDetail
             matchId={match.matchId}
-            individual={individual}
+            individual={individual || isDoubles} 
             onScoreResolved={(a, b) => setResolvedScore({ a, b })}
           />
         </div>
@@ -566,14 +622,16 @@ export function TableTennisPhaseBlock({ phase }: TableTennisPhaseBlockProps) {
 
   // Detectar si hay ambos tipos para mostrar el filtro
   const allMatches = matches as any[];
-  const hasIndividual = allMatches.some((m) => isIndividual(m));
-  const hasTeam = allMatches.some((m) => !isIndividual(m));
-  const showFilter = hasIndividual && hasTeam;
+  const hasIndividual = allMatches.some((m) => getParticipantType(m) === "individual");
+  const hasDoubles    = allMatches.some((m) => getParticipantType(m) === "doubles");
+  const hasTeam       = allMatches.some((m) => getParticipantType(m) === "team");
+  const showFilter    = [hasIndividual, hasDoubles, hasTeam].filter(Boolean).length > 1;
 
   // Aplicar filtro
   const filteredMatches = allMatches.filter((m) => {
-    if (matchFilter === "individual") return isIndividual(m);
-    if (matchFilter === "team") return !isIndividual(m);
+    if (matchFilter === "individual") return getParticipantType(m) === "individual";
+    if (matchFilter === "doubles")    return getParticipantType(m) === "doubles";
+    if (matchFilter === "team")       return getParticipantType(m) === "team";
     return true;
   });
 
@@ -792,55 +850,57 @@ export function TableTennisPhaseBlock({ phase }: TableTennisPhaseBlockProps) {
                                 key: "all",
                                 label: "Todos",
                                 count: allMatches.length,
+                                color: "blue",
                               },
                               {
                                 key: "individual",
                                 label: "Individual",
-                                count: allMatches.filter(isIndividual).length,
+                                count: allMatches.filter((m) => getParticipantType(m) === "individual").length,
+                                color: "violet",
+                              },
+                              {
+                                key: "doubles",
+                                label: "Dobles",
+                                count: allMatches.filter((m) => getParticipantType(m) === "doubles").length,
+                                color: "emerald",
                               },
                               {
                                 key: "team",
                                 label: "Equipos",
-                                count: allMatches.filter(
-                                  (m) => !isIndividual(m),
-                                ).length,
+                                count: allMatches.filter((m) => getParticipantType(m) === "team").length,
+                                color: "amber",
                               },
-                            ] as {
-                              key: MatchFilter;
-                              label: string;
-                              count: number;
-                            }[]
-                          ).map(({ key, label, count }) => (
-                            <button
-                              key={key}
-                              onClick={() => {
-                                setMatchFilter(key);
-                                setExpandedId(null); // cerrar el expandido al cambiar filtro
-                              }}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                matchFilter === key
-                                  ? "bg-white text-slate-800 shadow-sm"
-                                  : "text-slate-500 hover:text-slate-700"
-                              }`}
-                            >
-                              {label}
-                              <span
-                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            ] as { key: MatchFilter; label: string; count: number; color: string }[]
+                          )
+                            .filter((opt) => opt.key === "all" || opt.count > 0)
+                            .map(({ key, label, count, color }) => (
+                              <button
+                                key={key}
+                                onClick={() => {
+                                  setMatchFilter(key);
+                                  setExpandedId(null);
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                                   matchFilter === key
-                                    ? key === "individual"
-                                      ? "bg-violet-100 text-violet-600"
-                                      : key === "team"
-                                        ? "bg-amber-100 text-amber-600"
-                                        : "bg-blue-100 text-blue-600"
-                                    : "bg-slate-200 text-slate-500"
+                                    ? "bg-white text-slate-800 shadow-sm"
+                                    : "text-slate-500 hover:text-slate-700"
                                 }`}
                               >
-                                {count}
-                              </span>
-                            </button>
-                          ))}
+                                {label}
+                                <span
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                    matchFilter === key
+                                      ? `bg-${color}-100 text-${color}-600`
+                                      : "bg-slate-200 text-slate-500"
+                                  }`}
+                                >
+                                  {count}
+                                </span>
+                              </button>
+                            ))}
                         </div>
                       )}
+
 
                       <p className="text-xs text-slate-400 text-center">
                         Toca un partido para ver el detalle de sets

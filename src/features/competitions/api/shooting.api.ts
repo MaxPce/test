@@ -19,3 +19,14 @@ export const getShootingParticipationScore = (
   participationId: number,
 ): Promise<ShootingScore> =>
   apiClient.get(`${BASE}/participations/${participationId}/score`).then((res) => res.data);
+
+export const initializeShootingGroupPhase = async (
+  phaseId: number,
+  registrationIds: number[],
+) => {
+  const response = await apiClient.post(
+    `/competitions/shooting/phases/${phaseId}/initialize-group`,
+    { registrationIds },
+  );
+  return response.data;
+};

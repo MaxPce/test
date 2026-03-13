@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo  } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import {
   Plus,
   Calendar,
@@ -43,6 +44,8 @@ import { TiroDeportivoScheduleTable } from "@/features/competitions/components/s
 import { GenerateWeightliftingModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingModal";
 import { useInitializeWeightliftingPhase } from "@/features/competitions/api/weightlifting.mutations";
 import { ClimbingScoreTable } from "@/features/competitions/components/climbing/ClimbingScoreTable";
+import { InitializePoomsaeGroupModal } from "@/features/competitions/components/InitializePoomsaeGroupModal";
+import { InitializeShootingGroupModal } from "@/features/competitions/components/InitializeShootingGroupModal";
 
 import {
   useMatches,
@@ -76,6 +79,11 @@ import {
 } from "@/features/competitions/api/phaseRegistrations.queries";
 import { AssignSeriesParticipantModal } from "@/features/competitions/components/AssignSeriesParticipantModal";
 import { WeightliftingAttemptsTable } from "@/features/competitions/components/weightlifting/WeightliftingAttemptsTable";
+import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
+
+import { useInitializePoomsaeGroupPhase } from "@/features/competitions/api/taekwondo.mutations";
+
+
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -96,6 +104,8 @@ export function CategorySchedulePage() {
   const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
     useState(false);
   const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
+  const [isInitPoomsaeModalOpen, setIsInitPoomsaeModalOpen] = useState(false);
+  const [isInitShootingModalOpen, setIsInitShootingModalOpen] = useState(false);
 
   const [
     isGenerateWeightliftingModalOpen,
@@ -175,55 +185,52 @@ export function CategorySchedulePage() {
     );
   };
 
-  const isWeightlifting = () =>
-    sportName.includes("halterofilia") ||
-    sportName.includes("weightlifting") ||
-    sportName.includes("levantamiento de pesas");
-
-  const getTaekwondoType = () => {
-    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
-    if (!sportName.includes("taekwondo")) return null;
-
-    const categoryName = eventCategory.category?.name?.toLowerCase() || "";
-    if (
-      categoryName.includes("poomsae") ||
-      categoryName.includes("formas") ||
-      categoryName.includes("forma")
-    ) {
-      return "poomsae";
-    }
-
-    if (
-      categoryName.includes("kyorugi") ||
-      categoryName.includes("kyorugui") ||
-      categoryName.includes("combate") ||
-      categoryName.includes("pelea") ||
-      categoryName.includes("lucha")
-    ) {
-      return "kyorugui";
-    }
-    if (
-      selectedPhase?.type === "eliminacion" ||
-      selectedPhase?.type === "grupo"
-    ) {
-      return "kyorugui";
-    }
+  const isWeightlifting = () => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sport.includes("halterofilia") ||
+      sport.includes("weightlifting") ||
+      sport.includes("levantamiento de pesas")
+    );
   };
 
-  const getWushuType = () => {
-    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
-    if (!sportName.includes("wushu")) return null;
 
-    const categoryName = eventCategory.category?.name?.toLowerCase() || "";
-    if (
-      categoryName.includes("taolu") ||
-      categoryName.includes("formas") ||
-      categoryName.includes("forma")
-    ) {
-      return "taolu";
+  const getTaekwondoType = (): "poomsae" | "kyorugui" | null => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    if (!sport.includes("taekwondo")) return null;
+
+    const resultType = eventCategory.category?.resultType;
+
+    if (resultType === "score")  return "poomsae";
+    if (resultType === "combat") return "kyorugui";
+
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (name.includes("poomsae") || name.includes("forma")) return "poomsae";
+    if (name.includes("kyorugi") || name.includes("combate")) return "kyorugui";
+
+    if (selectedPhase?.type === "eliminacion" || selectedPhase?.type === "grupo") {
+      return "kyorugui";
     }
-    return "sanda"; // combate por defecto
+
+    return null;
   };
+
+
+  const getWushuType = (): "taolu" | "sanda" | null => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    if (!sport.includes("wushu")) return null;
+
+    const resultType = eventCategory.category?.resultType;
+
+    if (resultType === "score")  return "taolu";
+    if (resultType === "combat") return "sanda";
+
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (name.includes("taolu") || name.includes("forma")) return "taolu";
+
+    return "sanda"; 
+  };
+
 
   const handleCreatePhase = async (data: any) => {
     await createPhaseMutation.mutateAsync(data);
@@ -337,10 +344,12 @@ export function CategorySchedulePage() {
   const handleGenerateRoundRobin = async (data: {
     phaseId: number;
     registrationIds: number[];
+    emptyParticipantCount?: number;
   }) => {
     await initializeRoundRobinMutation.mutateAsync(data);
     setIsGenerateModalOpen(false);
   };
+
 
   const totalMatches = phases.reduce(
     (sum, phase) => sum + (phase.matches?.length || 0),
@@ -364,6 +373,18 @@ export function CategorySchedulePage() {
     sportName.includes("tiro deportivo") ||
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
+
+  const availableRegistrations = useMemo(
+    () =>
+      eventCategory.registrations?.map((r) => ({
+        registrationId: r.registrationId,
+        displayName:
+          r.athlete
+            ? r.athlete.name                          
+            : r.team?.name ?? `Registro #${r.registrationId}`, 
+      })) ?? [],
+    [eventCategory.registrations],
+  );
 
   const isClimbing = () =>
     sportName.includes("escalada") ||
@@ -687,6 +708,11 @@ export function CategorySchedulePage() {
   console.log("isWeightlifting():", isWeightlifting());
   console.log("isClimbing():", isClimbing());
 
+  console.log("category.name:", eventCategory.category?.name);
+  console.log("category.resultType:", eventCategory.category?.resultType);
+  console.log("selectedPhase.type:", selectedPhase?.type);
+  console.log("getTaekwondoType():", getTaekwondoType());
+
   if (isWeightlifting()) {
     return (
       <div className="space-y-6 animate-in">
@@ -979,6 +1005,33 @@ export function CategorySchedulePage() {
 
                   {/* Acciones */}
                   <div className="flex flex-wrap gap-2">
+                    {/* Inicializar Poomsae Grupos → solo poomsae en grupo sin matches */}
+                    {getTaekwondoType() === "poomsae" &&
+                      selectedPhase.type === "grupo" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="gradient"
+                          size="sm"
+                          icon={<Zap className="h-4 w-4" />}
+                          onClick={() => setIsInitPoomsaeModalOpen(true)}
+                        >
+                          Inicializar Fase Poomsae
+                        </Button>
+                      )}
+
+                      {isTiroDeportivo &&
+                        selectedPhase.type === "grupo" &&
+                        matches.length === 0 && (
+                          <Button
+                            variant="gradient"
+                            size="sm"
+                            icon={<Zap className="h-4 w-4" />}
+                            onClick={() => setIsInitShootingModalOpen(true)}
+                          >
+                            Inicializar Fase Tiro
+                          </Button>
+                        )}
+
                     {/* Generar Bracket → solo eliminacion sin partidos */}
                     {selectedPhase.type === "eliminacion" &&
                       matches.length === 0 && (
@@ -1034,6 +1087,7 @@ export function CategorySchedulePage() {
                         </Button>
                       )}
                   </div>
+
                 </div>
               </CardHeader>
 
@@ -1437,6 +1491,7 @@ export function CategorySchedulePage() {
           >
             <MatchForm
               phase={selectedPhase}
+              existingMatches={matches}
               onSubmit={handleCreateMatch}
               onCancel={() => setIsMatchModalOpen(false)}
               isLoading={createMatchMutation.isPending}
@@ -1448,9 +1503,12 @@ export function CategorySchedulePage() {
               isOpen={isGenerateModalOpen}
               onClose={() => setIsGenerateModalOpen(false)}
               phase={selectedPhase}
-              registrations={eventCategory.registrations || []}
+              registrations={eventCategory.registrations ?? []}
               onGenerate={handleGenerateRoundRobin}
               isLoading={initializeRoundRobinMutation.isPending}
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
 
@@ -1459,9 +1517,12 @@ export function CategorySchedulePage() {
               isOpen={isGenerateBestOf3ModalOpen}
               onClose={() => setIsGenerateBestOf3ModalOpen(false)}
               phase={selectedPhase}
-              registrations={eventCategory.registrations || []}
+              registrations={eventCategory.registrations ?? []}
               onGenerate={handleGenerateBestOf3}
               isLoading={initializeBestOf3Mutation.isPending}
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
 
@@ -1470,11 +1531,33 @@ export function CategorySchedulePage() {
               isOpen={isGenerateBracketModalOpen}
               onClose={() => setIsGenerateBracketModalOpen(false)}
               phase={selectedPhase}
-              availableRegistrations={
-                eventCategory.registrations?.map((r) => r.registrationId) || []
-              }
+              availableRegistrations={availableRegistrations}
+              // Nuevas props — opcionales, activan el modo Sismaster si están presentes
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
+
+          <InitializePoomsaeGroupModal
+            isOpen={isInitPoomsaeModalOpen}
+            onClose={() => setIsInitPoomsaeModalOpen(false)}
+            phase={selectedPhase}
+            availableRegistrations={availableRegistrations}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+
+          <InitializeShootingGroupModal
+            isOpen={isInitShootingModalOpen}
+            onClose={() => setIsInitShootingModalOpen(false)}
+            phase={selectedPhase}
+            availableRegistrations={availableRegistrations}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
 
           {selectedMatch && (
             <>

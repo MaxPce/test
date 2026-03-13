@@ -55,6 +55,8 @@ export interface Category {
   weightMin?: number;
   weightMax?: number;
   type: CategoryType;
+  sismasterIdparam?: number;  
+  sismasterIdsport?: number;
   createdAt: string;
   updatedAt: string;
   sport?: Sport;

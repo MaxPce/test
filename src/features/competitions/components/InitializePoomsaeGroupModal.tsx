@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { useGenerateBracket } from "../api/bracket.mutations";
+import { useInitializePoomsaeGroupPhase } from "../api/taekwondo.mutations";
 import type { Phase } from "../types";
 import { apiClient } from "@/lib/api/client";
 
@@ -35,7 +35,7 @@ interface NivCatResult {
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
-interface GenerateBracketModalProps {
+interface InitializePoomsaeGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
   phase: Phase;
@@ -45,11 +45,9 @@ interface GenerateBracketModalProps {
   eventCategoryId?: number;
 }
 
-type BracketType = "with-participants" | "empty";
-
 // ── Componente ─────────────────────────────────────────────────────────────
 
-export function GenerateBracketModal({
+export function InitializePoomsaeGroupModal({
   isOpen,
   onClose,
   phase,
@@ -57,19 +55,15 @@ export function GenerateBracketModal({
   sismasterEventId,
   sismasterSportId,
   eventCategoryId,
-}: GenerateBracketModalProps) {
-  const [bracketType, setBracketType] = useState<BracketType>("with-participants");
-  const [bracketSize, setBracketSize] = useState<number>(8);
-  const [includeThirdPlace, setIncludeThirdPlace] = useState(true);
+}: InitializePoomsaeGroupModalProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
     () => new Set(availableRegistrations.map((r) => r.registrationId)),
   );
   const [selectedNiv, setSelectedNiv] = useState<string>("");
   const [selectedCat, setSelectedCat] = useState<string>("");
 
-  const generateBracket = useGenerateBracket();
+  const initializeMutation = useInitializePoomsaeGroupPhase();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
-
   const isFilterActive = Boolean(selectedNiv && selectedCat);
 
   // ── Resetear al abrir ────────────────────────────────────────────────────
@@ -78,7 +72,6 @@ export function GenerateBracketModal({
       setSelectedIds(new Set(availableRegistrations.map((r) => r.registrationId)));
       setSelectedNiv("");
       setSelectedCat("");
-      setBracketType("with-participants");
     }
   }, [isOpen, availableRegistrations]);
 
@@ -120,10 +113,7 @@ export function GenerateBracketModal({
       );
       return data;
     },
-    enabled:
-      hasSismaster &&
-      Boolean(selectedNiv) &&
-      Boolean(selectedCat),
+    enabled: hasSismaster && Boolean(selectedNiv) && Boolean(selectedCat),
   });
 
   // ── Auto-seleccionar IDs cuando llega resultado del filtro ───────────────
@@ -150,48 +140,21 @@ export function GenerateBracketModal({
       return next;
     });
   };
+
   const selectAll = () =>
     setSelectedIds(new Set(availableRegistrations.map((r) => r.registrationId)));
   const deselectAll = () => setSelectedIds(new Set());
 
-  // ── Lógica de generación ─────────────────────────────────────────────────
+  // ── Generación ───────────────────────────────────────────────────────────
   const handleGenerate = () => {
-    // En ambos casos siempre se envían los registrationIds seleccionados
-    // para que AssignParticipantsModal pueda filtrar el pool correctamente.
-    const poolIds = Array.from(selectedIds);
-
-    if (bracketType === "empty") {
-      generateBracket.mutate(
-        {
-          phaseId: phase.phaseId,
-          bracketSize: poolIds.length,   // ← calculado desde los seleccionados
-          includeThirdPlace,
-          registrationIds: poolIds.length > 0 ? poolIds : undefined,
-        },
-        { onSuccess: () => onClose() },
-      );
-      return;
-    }
-
-    generateBracket.mutate(
-      {
-        phaseId: phase.phaseId,
-        registrationIds: poolIds,
-        includeThirdPlace,
-      },
+    const registrationIds = Array.from(selectedIds);
+    initializeMutation.mutate(
+      { phaseId: phase.phaseId, registrationIds },
       { onSuccess: () => onClose() },
     );
   };
 
-  // ── Cálculos de preview ──────────────────────────────────────────────────
-  const numParticipants = selectedIds.size;
-  const canGenerate = selectedIds.size >= 2;
-  const nextPowerOf2 =
-    numParticipants >= 2
-      ? Math.pow(2, Math.ceil(Math.log2(numParticipants)))
-      : 2;
-  const totalRounds = Math.log2(nextPowerOf2);
-  const byeCount    = nextPowerOf2 - numParticipants;
+  const canGenerate = selectedIds.size >= 1;
 
   // ────────────────────────────────────────────────────────────────────────
 
@@ -199,76 +162,39 @@ export function GenerateBracketModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Generar Bracket de Eliminación"
+      title="Inicializar Fase Poomsae - Grupos"
       size="md"
     >
       <div className="space-y-6">
 
-        {/* ── Toggle tipo de bracket ───────────────────────────────────── */}
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-gray-700">Tipo de bracket</p>
-          <div className="space-y-2">
-            <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-              <input
-                type="radio"
-                value="with-participants"
-                checked={bracketType === "with-participants"}
-                onChange={() => setBracketType("with-participants")}
-                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-              />
-              <div>
-                <p className="font-medium text-gray-900">Con participantes</p>
-                
-              </div>
-            </label>
-
-            <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-              <input
-                type="radio"
-                value="empty"
-                checked={bracketType === "empty"}
-                onChange={() => setBracketType("empty")}
-                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-              />
-              <div>
-                <p className="font-medium text-gray-900">Bracket vacío</p>
-                
-              </div>
-            </label>
-          </div>
-        </div>
-
         
 
-        {/* ── Sección de participantes (ambos modos) ───────────────────── */}
+        {/* ── Participantes ────────────────────────────────────────────── */}
         <div className="space-y-3">
-
-          {/* Encabezado con etiqueta contextual */}
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-700">
-                {bracketType === "with-participants"
-                  ? "Participantes en el bracket"
-                  : "Pool de participantes disponibles"}
-              </p>
-              {bracketType === "empty" && (
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Estos serán los únicos disponibles al asignar manualmente
-                </p>
-              )}
-            </div>
+            <p className="text-sm font-medium text-gray-700">
+              Participantes en la fase
+            </p>
             <div className="flex gap-2 text-xs">
-              <button type="button" onClick={selectAll} className="text-blue-600 hover:underline">
+              <button
+                type="button"
+                onClick={selectAll}
+                className="text-blue-600 hover:underline"
+              >
                 Todos
               </button>
               <span className="text-gray-300">|</span>
-              <button type="button" onClick={deselectAll} className="text-red-500 hover:underline">
+              <button
+                type="button"
+                onClick={deselectAll}
+                className="text-red-500 hover:underline"
+              >
                 Ninguno
               </button>
             </div>
           </div>
 
-          {/* Filtros Sismaster — solo si se pasaron las props */}
+          {/* Filtros Sismaster */}
           {hasSismaster && (
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-2">
               <div className="flex items-center justify-between">
@@ -328,14 +254,17 @@ export function GenerateBracketModal({
               </div>
 
               {loadingFilter && (
-                <p className="text-xs text-blue-500 animate-pulse">Aplicando filtro...</p>
+                <p className="text-xs text-blue-500 animate-pulse">
+                  Aplicando filtro...
+                </p>
               )}
               {isFilterActive && !loadingFilter && (
                 <p className="text-xs text-blue-600">
                   Filtro activo:{" "}
-                  <span className="font-semibold">{selectedNiv} / {selectedCat}</span>
-                  {" — "}
-                  {selectedIds.size} de {availableRegistrations.length} seleccionados
+                  <span className="font-semibold">
+                    {selectedNiv} / {selectedCat}
+                  </span>{" "}
+                  — {selectedIds.size} de {availableRegistrations.length} seleccionados
                 </p>
               )}
             </div>
@@ -347,68 +276,56 @@ export function GenerateBracketModal({
             {" "}/{" "}{availableRegistrations.length} seleccionados
           </p>
 
-          {/* Lista de participantes */}
-          <div className="border rounded-lg divide-y max-h-52 overflow-y-auto">
-            {availableRegistrations.map((reg) => {
-              const isFiltered =
-                isFilterActive &&
-                !loadingFilter &&
-                nivCatResult !== undefined &&
-                !nivCatResult.registrationIds.includes(reg.registrationId);
+          {/* Lista */}
+          <div className="border rounded-lg divide-y max-h-56 overflow-y-auto">
+            {availableRegistrations.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">
+                No hay inscritos en esta categoría
+              </p>
+            ) : (
+              availableRegistrations.map((reg) => {
+                const isFiltered =
+                  isFilterActive &&
+                  !loadingFilter &&
+                  nivCatResult !== undefined &&
+                  !nivCatResult.registrationIds.includes(reg.registrationId);
 
-              return (
-                <label
-                  key={reg.registrationId}
-                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-opacity ${
-                    isFiltered ? "opacity-30" : ""
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(reg.registrationId)}
-                    onChange={() => toggleParticipant(reg.registrationId)}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-800">{reg.displayName}</span>
-                </label>
-              );
-            })}
+                return (
+                  <label
+                    key={reg.registrationId}
+                    className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-opacity ${
+                      isFiltered ? "opacity-30" : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(reg.registrationId)}
+                      onChange={() => toggleParticipant(reg.registrationId)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-800">{reg.displayName}</span>
+                  </label>
+                );
+              })
+            )}
           </div>
 
-          {bracketType === "with-participants" && selectedIds.size < 2 && (
-            <p className="text-xs text-red-500">Selecciona al menos 2 participantes.</p>
+          {selectedIds.size === 0 && (
+            <p className="text-xs text-red-500">
+              Selecciona al menos 1 participante.
+            </p>
           )}
         </div>
 
-        {/* ── Tercer lugar ─────────────────────────────────────────────── */}
-        <div>
-          <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeThirdPlace}
-              onChange={(e) => setIncludeThirdPlace(e.target.checked)}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <p className="font-medium text-gray-900">Incluir partido de tercer lugar</p>
-          </label>
-        </div>
-
-        {/* ── Preview dinámico ──────────────────────────────────────────── */}
-        {canGenerate && numParticipants >= 2 && (
+        {/* ── Preview ──────────────────────────────────────────────────── */}
+        {canGenerate && (
           <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm font-medium text-gray-700 mb-2">Se generarán:</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Se creará:
+            </p>
             <ul className="text-sm text-gray-600 space-y-1">
-              {byeCount > 0 && (
-                <li className="text-amber-600">• BYEs automáticos: {byeCount}</li>
-              )}
-              {getRoundNames(totalRounds).map((round, index) => (
-                <li key={index}>
-                  • {round.name}: {round.matches} partido(s)
-                </li>
-              ))}
-              {includeThirdPlace && (
-                <li className="text-amber-700">• Tercer lugar: 1 partido</li>
-              )}
+              <li>• 1 grupo con {selectedIds.size} participante{selectedIds.size !== 1 ? "s" : ""}</li>
+              
             </ul>
           </div>
         )}
@@ -420,37 +337,13 @@ export function GenerateBracketModal({
           </Button>
           <Button
             onClick={handleGenerate}
-            isLoading={generateBracket.isPending}
-            disabled={!canGenerate || generateBracket.isPending}
+            isLoading={initializeMutation.isPending}
+            disabled={!canGenerate || initializeMutation.isPending}
           >
-            Generar Bracket
+            Inicializar Fase
           </Button>
         </div>
       </div>
     </Modal>
   );
-}
-
-// ── Helper ────────────────────────────────────────────────────────────────
-function getRoundNames(totalRounds: number) {
-  const rounds = [];
-  let matchesInRound = Math.pow(2, totalRounds - 1);
-
-  const names: Record<number, string> = {
-    1: "Final",
-    2: "Semifinales",
-    4: "Cuartos de Final",
-    8: "Octavos de Final",
-    16: "Dieciseisavos de Final",
-  };
-
-  for (let i = 0; i < totalRounds; i++) {
-    rounds.push({
-      name: names[matchesInRound] || `Ronda de ${matchesInRound * 2}`,
-      matches: matchesInRound,
-    });
-    matchesInRound /= 2;
-  }
-
-  return rounds;
 }

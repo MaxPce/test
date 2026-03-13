@@ -4,6 +4,7 @@ export const bracketApi = {
   generateCompleteBracket: async (data: {
     phaseId: number;
     registrationIds: number[];
+    bracketSize?: number;
     includeThirdPlace?: boolean;
   }) => {
     const response = await apiClient.post(

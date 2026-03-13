@@ -73,6 +73,24 @@ export interface SismasterAthlete {
   age?: number | null;
 }
 
+export interface SportCategoryParam {
+  idparam: number;
+  code: string;
+  name: string;
+  idsport: number;
+  athleteCount: number;
+}
+
+export interface AthleteByCategoryDto extends SismasterAthlete {
+  idacreditation: number;
+  idevent: number;
+  idsport: number;
+  idinstitution: number;
+  division_inscrita: string;
+  idparam: number;
+  gender_text: string;
+}
+
 // ==================== ENDPOINTS ====================
 
 const SISMASTER_ENDPOINTS = {
@@ -83,10 +101,13 @@ const SISMASTER_ENDPOINTS = {
   SPORTS: {
     LIST: "/sismaster/sports",
     DETAIL: (id: number) => `/sismaster/sports/${id}`,
+    PARAMS_BY_LOCAL_SPORT: (localSportId: number, eventId: number) =>
+      `/sismaster/sports/local/${localSportId}/params/by-event/${eventId}`,
   },
   ATHLETES: {
     SEARCH: "/sismaster/athletes/search",
     ACCREDITED: "/sismaster/athletes/accredited",
+    BY_CATEGORY_LOCAL: "/sismaster/athletes/by-category-local",
     DETAIL: (id: number) => `/sismaster/athletes/${id}`,
     BY_DOCUMENT: (doc: string) => `/sismaster/athletes/document/${doc}`,
     COUNT: "/sismaster/athletes/count",
@@ -112,6 +133,8 @@ export const sismasterKeys = {
     list: () => [...sismasterKeys.sports.all, "list"] as const,
     detail: (id: number) =>
       [...sismasterKeys.sports.all, "detail", id] as const,
+    paramsByEvent: (localSportId: number, eventId: number) =>
+      [...sismasterKeys.sports.all, "params", { localSportId, eventId }] as const,
   },
   athletes: {
     all: ["sismaster", "athletes"] as const,
@@ -121,13 +144,23 @@ export const sismasterKeys = {
       [...sismasterKeys.athletes.all, "detail", id] as const,
     byDocument: (dni: string) =>
       [...sismasterKeys.athletes.all, "document", dni] as const,
-    accredited: (idevent?: number, idinstitution?: number, gender?: string) =>
+    accredited: (idevent?: number, idinstitution?: number, gender?: string, localSportId?: number) =>
       [
-        ...sismasterKeys.athletes.all,
-        "accredited",
-        { idevent, idinstitution, gender },
-      ] as const,
-    count: () => [...sismasterKeys.athletes.all, "count"] as const,
+      ...sismasterKeys.athletes.all,
+      "accredited",
+      { idevent, idinstitution, gender, localSportId },
+        ] as const,
+      byCategory: ( 
+        sismasterEventId: number,
+        localSportId: number,
+        idparam: number,
+      ) =>
+        [
+          ...sismasterKeys.athletes.all,
+          "by-category",
+          { sismasterEventId, localSportId, idparam },
+        ] as const,
+      count: () => [...sismasterKeys.athletes.all, "count"] as const,
   },
   institutions: {
     all: ["sismaster", "institutions"] as const,
@@ -228,20 +261,22 @@ interface AccreditedAthletesOptions {
   idevent: number;
   idinstitution?: number;
   gender?: "M" | "F";
+  localSportId?: number;
 }
 
 export const useAccreditedAthletes = (
   options: AccreditedAthletesOptions,
   enabled = true,
 ) => {
-  const { idevent, idinstitution, gender } = options;
+  const { idevent, idinstitution, gender, localSportId } = options;
 
   return useQuery({
-    queryKey: sismasterKeys.athletes.accredited(idevent, idinstitution, gender),
+    queryKey: sismasterKeys.athletes.accredited(idevent, idinstitution, gender, localSportId),
     queryFn: async () => {
       const params: Record<string, any> = { idevent };
       if (idinstitution) params.idinstitution = idinstitution;
       if (gender) params.gender = gender;
+      if (localSportId) params.localSportId = localSportId; 
 
       const { data } = await apiClient.get<SismasterAthlete[]>(
         SISMASTER_ENDPOINTS.ATHLETES.ACCREDITED,
@@ -250,9 +285,10 @@ export const useAccreditedAthletes = (
       return data;
     },
     enabled: enabled && !!idevent,
-    staleTime: 1000 * 60 * 2, // Cache 2 minutos
+    staleTime: 1000 * 60 * 2,
   });
 };
+
 
 /**
  * Obtener un atleta por ID
@@ -291,6 +327,8 @@ export const useSismasterAthleteByDocument = (
   });
 };
 
+
+
 /**
  * Obtener contador total de atletas en Sismaster
  */
@@ -304,5 +342,97 @@ export const useAthletesCount = () => {
       return data.count;
     },
     staleTime: 1000 * 60 * 10, // Cache 10 minutos
+  });
+};
+
+export interface SismasterAthleteByCategory extends SismasterAthlete {
+  idacreditation?: number;
+  idsport?: number;
+  division_inscrita?: string;
+  idparam?: number;
+  gender_text?: string;
+}
+
+interface AthletesByCategoryNameOptions {
+  sismasterEventId: number;
+  localSportId: number;
+  categoryName: string;
+}
+
+export const useAthletesByCategoryName = (
+  options: AthletesByCategoryNameOptions,
+  enabled = true,
+) => {
+  const { sismasterEventId, localSportId, categoryName } = options;
+
+  return useQuery({
+    queryKey: [
+      ...sismasterKeys.athletes.all,
+      'by-category-name',
+      { sismasterEventId, localSportId, categoryName },
+    ] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<SismasterAthleteByCategory[]>(
+        '/sismaster/athletes/by-category-name',
+        { params: { sismasterEventId, localSportId, categoryName } },
+      );
+      return data;
+    },
+    enabled: enabled && !!sismasterEventId && !!localSportId && !!categoryName,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+
+/**
+ * Obtener categorías con atletas acreditados para un deporte y evento
+ */
+export const useSportCategoriesByEvent = (
+  localSportId: number,
+  sismasterEventId: number,
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: sismasterKeys.sports.paramsByEvent(localSportId, sismasterEventId),
+    queryFn: async () => {
+      const { data } = await apiClient.get<SportCategoryParam[]>(
+        SISMASTER_ENDPOINTS.SPORTS.PARAMS_BY_LOCAL_SPORT(
+          localSportId,
+          sismasterEventId,
+        ),
+      );
+      return data;
+    },
+    enabled: enabled && !!localSportId && !!sismasterEventId,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+/**
+ * Obtener atletas acreditados filtrados por categoría específica
+ */
+export const useAthletesByCategory = (
+  sismasterEventId: number,
+  localSportId: number,
+  idparam: number,
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: sismasterKeys.athletes.byCategory(
+      sismasterEventId,
+      localSportId,
+      idparam,
+    ),
+    queryFn: async () => {
+      const { data } = await apiClient.get<AthleteByCategoryDto[]>(
+        SISMASTER_ENDPOINTS.ATHLETES.BY_CATEGORY_LOCAL,
+        {
+          params: { sismasterEventId, localSportId, idparam },
+        },
+      );
+      return data;
+    },
+    enabled: enabled && !!sismasterEventId && !!localSportId && !!idparam,
+    staleTime: 1000 * 60 * 2,
   });
 };

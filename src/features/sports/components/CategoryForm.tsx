@@ -5,37 +5,9 @@ import { Select } from "@/components/ui/Select";
 import { useSports } from "../api/sports.queries";
 import type { Category, CreateCategoryData } from "../types";
 
-const SPORT_MODALITIES: Record<string, { value: string; label: string }[]> = {
-  taekwondo: [
-    { value: "Kyorugi", label: "Kyorugi" },
-    { value: "Poomsae", label: "Poomsae" },
-  ],
-  wushu: [
-    { value: "Taolu", label: "Taolu" },
-    { value: "Sanda", label: "Sanda" },
-  ],
-  judo: [
-    { value: "Judo", label: "Judo" },
-  ],
-  karate: [
-    { value: "Kata", label: "Kata" },
-    { value: "Kumite", label: "Kumite" },
-  ],
-};
-
-const GENDER_LABEL: Record<string, string> = {
-  M: "Masculino",
-  F: "Femenino",
-  MIXTO: "Mixto",
-};
-
-function getModalities(sportName: string) {
-  const lower = sportName.toLowerCase();
-  for (const [key, mods] of Object.entries(SPORT_MODALITIES)) {
-    if (lower.includes(key)) return mods;
-  }
-  return null;
-}
+// const SPORT_MODALITIES = { ... }  ← eliminado
+// const GENDER_LABEL     = { ... }  ← eliminado (ya no compone el nombre)
+// function getModalities(...)        ← eliminado
 
 interface CategoryFormProps {
   category?: Category;
@@ -48,27 +20,19 @@ export function CategoryForm({ category, onSubmit, onCancel, isLoading }: Catego
   const { data: sports = [] } = useSports();
 
   const [formData, setFormData] = useState<CreateCategoryData>({
-    sportId: 0,
-    name: "",
+    sportId:    0,
+    name:       "",
     formatType: "eliminacion_directa",
     resultType: "combat",
-    gender: "M",
-    type: "individual",
-    weightMin: undefined,
-    weightMax: undefined,
+    gender:     "M",
+    type:       "individual",
+    weightMin:  undefined,
+    weightMax:  undefined,
   });
 
-  const [modalidad, setModalidad]   = useState<string>("");
-  const [complement, setComplement] = useState<string>("");
-
-  const selectedSport = sports.find((s) => s.sportId === formData.sportId);
-  const modalities    = selectedSport ? getModalities(selectedSport.name) : null;
-
-  const composedName = modalities
-    ? [modalidad, complement.trim(), GENDER_LABEL[formData.gender]]
-        .filter(Boolean)
-        .join(" ")
-    : formData.name;
+  // ── Estados de modalidad/complemento eliminados ──────────────
+  // const [modalidad, setModalidad]   = useState<string>("");
+  // const [complement, setComplement] = useState<string>("");
 
   useEffect(() => {
     if (category) {
@@ -87,26 +51,18 @@ export function CategoryForm({ category, onSubmit, onCancel, isLoading }: Catego
     }
   }, [category, sports]);
 
-  useEffect(() => {
-    if (modalities && modalities.length > 0) {
-      setModalidad(modalities[0].value);
-    } else {
-      setModalidad("");
-    }
-    setComplement("");
-  }, [formData.sportId]);
+  // ── useEffect de modalidades eliminado ───────────────────────
+  // useEffect(() => { setModalidad(...); setComplement(""); }, [formData.sportId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ ...formData, name: composedName });
+    onSubmit(formData);  // ← ya no hay composedName, se manda name directo
   };
 
   const sportOptions = [
     { value: 0, label: "Seleccione un deporte" },
     ...sports.map((s) => ({ value: s.sportId, label: s.name })),
   ];
-
-  const modalityOptions = modalities?.map((m) => ({ value: m.value, label: m.label })) ?? [];
 
   const formatTypeOptions = [
     { value: "eliminacion_directa", label: "Eliminación Directa" },
@@ -146,39 +102,14 @@ export function CategoryForm({ category, onSubmit, onCancel, isLoading }: Catego
         required
       />
 
-      {modalities ? (
-        <>
-          <Select
-            label="Modalidad *"
-            value={modalidad}
-            onChange={(e) => setModalidad(e.target.value)}
-            options={modalityOptions}
-            required
-          />
-
-          <Input
-            label="Complemento"
-            value={complement}
-            onChange={(e) => setComplement(e.target.value)}
-            placeholder="Ej: -85kg · Individual · Espada · Grupal..."
-          />
-
-          <div className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg">
-            <p className="text-xs text-gray-400 mb-0.5">Nombre que se guardará</p>
-            <p className="text-sm font-bold text-gray-800">
-              {composedName || "—"}
-            </p>
-          </div>
-        </>
-      ) : (
-        <Input
-          label="Nombre de la Categoría *"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Ej: Kumite Masculino -67kg"
-          required
-        />
-      )}
+      {/* Nombre siempre libre — sin lógica de modalidades */}
+      <Input
+        label="Nombre de la Categoría *"
+        value={formData.name}
+        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        placeholder="Ej: Kyorugi Masculino -68kg"
+        required
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <Select
@@ -202,6 +133,7 @@ export function CategoryForm({ category, onSubmit, onCancel, isLoading }: Catego
       </div>
 
       <div className="grid grid-cols-2 gap-4">
+        {/* Género se mantiene — se guarda en BD */}
         <Select
           label="Género *"
           value={formData.gender}
@@ -252,7 +184,7 @@ export function CategoryForm({ category, onSubmit, onCancel, isLoading }: Catego
         <Button
           type="submit"
           isLoading={isLoading}
-          disabled={formData.sportId === 0 || !composedName}
+          disabled={formData.sportId === 0 || !formData.name.trim()}
         >
           {category ? "Actualizar" : "Crear"}
         </Button>

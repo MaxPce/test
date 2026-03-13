@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { UserCircle2 } from "lucide-react";
 import type { Match } from "../types";
+import { apiClient } from "@/lib/api/client";
 
 interface AssignParticipantsModalProps {
   isOpen: boolean;
@@ -30,9 +32,30 @@ export function AssignParticipantsModal({
   const [participant1, setParticipant1] = useState<number>(0);
   const [participant2, setParticipant2] = useState<number>(0);
 
+  const phaseId = match.phase?.phaseId;
+
+  // ── Fetch de registrations asignados a esta fase ─────────────────────
+  const { data: phaseRegistrations } = useQuery<{ registrationId: number; registration: any }[]>({
+    queryKey: ["phase-registrations", phaseId],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/competitions/phases/${phaseId}/registrations`);
+      return data;
+    },
+    enabled: isOpen && Boolean(phaseId),
+    staleTime: 1000 * 30,
+  });
+
+  // Si la fase tiene registrations asignados → filtrar; si no → usar todos
+  const filteredRegistrations =
+    phaseRegistrations && phaseRegistrations.length > 0
+      ? registrations.filter((r) =>
+          phaseRegistrations.some((pr) => pr.registrationId === r.registrationId),
+        )
+      : registrations;
+
   const assignedIds = match.participations?.map((p) => p.registrationId) || [];
-  const availableRegistrations = registrations.filter(
-    (r) => !assignedIds.includes(r.registrationId)
+  const availableRegistrations = filteredRegistrations.filter(
+    (r) => !assignedIds.includes(r.registrationId),
   );
 
   const registrationOptions = [
@@ -41,12 +64,9 @@ export function AssignParticipantsModal({
       const name = reg.athlete
         ? `${reg.athlete.name} (${reg.athlete.institution?.name})`
         : reg.team
-        ? `${reg.team.name} (${reg.team.institution?.name})`
-        : "Sin nombre";
-      return {
-        value: reg.registrationId,
-        label: name,
-      };
+          ? `${reg.team.name} (${reg.team.institution?.name})`
+          : "Sin nombre";
+      return { value: reg.registrationId, label: name };
     }),
   ];
 
@@ -89,13 +109,18 @@ export function AssignParticipantsModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Asignar Participantes"
-      size="lg"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Asignar Participantes" size="lg">
       <div className="space-y-6">
+
+        {/* Info: si está filtrado por fase */}
+        {phaseRegistrations && phaseRegistrations.length > 0 && (
+          <p className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            Mostrando solo los{" "}
+            <span className="font-semibold">{phaseRegistrations.length}</span>{" "}
+            participantes.
+          </p>
+        )}
+
         {/* Participantes actuales */}
         {currentParticipants.length > 0 && (
           <div>
@@ -110,8 +135,7 @@ export function AssignParticipantsModal({
                   : reg?.team?.name || "Sin nombre";
                 const institution =
                   reg?.athlete?.institution?.name ||
-                  reg?.team?.institution?.name ||
-                  "";
+                  reg?.team?.institution?.name || "";
 
                 return (
                   <div
@@ -127,9 +151,7 @@ export function AssignParticipantsModal({
                         )}
                       </div>
                     </div>
-                    <Badge
-                      variant={getCornerBadgeVariant(participation.corner)}
-                    >
+                    <Badge variant={getCornerBadgeVariant(participation.corner)}>
                       {getCornerLabel(participation.corner)}
                     </Badge>
                   </div>
@@ -140,87 +162,63 @@ export function AssignParticipantsModal({
         )}
 
         {/* Agregar nuevos participantes */}
-        {availableRegistrations.length > 0 &&
-          currentParticipants.length < 2 && (
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">
-                Agregar Participantes
-              </h4>
+        {availableRegistrations.length > 0 && currentParticipants.length < 2 && (
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900">Agregar Participantes</h4>
 
-              {currentParticipants.length === 0 && (
-                <>
-                  <div>
-                    <Select
-                      label={
-                        match.phase?.type === "grupo"
-                          ? "Participante 1 (A)"
-                          : "Participante 1 (Azul)"
-                      }
-                      value={participant1}
-                      onChange={(e) => setParticipant1(Number(e.target.value))}
-                      options={registrationOptions}
-                    />
-                  </div>
+            {currentParticipants.length === 0 && (
+              <>
+                <Select
+                  label={match.phase?.type === "grupo" ? "Participante 1 (A)" : "Participante 1 (Azul)"}
+                  value={participant1}
+                  onChange={(e) => setParticipant1(Number(e.target.value))}
+                  options={registrationOptions}
+                />
+                <Select
+                  label={match.phase?.type === "grupo" ? "Participante 2 (B) — opcional" : "Participante 2 (Blanco) — opcional"}
+                  value={participant2}
+                  onChange={(e) => setParticipant2(Number(e.target.value))}
+                  options={registrationOptions.filter((opt) => opt.value !== participant1)}
+                />
+              </>
+            )}
 
-                  <div>
-                    <Select
-                      label={
-                        match.phase?.type === "grupo"
-                          ? "Participante 2 (B)"
-                          : "Participante 2 (Blanco)"
-                      }
-                      value={participant2}
-                      onChange={(e) => setParticipant2(Number(e.target.value))}
-                      options={registrationOptions.filter(
-                        (opt) => opt.value !== participant1
-                      )}
-                    />
-                  </div>
-                </>
-              )}
+            {currentParticipants.length === 1 && (
+              <Select
+                label={`Participante 2 (${getCornerLabel(
+                  currentParticipants[0].corner === "blue" ? "white" : "blue",
+                )})`}
+                value={participant1}
+                onChange={(e) => setParticipant1(Number(e.target.value))}
+                options={registrationOptions}
+              />
+            )}
+          </div>
+        )}
 
-              {currentParticipants.length === 1 && (
-                <div>
-                  <Select
-                    label={`Participante 2 (${getCornerLabel(
-                      currentParticipants[0].corner === "blue"
-                        ? "white"
-                        : "blue"
-                    )})`}
-                    value={participant1}
-                    onChange={(e) => setParticipant1(Number(e.target.value))}
-                    options={registrationOptions}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-        {availableRegistrations.length === 0 &&
-          currentParticipants.length < 2 && (
-            <div className="text-center py-6 text-gray-500">
-              <p>No hay más participantes disponibles</p>
-            </div>
-          )}
+        {availableRegistrations.length === 0 && currentParticipants.length < 2 && (
+          <div className="text-center py-6 text-gray-500">
+            <p>No hay más participantes disponibles</p>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button variant="ghost" onClick={onClose}>
             Cerrar
           </Button>
-          {availableRegistrations.length > 0 &&
-            currentParticipants.length < 2 && (
-              <Button
-                onClick={handleAssign}
-                isLoading={isLoading}
-                disabled={
-                  currentParticipants.length === 0
-                    ? participant1 === 0 || participant2 === 0
-                    : participant1 === 0
-                }
-              >
-                Asignar
-              </Button>
-            )}
+          {availableRegistrations.length > 0 && currentParticipants.length < 2 && (
+            <Button
+              onClick={handleAssign}
+              isLoading={isLoading}
+              disabled={
+                currentParticipants.length === 0
+                  ? participant1 === 0  
+                  : participant1 === 0
+              }
+            >
+              Asignar
+            </Button>
+          )}
         </div>
       </div>
     </Modal>
