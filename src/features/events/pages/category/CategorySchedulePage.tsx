@@ -1,4 +1,4 @@
-import { useState, useMemo  } from "react";
+import { useState, useMemo } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -46,8 +46,7 @@ import { useInitializeWeightliftingPhase } from "@/features/competitions/api/wei
 import { ClimbingScoreTable } from "@/features/competitions/components/climbing/ClimbingScoreTable";
 import { InitializePoomsaeGroupModal } from "@/features/competitions/components/InitializePoomsaeGroupModal";
 import { InitializeShootingGroupModal } from "@/features/competitions/components/InitializeShootingGroupModal";
-import AthleticsResultsTable from '../../../competitions/components/athletics/AthleticsResultsTable';
-
+import AthleticsResultsTable from "../../../competitions/components/athletics/AthleticsResultsTable";
 
 import {
   useMatches,
@@ -84,8 +83,8 @@ import { WeightliftingAttemptsTable } from "@/features/competitions/components/w
 import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
 
 import { useInitializePoomsaeGroupPhase } from "@/features/competitions/api/taekwondo.mutations";
-
-
+import AthleticsFieldTable from "../../../competitions/components/athletics/AthleticsFieldTable";
+import type { FieldEventType } from "@/features/competitions/types/athletics.types";
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -108,6 +107,7 @@ export function CategorySchedulePage() {
   const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
   const [isInitPoomsaeModalOpen, setIsInitPoomsaeModalOpen] = useState(false);
   const [isInitShootingModalOpen, setIsInitShootingModalOpen] = useState(false);
+  const assignPhaseRegistrationMutation = useAssignPhaseRegistration();
 
   const [
     isGenerateWeightliftingModalOpen,
@@ -196,27 +196,28 @@ export function CategorySchedulePage() {
     );
   };
 
-
   const getTaekwondoType = (): "poomsae" | "kyorugui" | null => {
     const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
     if (!sport.includes("taekwondo")) return null;
 
     const resultType = eventCategory.category?.resultType;
 
-    if (resultType === "score")  return "poomsae";
+    if (resultType === "score") return "poomsae";
     if (resultType === "combat") return "kyorugui";
 
     const name = eventCategory.category?.name?.toLowerCase() || "";
     if (name.includes("poomsae") || name.includes("forma")) return "poomsae";
     if (name.includes("kyorugi") || name.includes("combate")) return "kyorugui";
 
-    if (selectedPhase?.type === "eliminacion" || selectedPhase?.type === "grupo") {
+    if (
+      selectedPhase?.type === "eliminacion" ||
+      selectedPhase?.type === "grupo"
+    ) {
       return "kyorugui";
     }
 
     return null;
   };
-
 
   const getWushuType = (): "taolu" | "sanda" | null => {
     const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
@@ -224,15 +225,14 @@ export function CategorySchedulePage() {
 
     const resultType = eventCategory.category?.resultType;
 
-    if (resultType === "score")  return "taolu";
+    if (resultType === "score") return "taolu";
     if (resultType === "combat") return "sanda";
 
     const name = eventCategory.category?.name?.toLowerCase() || "";
     if (name.includes("taolu") || name.includes("forma")) return "taolu";
 
-    return "sanda"; 
+    return "sanda";
   };
-
 
   const handleCreatePhase = async (data: any) => {
     await createPhaseMutation.mutateAsync(data);
@@ -352,7 +352,6 @@ export function CategorySchedulePage() {
     setIsGenerateModalOpen(false);
   };
 
-
   const totalMatches = phases.reduce(
     (sum, phase) => sum + (phase.matches?.length || 0),
     0,
@@ -365,26 +364,40 @@ export function CategorySchedulePage() {
   );
 
   const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
-  const isAtletismo = sportName.includes('atletismo')
+  const isAtletismo = sportName.includes("atletismo");
 
-  const isTimedSport = sportName.includes('natación') ||
-    sportName.includes('natacion') ||
-    sportName.includes('ciclismo')
-
+  const isTimedSport =
+    sportName.includes("natación") ||
+    sportName.includes("natacion") ||
+    sportName.includes("ciclismo");
 
   const isTiroDeportivo =
     sportName.includes("tiro deportivo") ||
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
 
+  const getAthleticsFieldType = (): FieldEventType | null => {
+    const catId = eventCategory.category?.categoryId;
+    const map: Record<number, FieldEventType> = {
+      220: "long_jump",
+      221: "high_jump",
+      222: "triple_jump",
+      223: "pole_vault",
+      224: "shot_put",
+      225: "discus",
+      226: "javelin",
+      227: "hammer",
+    };
+    return catId != null ? (map[catId] ?? null) : null;
+  };
+
   const availableRegistrations = useMemo(
     () =>
       eventCategory.registrations?.map((r) => ({
         registrationId: r.registrationId,
-        displayName:
-          r.athlete
-            ? r.athlete.name                          
-            : r.team?.name ?? `Registro #${r.registrationId}`, 
+        displayName: r.athlete
+          ? r.athlete.name
+          : (r.team?.name ?? `Registro #${r.registrationId}`),
       })) ?? [],
     [eventCategory.registrations],
   );
@@ -553,131 +566,169 @@ export function CategorySchedulePage() {
     );
   }
 
-  if (isAtletismo) return (
-    <div className="space-y-6 animate-in">
-      <PageHeader
-        title="Atletismo"
-        actions={
-          <Button
-            onClick={() => setIsPhaseModalOpen(true)}
-            variant="gradient"
-            size="lg"
-            className="h-5 w-5"
-          >
-            Nueva Serie
-          </Button>
-        }
-      />
-
-      {phasesLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full" />
-        </div>
-      ) : phases.length === 0 ? (
-        <EmptyState
-          icon={Calendar}
-          title="No hay series creadas"
-          description="Crea la primera serie. Ej: '100m Serie A', '4x100m Relevos'"
-          action={{ label: 'Crear Primera Serie', onClick: () => setIsPhaseModalOpen(true) }}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {phases.map((phase) => (
-            <Card
-              key={phase.phaseId}
-              variant="elevated"
-              padding="none"
-              hover
-              onClick={() => setSelectedPhase(phase)}
-              className={`cursor-pointer transition-all ${
-                selectedPhase?.phaseId === phase.phaseId
-                  ? 'ring-2 ring-orange-500 shadow-strong'
-                  : ''
-              }`}
+  if (isAtletismo)
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Atletismo"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              className="h-5 w-5"
             >
-              <div className="relative h-24 bg-gradient-to-br from-orange-500 to-red-600 overflow-hidden rounded-t-xl">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                <div className="absolute top-4 left-4">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <Timer className="h-6 w-6 text-white" />
+              Nueva Serie
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No hay series creadas"
+            description="Crea la primera serie. Ej: '100m Serie A', '4x100m Relevos'"
+            action={{
+              label: "Crear Primera Serie",
+              onClick: () => setIsPhaseModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => (
+              <Card
+                key={phase.phaseId}
+                variant="elevated"
+                padding="none"
+                hover
+                onClick={() => setSelectedPhase(phase)}
+                className={`cursor-pointer transition-all ${
+                  selectedPhase?.phaseId === phase.phaseId
+                    ? "ring-2 ring-orange-500 shadow-strong"
+                    : ""
+                }`}
+              >
+                <div className="relative h-24 bg-gradient-to-br from-orange-500 to-red-600 overflow-hidden rounded-t-xl">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute top-4 left-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-white" />
+                    </div>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhase(phase.phaseId);
+                    }}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeletePhase(phase.phaseId); }}
-                  className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                <CardBody>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2">
+                    {phase.name}
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="primary" size="sm">
+                      Serie / Sección
+                    </Badge>
+                    <span className="text-xs text-slate-500">
+                      ID {phase.phaseId}
+                    </span>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {selectedPhase && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-orange-500" />
+                <h4 className="text-lg font-bold text-slate-800">
+                  {selectedPhase.name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Asignar participante solo en eventos de PISTA */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAssignSeriesModalOpen(true)}
                 >
-                  ×
+                  Asignar Participante
+                </Button>
+                <button
+                  onClick={() => setSelectedPhase(null)}
+                  className="text-slate-400 hover:text-slate-600 text-sm"
+                >
+                  Cerrar
                 </button>
               </div>
-              <CardBody>
-                <h4 className="text-lg font-bold text-slate-900 mb-2">{phase.name}</h4>
-                <div className="flex items-center justify-between">
-                  <Badge variant="primary" size="sm">Serie / Sección</Badge>
-                  <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
-                </div>
-              </CardBody>
-            </Card>
-          ))}
-        </div>
-      )}
+            </div>
 
-      {selectedPhase && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2">
-              <Timer className="h-5 w-5 text-orange-500" />
-              <h4 className="text-lg font-bold text-slate-800">{selectedPhase.name}</h4>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-4 w-4"
-                onClick={() => setIsAssignSeriesModalOpen(true)}
-              >
-                Asignar Participante
-              </Button>
-              <button
-                onClick={() => setSelectedPhase(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm"
-              >
-                Cerrar
-              </button>
-            </div>
+            {/* ── Switch pista / campo ── */}
+            {(() => {
+              const fieldType = getAthleticsFieldType();
+              if (fieldType) {
+                // Eventos de campo: saltos y lanzamientos
+                return (
+                  <AthleticsFieldTable
+                    phaseId={selectedPhase.phaseId}
+                    eventType={fieldType}
+                  />
+                );
+              }
+              // Eventos de pista: metros, vallas, postas, marcha, combinados
+              return <AthleticsResultsTable phaseId={selectedPhase.phaseId} />;
+            })()}
           </div>
+        )}
 
-          <AthleticsResultsTable phaseId={selectedPhase.phaseId} />
-        </div>
-      )}
+        {/* Modal crear serie */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Serie"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
 
-      {/* Modal crear serie */}
-      <Modal
-        isOpen={isPhaseModalOpen}
-        onClose={() => setIsPhaseModalOpen(false)}
-        title="Crear Nueva Serie"
-        size="md"
-      >
-        <PhaseForm
-          eventCategoryId={eventCategory.eventCategoryId}
-          existingPhases={phases.length}
-          onSubmit={handleCreatePhase}
-          onCancel={() => setIsPhaseModalOpen(false)}
-          isLoading={createPhaseMutation.isPending}
-        />
-      </Modal>
-
-      {selectedPhase && (
-        <AssignSeriesParticipantModal
-          isOpen={isAssignSeriesModalOpen}
-          onClose={() => setIsAssignSeriesModalOpen(false)}
-          phaseId={selectedPhase.phaseId}
-          phaseName={selectedPhase.name}
-          allRegistrations={eventCategory.registrations}
-        />
-      )}
-    </div>
-  );
-
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
 
   if (isTimedSport) {
     return (
@@ -790,12 +841,16 @@ export function CategorySchedulePage() {
             </div>
 
             {/* Tabla de tiempos directamente */}
-            <SwimmingResultsTable
-              eventCategoryId={eventCategory.eventCategoryId}
-              registrations={eventCategory.registrations || []}
-              categoryName={selectedPhase.name}
-              forcedPhaseId={selectedPhase.phaseId}
-            />
+            {sportName.includes("atletismo") ? (
+              <AthleticsResultsTable phaseId={selectedPhase.phaseId} />
+            ) : (
+              <SwimmingResultsTable
+                eventCategoryId={eventCategory.eventCategoryId}
+                registrations={eventCategory.registrations}
+                categoryName={selectedPhase.name}
+                forcedPhaseId={selectedPhase.phaseId}
+              />
+            )}
           </div>
         )}
 
@@ -822,6 +877,16 @@ export function CategorySchedulePage() {
             phaseId={selectedPhase.phaseId}
             phaseName={selectedPhase.name}
             allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
           />
         )}
       </div>
@@ -1148,18 +1213,18 @@ export function CategorySchedulePage() {
                         </Button>
                       )}
 
-                      {isTiroDeportivo &&
-                        selectedPhase.type === "grupo" &&
-                        matches.length === 0 && (
-                          <Button
-                            variant="gradient"
-                            size="sm"
-                            icon={<Zap className="h-4 w-4" />}
-                            onClick={() => setIsInitShootingModalOpen(true)}
-                          >
-                            Inicializar Fase Tiro
-                          </Button>
-                        )}
+                    {isTiroDeportivo &&
+                      selectedPhase.type === "grupo" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="gradient"
+                          size="sm"
+                          icon={<Zap className="h-4 w-4" />}
+                          onClick={() => setIsInitShootingModalOpen(true)}
+                        >
+                          Inicializar Fase Tiro
+                        </Button>
+                      )}
 
                     {/* Generar Bracket → solo eliminacion sin partidos */}
                     {selectedPhase.type === "eliminacion" &&
@@ -1216,7 +1281,6 @@ export function CategorySchedulePage() {
                         </Button>
                       )}
                   </div>
-
                 </div>
               </CardHeader>
 

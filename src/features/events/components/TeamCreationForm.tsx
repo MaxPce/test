@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Plus, X, UserCircle2, AlertCircle, Tag } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { useInstitutions } from "@/features/institutions/api/institutions.queries";
 import {
   useSportCategoriesByEvent,
   useAthletesByCategory,
@@ -19,7 +20,7 @@ interface TeamMember {
 }
 
 interface TeamCreationFormProps {
-  eventId: number; // sismaster event ID
+  eventId: number;
   eventCategory: EventCategory;
   categoryId: number;
   onSubmit: (data: {
@@ -32,7 +33,6 @@ interface TeamCreationFormProps {
   isLoading?: boolean;
 }
 
-// Mismo helper que BulkRegistrationModal para fallback por nombre
 function findMatchingParam(
   params: SportCategoryParam[],
   localName: string,
@@ -44,6 +44,15 @@ function findMatchingParam(
     params.find((p) => normalize(p.name).includes(target)) ??
     params.find((p) => target.includes(normalize(p.name)))
   );
+}
+
+function normalizeInstitutionName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
 }
 
 export function TeamCreationForm({
@@ -61,34 +70,33 @@ export function TeamCreationForm({
   const [selectedRole, setSelectedRole] = useState<string>("titular");
   const [manualIdparam, setManualIdparam] = useState<number | null>(null);
 
+  const { data: localInstitutions = [] } = useInstitutions();
+
   const localSportId = eventCategory.category?.sport?.sportId;
   const categoryName = eventCategory.category?.name ?? "";
 
-  // ── 1. Intentar resolver idparam directamente desde sismasterIdParam ────
-  // (ya mapeado en la entity — más confiable que name matching)
   const directIdparam = (eventCategory.category as any)?.sismasterIdParam as
     | number
     | null
     | undefined;
 
-  // ── 2. Si no hay idparam directo, cargar params del sport para selector ─
   const { data: sismasterCategories = [], isLoading: isLoadingCategories } =
     useSportCategoriesByEvent(
       localSportId!,
       eventId,
-      !!localSportId && !directIdparam, // skip si ya tenemos idparam
+      !!localSportId && !directIdparam,
     );
 
-  // ── 3. Resolver el idparam efectivo ──────────────────────────────────────
   const effectiveIdparam = useMemo(() => {
-    if (directIdparam) return directIdparam; // fuente de verdad primaria
+    if (directIdparam) return directIdparam;
     if (manualIdparam) return manualIdparam;
-    return findMatchingParam(sismasterCategories, categoryName)?.idparam ?? null;
+    return (
+      findMatchingParam(sismasterCategories, categoryName)?.idparam ?? null
+    );
   }, [directIdparam, manualIdparam, sismasterCategories, categoryName]);
 
   const showCategorySelector = !directIdparam && sismasterCategories.length > 0;
 
-  // ── 4. Cargar atletas filtrados por categoría ────────────────────────────
   const { data: athletesFromSismaster = [], isLoading: isLoadingAthletes } =
     useAthletesByCategory(
       eventId,
@@ -99,16 +107,50 @@ export function TeamCreationForm({
 
   const isLoadingData = isLoadingCategories || isLoadingAthletes;
 
-  // Reset miembros al cambiar institución
   const institutions = useMemo(() => {
-    const map = new Map<number, { id: number; name: string }>();
-    athletesFromSismaster.forEach((a) => {
-      if (a.idinstitution && a.institutionName) {
-        map.set(a.idinstitution, { id: a.idinstitution, name: a.institutionName });
+    const localByName = new Map(
+      localInstitutions.map((inst) => [
+        normalizeInstitutionName(inst.name),
+        inst,
+      ]),
+    );
+
+    const map = new Map<
+      number,
+      {
+        sismasterId: number;
+        localId: number;
+        name: string;
       }
+    >();
+
+    athletesFromSismaster.forEach((a) => {
+      if (!a.idinstitution || !a.institutionName) return;
+
+      const localInstitution = localByName.get(
+        normalizeInstitutionName(a.institutionName),
+      );
+
+      if (!localInstitution) return;
+
+      map.set(a.idinstitution, {
+        sismasterId: a.idinstitution,
+        localId: localInstitution.institutionId,
+        name: localInstitution.name,
+      });
     });
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [athletesFromSismaster]);
+
+    return Array.from(map.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [athletesFromSismaster, localInstitutions]);
+
+  const selectedInstitutionData = useMemo(() => {
+    return (
+      institutions.find((inst) => inst.sismasterId === selectedInstitution) ??
+      null
+    );
+  }, [institutions, selectedInstitution]);
 
   const availableAthletes = useMemo(() => {
     return athletesFromSismaster.filter(
@@ -120,7 +162,10 @@ export function TeamCreationForm({
 
   const institutionOptions = [
     { value: 0, label: "Seleccione una institución" },
-    ...institutions.map((inst) => ({ value: inst.id, label: inst.name })),
+    ...institutions.map((inst) => ({
+      value: inst.sismasterId,
+      label: inst.name,
+    })),
   ];
 
   const athleteOptions = [
@@ -146,7 +191,10 @@ export function TeamCreationForm({
   ];
 
   const addMember = () => {
-    const athlete = availableAthletes.find((a) => a.idperson === selectedAthlete);
+    const athlete = availableAthletes.find(
+      (a) => a.idperson === selectedAthlete,
+    );
+
     if (athlete) {
       setMembers([
         ...members,
@@ -166,9 +214,12 @@ export function TeamCreationForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!selectedInstitutionData) return;
+
     onSubmit({
-      teamName,
-      institutionId: selectedInstitution,
+      teamName: teamName.trim(),
+      institutionId: selectedInstitutionData.localId, // ID LOCAL
       categoryId,
       members: members.map((m) => ({ athleteId: m.athleteId, rol: m.rol })),
     });
@@ -182,7 +233,6 @@ export function TeamCreationForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Info categoría */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
         <div className="flex items-center justify-between">
           <div>
@@ -197,7 +247,6 @@ export function TeamCreationForm({
         </div>
       </div>
 
-      {/* ── Selector de categoría Sismaster (solo si no hay idparam directo) ── */}
       {showCategorySelector && (
         <div className="space-y-1.5">
           <label className="block text-sm font-semibold text-gray-700 flex items-center gap-1.5">
@@ -223,40 +272,49 @@ export function TeamCreationForm({
         </div>
       )}
 
-      {/* Loading */}
       {isLoadingData && (
         <div className="flex justify-center py-6">
           <Spinner size="lg" label="Cargando atletas de la categoría..." />
         </div>
       )}
 
-      {/* Formulario solo cuando hay atletas cargados */}
+      {!isLoadingData && effectiveIdparam && institutions.length === 0 && (
+        <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>
+            No hay coincidencia entre las instituciones de Sismaster y tus
+            instituciones locales. Revisa los nombres de institución.
+          </span>
+        </div>
+      )}
+
       {!isLoadingData && effectiveIdparam && (
         <>
-          {/* Paso 1: Info del equipo */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">
               Información del Equipo
             </h3>
+
             <Input
               label="Nombre del Equipo *"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               required
             />
+
             <Select
               label={`Institución * (${institutions.length} disponibles)`}
               value={selectedInstitution}
               onChange={(e) => {
-                setSelectedInstitution(Number(e.target.value));
+                setSelectedInstitution(Number(e.target.value)); // SISMASTER ID
                 setMembers([]);
+                setSelectedAthlete(0);
               }}
               options={institutionOptions}
               required
             />
           </div>
 
-          {/* Paso 2: Agregar atletas */}
           {selectedInstitution > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -276,12 +334,14 @@ export function TeamCreationForm({
                     onChange={(e) => setSelectedAthlete(Number(e.target.value))}
                     options={athleteOptions}
                   />
+
                   <Select
                     label="Rol"
                     value={selectedRole}
                     onChange={(e) => setSelectedRole(e.target.value)}
                     options={roleOptions}
                   />
+
                   <div className="flex items-end">
                     <Button
                       type="button"
@@ -315,11 +375,16 @@ export function TeamCreationForm({
                           <p className="font-medium text-gray-900">
                             {member.athleteName}
                           </p>
-                          <Badge variant={getRoleBadgeVariant(member.rol)} size="sm">
-                            {member.rol.charAt(0).toUpperCase() + member.rol.slice(1)}
+                          <Badge
+                            variant={getRoleBadgeVariant(member.rol)}
+                            size="sm"
+                          >
+                            {member.rol.charAt(0).toUpperCase() +
+                              member.rol.slice(1)}
                           </Badge>
                         </div>
                       </div>
+
                       <Button
                         type="button"
                         variant="ghost"
@@ -341,7 +406,6 @@ export function TeamCreationForm({
         </>
       )}
 
-      {/* Mensaje si no hay idparam y no hay categorías cargadas */}
       {!isLoadingData && !effectiveIdparam && !showCategorySelector && (
         <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -353,17 +417,18 @@ export function TeamCreationForm({
         </div>
       )}
 
-      {/* Botones */}
       <div className="flex justify-end gap-3 pt-4 border-t">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancelar
         </Button>
+
         <Button
           type="submit"
           isLoading={isLoading}
           disabled={
-            !teamName ||
+            !teamName.trim() ||
             selectedInstitution === 0 ||
+            !selectedInstitutionData ||
             members.length === 0 ||
             !effectiveIdparam
           }

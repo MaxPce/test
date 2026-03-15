@@ -39,7 +39,7 @@ export function TeamMembersModal({
   // Atletas que no están en el equipo
   const availableAthletes = athletes.filter(
     (athlete) =>
-      !team?.members?.some((member) => member.athleteId === athlete.athleteId)
+      !team?.members?.some((member) => member.athleteId === athlete.athleteId),
   );
 
   const handleAddMember = async () => {
@@ -198,7 +198,7 @@ export function TeamMembersModal({
                       onChange={(e) =>
                         handleChangeRole(
                           member.athleteId,
-                          e.target.value as TeamRole
+                          e.target.value as TeamRole,
                         )
                       }
                       options={roleOptions}

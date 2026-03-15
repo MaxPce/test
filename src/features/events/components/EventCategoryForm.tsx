@@ -10,8 +10,8 @@ import {
 import type { EventCategory, CreateEventCategoryData } from "../types";
 
 interface EventCategoryFormProps {
-  eventId?: number; // ✅ Ahora es opcional
-  externalEventId?: number; // ✅ Agregar para eventos de Sismaster
+  eventId?: number;
+  externalEventId?: number; // Agregar para eventos de Sismaster
   eventCategory?: EventCategory;
   onSubmit: (data: CreateEventCategoryData) => void;
   onCancel: () => void;
@@ -20,7 +20,7 @@ interface EventCategoryFormProps {
 
 export function EventCategoryForm({
   eventId,
-  externalEventId, // ✅ Agregar
+  externalEventId,
   eventCategory,
   onSubmit,
   onCancel,
@@ -94,8 +94,6 @@ export function EventCategoryForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      
-
       <Select
         label="Categoría *"
         value={formData.categoryId}
@@ -182,8 +180,6 @@ export function EventCategoryForm({
           )}
         </div>
       )}
-
-      
 
       {/* Botones */}
       <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
