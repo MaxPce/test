@@ -14,7 +14,15 @@ interface PhaseFormProps {
   }) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  typeOptions?: { value: string; label: string }[];
+  defaultType?: string;
 }
+
+const DEFAULT_TYPE_OPTIONS = [
+  { value: "grupo", label: "Fase de Grupos" },
+  { value: "eliminacion", label: "Eliminación Directa" },
+  { value: "mejor_de_3", label: "Mejor de 3" },
+];
 
 export function PhaseForm({
   eventCategoryId,
@@ -22,10 +30,12 @@ export function PhaseForm({
   onSubmit,
   onCancel,
   isLoading,
+  typeOptions = DEFAULT_TYPE_OPTIONS,
+  defaultType = "eliminacion",
 }: PhaseFormProps) {
   const [formData, setFormData] = useState({
     name: "",
-    type: "eliminacion",
+    type: defaultType,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -37,12 +47,6 @@ export function PhaseForm({
       displayOrder: existingPhases + 1,
     });
   };
-
-  const typeOptions = [
-    { value: "grupo", label: "Fase de Grupos" },
-    { value: "eliminacion", label: "Eliminación Directa" },
-    { value: "mejor_de_3", label: "Mejor de 3" },
-  ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

@@ -444,14 +444,15 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
       heightResult: result,
       isValid: result === "O",
     });
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
     toast.success(`Salto registrado: ${height.toFixed(2)}m ${result}`);
   };
 
   const handleDeleteAttempt = async (athleticsResultId: number) => {
     if (!confirm("¿Eliminar este intento?")) return;
     await deleteAttempt(athleticsResultId);
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+
     toast.success("Intento eliminado");
   };
 
@@ -490,7 +491,8 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
       });
     }
 
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+
     toast.success(`${status} aplicado`);
   };
 
@@ -518,7 +520,8 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
       );
     }
 
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+
     toast.success("Status eliminado");
   };
 
@@ -545,7 +548,8 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
     await apiClient.delete(
       `/competitions/phase-registrations/${phaseRegistrationId}`,
     );
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+
     toast.success(`"${athleteName}" quitado de la fase`);
   };
 

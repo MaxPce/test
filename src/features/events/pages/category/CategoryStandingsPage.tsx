@@ -1,8 +1,6 @@
-// src/features/events/components/CategoryStandingsPage.tsx
-
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { BarChart3, Trophy, Users } from "lucide-react";
+import { BarChart3, Timer, Trophy, Users } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
@@ -24,8 +22,10 @@ import { TiroDeportivoStandingsTable } from "@/features/competitions/components/
 import { PhaseStandingsBlock } from "@/features/competitions/components/PhaseStandingsBlock";
 import { TableTennisPhaseBlock } from "@/features/competitions/components/table-tennis/TableTennisPhaseBlock";
 import { ClimbingResultsTable } from "@/features/competitions/components/climbing/ClimbingResultsTable";
-import { PhaseFeaturedAthlete } from '@/features/events/components/PhaseFeaturedAthlete';
+import { AthleticsStandingsBlock } from "@/features/competitions/components/athletics/AthleticsStandingsBlock";
+import { PhaseFeaturedAthlete } from "@/features/events/components/PhaseFeaturedAthlete";
 import type { EventCategory } from "../../types";
+import type { Phase } from "@/features/competitions/types";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +47,101 @@ interface SportConfig {
     scores?: string;
   };
   showScores: boolean;
+}
+
+// ── Selector de fases de atletismo ────────────────────────────────────────────
+
+function AthleticsPhaseSelector({
+  phases,
+  categoryName,
+}: {
+  phases: Phase[];
+  categoryName: string;
+}) {
+  const [selectedPhaseId, setSelectedPhaseId] = useState<number>(
+    phases[0]?.phaseId ?? 0,
+  );
+
+  const selectedPhase =
+    phases.find((p) => p.phaseId === selectedPhaseId) ?? null;
+
+  const grouped = {
+    pista: phases.filter((p) => p.type === "combined_pista"),
+    distancia: phases.filter((p) => p.type === "combined_distancia"),
+    altura: phases.filter((p) => p.type === "combined_altura"),
+  };
+
+  const groups: { key: keyof typeof grouped; emoji: string; label: string }[] =
+    [
+      { key: "pista", emoji: "🏃", label: "Pista" },
+      { key: "distancia", emoji: "📏", label: "Distancia" },
+      { key: "altura", emoji: "📐", label: "Altura" },
+    ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+            <Timer className="h-8 w-8" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-bold">Atletismo</h3>
+            <p className="text-orange-100 mt-1">
+              {categoryName} · Resultados por prueba
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Selector agrupado */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Selecciona una prueba
+          </p>
+        </div>
+        <div className="p-3 space-y-3">
+          {groups.map(({ key, emoji, label }) => {
+            const group = grouped[key];
+            if (group.length === 0) return null;
+            return (
+              <div key={key}>
+                <p className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  {emoji} {label}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {group.map((phase) => (
+                    <button
+                      key={phase.phaseId}
+                      type="button"
+                      onClick={() => setSelectedPhaseId(phase.phaseId)}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
+                        selectedPhaseId === phase.phaseId
+                          ? "bg-orange-500 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-orange-50 hover:text-orange-700"
+                      }`}
+                    >
+                      {phase.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Resultado de la fase seleccionada */}
+      {selectedPhase && (
+        <AthleticsStandingsBlock
+          key={selectedPhase.phaseId}
+          phase={selectedPhase}
+        />
+      )}
+    </div>
+  );
 }
 
 // ── Componente principal ─────────────────────────────────────────────────────
@@ -75,21 +170,24 @@ export function CategoryStandingsPage() {
 
   const getTaekwondoType = (): "poomsae" | "kyorugui" | null => {
     if (!sportName.includes("taekwondo")) return null;
-    if (resultType === "score")   return "poomsae";
-    if (resultType === "combat")  return "kyorugui";
-    if (categoryName.includes("poomsae") || categoryName.includes("forma")) return "poomsae";
-    if (categoryName.includes("kyorugi") || categoryName.includes("combate")) return "kyorugui";
+    if (resultType === "score") return "poomsae";
+    if (resultType === "combat") return "kyorugui";
+    if (categoryName.includes("poomsae") || categoryName.includes("forma"))
+      return "poomsae";
+    if (categoryName.includes("kyorugi") || categoryName.includes("combate"))
+      return "kyorugui";
     return null;
   };
 
   const taekwondoType = getTaekwondoType();
   const isTaekwondoKyorugi = taekwondoType === "kyorugui";
-  const isTaekwondoPoomsae  = taekwondoType === "poomsae";
+  const isTaekwondoPoomsae = taekwondoType === "poomsae";
   const isJudo = sportName.includes("judo");
+  const isAtletismo = sportName.includes("atletismo");
+
   const isTimedSport =
     sportName.includes("natación") ||
     sportName.includes("natacion") ||
-    sportName.includes("atletismo") ||
     sportName.includes("ciclismo");
   const isTableTennis =
     sportName.includes("tenis de mesa") || sportName.includes("tenis de campo");
@@ -277,9 +375,7 @@ export function CategoryStandingsPage() {
     };
     const viewSubtitles: Record<EliminationView, string> = {
       bracket: "Diagrama de enfrentamientos",
-      podium: isTaekwondoPoomsae
-        ? "Top de Poomsae"
-        : "Top de la competencia",
+      podium: isTaekwondoPoomsae ? "Top de Poomsae" : "Top de la competencia",
       manual: "Asignación manual de puestos",
       resumen: "Resultados y clasificación UWW",
     };
@@ -294,7 +390,9 @@ export function CategoryStandingsPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">{eliminationPhase.name}</h3>
-                <p className="text-purple-100 mt-1">{viewTitles[elimView]} · {viewSubtitles[elimView]}</p>
+                <p className="text-purple-100 mt-1">
+                  {viewTitles[elimView]} · {viewSubtitles[elimView]}
+                </p>
               </div>
             </div>
             {renderViewPills()}
@@ -346,7 +444,6 @@ export function CategoryStandingsPage() {
 
     return (
       <div className="space-y-6">
-        {/* Header verde */}
         <div className="bg-gradient-to-r from-green-600 to-teal-600 rounded-2xl p-6 text-white shadow-lg">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
@@ -373,7 +470,6 @@ export function CategoryStandingsPage() {
           </Card>
         ) : (
           <>
-            {/* Selector de fase si hay más de una */}
             {groupPhases.length > 1 && (
               <Card>
                 <CardBody>
@@ -393,7 +489,6 @@ export function CategoryStandingsPage() {
               </Card>
             )}
 
-            {/* PhaseStandingsBlock ahora viene del archivo externo */}
             {selectedPhaseId > 0 ? (
               <PhaseStandingsBlock
                 phase={phases.find((p) => p.phaseId === selectedPhaseId)!}
@@ -417,6 +512,54 @@ export function CategoryStandingsPage() {
   }
 
   // ── Guards de render temprano ──────────────────────────────────────────────
+
+  // ▼▼▼ ÚNICO CAMBIO RESPECTO A TU VERSIÓN ANTERIOR ▼▼▼
+  if (isAtletismo) {
+    const athleticsPhases = phases.filter(
+      (p) =>
+        p.type === "combined_pista" ||
+        p.type === "combined_distancia" ||
+        p.type === "combined_altura",
+    );
+
+    if (athleticsPhases.length === 0) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                <Timer className="h-8 w-8" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold">Atletismo</h3>
+                <p className="text-orange-100 mt-1">
+                  {eventCategory?.category?.name} · Resultados por prueba
+                </p>
+              </div>
+            </div>
+          </div>
+          <Card>
+            <CardBody>
+              <div className="text-center py-12 text-slate-400">
+                <p className="font-medium">Sin pruebas registradas</p>
+                <p className="text-sm mt-1">
+                  Los resultados aparecerán aquí una vez que se creen las series
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <AthleticsPhaseSelector
+        phases={athleticsPhases}
+        categoryName={eventCategory?.category?.name ?? ""}
+      />
+    );
+  }
+  // ▲▲▲ FIN DEL CAMBIO ▲▲▲
 
   if (isTimedSport) {
     return (
@@ -534,8 +677,14 @@ export function CategoryStandingsPage() {
             <div className="space-y-4">
               {groupPhases.map((phase) => (
                 <div key={phase.phaseId}>
-                  <TiroDeportivoStandingsTable phaseId={phase.phaseId} phaseName={phase.name} />
-                  <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                  <TiroDeportivoStandingsTable
+                    phaseId={phase.phaseId}
+                    phaseName={phase.name}
+                  />
+                  <PhaseFeaturedAthlete
+                    phaseId={phase.phaseId}
+                    eventCategoryId={eventCategory.eventCategoryId}
+                  />
                 </div>
               ))}
             </div>
@@ -543,28 +692,43 @@ export function CategoryStandingsPage() {
             <div className="space-y-4">
               {groupPhases.map((phase) => (
                 <div key={phase.phaseId}>
-                  <WeightliftingResultsTable phaseId={phase.phaseId} phaseName={phase.name} />
-                  <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                  <WeightliftingResultsTable
+                    phaseId={phase.phaseId}
+                    phaseName={phase.name}
+                  />
+                  <PhaseFeaturedAthlete
+                    phaseId={phase.phaseId}
+                    eventCategoryId={eventCategory.eventCategoryId}
+                  />
                 </div>
               ))}
             </div>
           ) : isTaekwondoPoomsae ? (
             <>
-              <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+              <PoomsaeResultsTable
+                eventCategoryId={eventCategory.eventCategoryId}
+              />
               {groupPhases[0] && (
-                <PhaseFeaturedAthlete phaseId={groupPhases[0].phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                <PhaseFeaturedAthlete
+                  phaseId={groupPhases[0].phaseId}
+                  eventCategoryId={eventCategory.eventCategoryId}
+                />
               )}
             </>
           ) : isWushuTaolu ? (
             <>
-              <WushuTaoluResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+              <WushuTaoluResultsTable
+                eventCategoryId={eventCategory.eventCategoryId}
+              />
               {groupPhases[0] && (
-                <PhaseFeaturedAthlete phaseId={groupPhases[0].phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                <PhaseFeaturedAthlete
+                  phaseId={groupPhases[0].phaseId}
+                  eventCategoryId={eventCategory.eventCategoryId}
+                />
               )}
             </>
           ) : isWrestling ? (
             <div className="space-y-6">
-              {/* Header Wrestling con tabs */}
               <div className="bg-gradient-to-r from-orange-700 to-red-600 rounded-2xl p-6 text-white shadow-lg">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
@@ -584,8 +748,6 @@ export function CategoryStandingsPage() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Pills Wrestling */}
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
                     <div className="flex gap-1">
                       {(
@@ -615,22 +777,35 @@ export function CategoryStandingsPage() {
               {wrestlingView === "results" &&
                 groupPhases.map((phase) => (
                   <div key={phase.phaseId}>
-                    <WrestlingResultsTable phaseId={phase.phaseId} title={phase.name} categoryLabel={eventCategory?.category?.name} />
-                    <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                    <WrestlingResultsTable
+                      phaseId={phase.phaseId}
+                      title={phase.name}
+                      categoryLabel={eventCategory?.category?.name}
+                    />
+                    <PhaseFeaturedAthlete
+                      phaseId={phase.phaseId}
+                      eventCategoryId={eventCategory.eventCategoryId}
+                    />
                   </div>
                 ))}
               {wrestlingView === "bracket" &&
                 groupPhases.map((phase) => (
                   <div key={phase.phaseId}>
                     <WrestlingBracket phaseId={phase.phaseId} />
-                    <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                    <PhaseFeaturedAthlete
+                      phaseId={phase.phaseId}
+                      eventCategoryId={eventCategory.eventCategoryId}
+                    />
                   </div>
                 ))}
               {wrestlingView === "ranking" &&
                 groupPhases.map((phase) => (
                   <div key={phase.phaseId}>
                     <WrestlingRanking phaseId={phase.phaseId} />
-                    <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                    <PhaseFeaturedAthlete
+                      phaseId={phase.phaseId}
+                      eventCategoryId={eventCategory.eventCategoryId}
+                    />
                   </div>
                 ))}
             </div>
@@ -639,15 +814,23 @@ export function CategoryStandingsPage() {
               {groupPhases.map((phase) => (
                 <div key={phase.phaseId}>
                   <TableTennisPhaseBlock phase={phase} />
-                  <PhaseFeaturedAthlete phaseId={phase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                  <PhaseFeaturedAthlete
+                    phaseId={phase.phaseId}
+                    eventCategoryId={eventCategory.eventCategoryId}
+                  />
                 </div>
               ))}
             </div>
           ) : isClimbing ? (
             <>
-              <ClimbingResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+              <ClimbingResultsTable
+                eventCategoryId={eventCategory.eventCategoryId}
+              />
               {groupPhases[0] && (
-                <PhaseFeaturedAthlete phaseId={groupPhases[0].phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+                <PhaseFeaturedAthlete
+                  phaseId={groupPhases[0].phaseId}
+                  eventCategoryId={eventCategory.eventCategoryId}
+                />
               )}
             </>
           ) : (

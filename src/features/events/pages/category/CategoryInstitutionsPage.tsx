@@ -50,13 +50,6 @@ export function CategoryInstitutionsPage() {
       const alreadyAdded = entry.members.some(
         (m) => m.athleteId === member.athleteId,
       );
-      if (!alreadyAdded && member.athlete) {
-        entry.members.push({
-          athleteId: member.athleteId,
-          name: `${member.athlete.firstName ?? ""} ${member.athlete.lastName ?? ""}`.trim(),
-          rol: member.rol,
-        });
-      }
     });
   });
 

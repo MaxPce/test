@@ -21,8 +21,9 @@ export interface Phase {
 export interface CreatePhaseData {
   eventCategoryId: number;
   name: string;
-  format: PhaseFormat;
-  status: "pendiente" | "en_curso" | "finalizado";
+  type?: string;
+  format?: PhaseFormat;
+  status?: "pendiente" | "en_curso" | "finalizado";
   startDate?: string;
   endDate?: string;
 }
@@ -70,7 +71,7 @@ export interface Match {
         type: string;
         sport?: {
           sportId: number;
-          name: string; 
+          name: string;
         };
       };
     };
@@ -81,7 +82,7 @@ export interface Match {
     phaseId: number;
     athleteId?: number;
     teamId?: number;
-    registrationId?: number; 
+    registrationId?: number;
     registration?: {
       registrationId: number;
       athleteId?: number;
@@ -145,7 +146,7 @@ export interface Participation {
   phaseId: number;
   athleteId?: number;
   teamId?: number;
-  registrationId?: number; 
+  registrationId?: number;
   wins: number;
   losses: number;
   points: number;
@@ -194,5 +195,5 @@ export interface StandingsRow {
 
 export interface AvailableRegistration {
   registrationId: number;
-  displayName: string; 
+  displayName: string;
 }

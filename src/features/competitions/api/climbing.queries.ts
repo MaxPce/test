@@ -28,3 +28,25 @@ export function useUpdateClimbingScore(phaseId: number) {
     },
   });
 }
+
+export function useAssignClimbingParticipant(phaseId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (registrationId: number) =>
+      climbingApi.assignParticipant(phaseId, registrationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: climbingKeys.table(phaseId) });
+    },
+  });
+}
+
+export function useRemoveClimbingParticipant(phaseId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (registrationId: number) =>
+      climbingApi.removeParticipant(phaseId, registrationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: climbingKeys.table(phaseId) });
+    },
+  });
+}

@@ -338,7 +338,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
         notes, // ← idem al crear
       });
     }
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
     toast.success("Intento guardado");
   };
 
@@ -368,7 +368,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
         });
       }),
     );
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
     toast.success(`${status} aplicado a todos los intentos`);
   };
 
@@ -395,7 +395,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
     await apiClient.delete(
       `/competitions/phase-registrations/${phaseRegistrationId}`,
     );
-    await queryClient.refetchQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
     toast.success(`"${athleteName}" quitado de la fase`);
   };
 

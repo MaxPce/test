@@ -31,4 +31,19 @@ export const climbingApi = {
     );
     return res.data;
   },
+
+  assignParticipant: async (phaseId: number, registrationId: number) => {
+    const res = await apiClient.post(
+      `/competitions/phases/${phaseId}/climbing-assign`,
+      { registrationId },
+    );
+    return res.data;
+  },
+
+  removeParticipant: async (phaseId: number, registrationId: number) => {
+    const res = await apiClient.delete(
+      `/competitions/phases/${phaseId}/climbing-assign/${registrationId}`,
+    );
+    return res.data;
+  },
 };

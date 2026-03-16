@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useOutletContext, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -47,7 +48,11 @@ import { ClimbingScoreTable } from "@/features/competitions/components/climbing/
 import { InitializePoomsaeGroupModal } from "@/features/competitions/components/InitializePoomsaeGroupModal";
 import { InitializeShootingGroupModal } from "@/features/competitions/components/InitializeShootingGroupModal";
 import AthleticsResultsTable from "../../../competitions/components/athletics/AthleticsResultsTable";
-
+import { useAssignClimbingParticipant } from "@/features/competitions/api/climbing.queries";
+import {
+  FIELD_TABLE_KEY,
+  TRACK_TABLE_KEY,
+} from "@/features/competitions/api/athletics.queries";
 import {
   useMatches,
   useMatch,
@@ -85,6 +90,10 @@ import { GenerateTableTennisPhasesModal } from "@/features/events/components/Gen
 import { useInitializePoomsaeGroupPhase } from "@/features/competitions/api/taekwondo.mutations";
 import AthleticsFieldTable from "../../../competitions/components/athletics/AthleticsFieldTable";
 import type { FieldEventType } from "@/features/competitions/types/athletics.types";
+import { GenerateCombinedModal } from "@/features/competitions/components/athletics/GenerateCombinedModal";
+import type { CombinedEventDraft } from "@/features/competitions/types/combined-events.config";
+import HeightAttemptsTable from "@/features/competitions/components/athletics/HeightAttemptsTable";
+import { queryClient } from "@/app/providers/queryClient";
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -107,6 +116,9 @@ export function CategorySchedulePage() {
   const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
   const [isInitPoomsaeModalOpen, setIsInitPoomsaeModalOpen] = useState(false);
   const [isInitShootingModalOpen, setIsInitShootingModalOpen] = useState(false);
+  const [isGenerateCombinedModalOpen, setIsGenerateCombinedModalOpen] =
+    useState(false);
+
   const assignPhaseRegistrationMutation = useAssignPhaseRegistration();
 
   const [
@@ -131,6 +143,7 @@ export function CategorySchedulePage() {
     selectedMatchId || 0,
   );
 
+  const queryClient = useQueryClient();
   const createPhaseMutation = useCreatePhase();
   const deletePhaseMutation = useDeletePhase();
   const createMatchMutation = useCreateMatch();
@@ -305,6 +318,17 @@ export function CategorySchedulePage() {
     setIsGenerateBracketModalOpen(false);
   };
 
+  const handleGenerateCombined = async (drafts: CombinedEventDraft[]) => {
+    for (const draft of drafts) {
+      await createPhaseMutation.mutateAsync({
+        eventCategoryId: eventCategory.eventCategoryId,
+        name: draft.name,
+        type: `combined_${draft.tableType}`,
+      });
+    }
+    setIsGenerateCombinedModalOpen(false);
+  };
+
   const getStatusConfig = (status: string) => {
     const configs = {
       programado: {
@@ -376,19 +400,36 @@ export function CategorySchedulePage() {
     sportName.includes("tiro al blanco") ||
     sportName.includes("shooting");
 
-  const getAthleticsFieldType = (): FieldEventType | null => {
-    const catId = eventCategory.category?.categoryId;
-    const map: Record<number, FieldEventType> = {
-      220: "long_jump",
-      221: "high_jump",
-      222: "triple_jump",
-      223: "pole_vault",
-      224: "shot_put",
-      225: "discus",
-      226: "javelin",
-      227: "hammer",
-    };
-    return catId != null ? (map[catId] ?? null) : null;
+  const getFieldEventTypeFromName = (phase: Phase): FieldEventType => {
+    const n = phase.name.toLowerCase();
+    if (n.includes("garrocha") || n.includes("pértiga")) return "pole_vault";
+    if (n.includes("salto alto")) return "high_jump";
+    if (n.includes("triple")) return "triple_jump";
+    if (n.includes("salto largo")) return "long_jump";
+    if (n.includes("bala")) return "shot_put";
+    if (n.includes("disco")) return "discus";
+    if (n.includes("jabalina")) return "javelin";
+    if (n.includes("martillo")) return "hammer";
+    return "long_jump"; // fallback
+  };
+
+  // Renderiza la tabla correcta según phase.type — usado en atletismo Y combinados
+  const renderAthleticsPhaseTable = (phase: Phase) => {
+    if (phase.type === "combined_altura") {
+      return (
+        <HeightAttemptsTable phaseId={phase.phaseId} /> // ← tabla específica de altura
+      );
+    }
+    if (phase.type === "combined_distancia") {
+      return (
+        <AthleticsFieldTable
+          phaseId={phase.phaseId}
+          eventType={getFieldEventTypeFromName(phase)}
+        />
+      );
+    }
+    // combined_pista, eliminacion (fases antiguas) → tabla de tiempos
+    return <AthleticsResultsTable phaseId={phase.phaseId} />;
   };
 
   const availableRegistrations = useMemo(
@@ -406,6 +447,29 @@ export function CategorySchedulePage() {
     sportName.includes("escalada") ||
     sportName.includes("climbing") ||
     sportName.includes("boulder");
+
+  const getCombinedType = (): "heptatlon" | "decatlon" | null => {
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (
+      name.includes("heptatlón") ||
+      name.includes("heptatlon") ||
+      name.includes("heptathlon")
+    )
+      return "heptatlon";
+    if (
+      name.includes("decatlón") ||
+      name.includes("decatlon") ||
+      name.includes("decathlon")
+    )
+      return "decatlon";
+    return null;
+  };
+
+  const isCombined = () => getCombinedType() !== null;
+
+  const assignClimbingMutation = useAssignClimbingParticipant(
+    selectedPhase?.phaseId ?? 0,
+  );
 
   if (isClimbing()) {
     return (
@@ -506,9 +570,7 @@ export function CategorySchedulePage() {
                         variant="outline"
                         size="sm"
                         icon={<UserPlus className="h-4 w-4" />}
-                        onClick={() =>
-                          setIsGenerateWeightliftingModalOpen(true)
-                        }
+                        onClick={() => setIsAssignSeriesModalOpen(true)}
                       >
                         Asignar atletas
                       </Button>
@@ -547,19 +609,212 @@ export function CategorySchedulePage() {
 
         {/* Modal asignar atletas */}
         {selectedPhase && (
-          <GenerateWeightliftingModal
-            isOpen={isGenerateWeightliftingModalOpen}
-            onClose={() => setIsGenerateWeightliftingModalOpen(false)}
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
             phaseId={selectedPhase.phaseId}
-            registrations={eventCategory.registrations || []}
-            onGenerate={async (entries) => {
-              await initializeWeightliftingMutation.mutateAsync({
-                phaseId: selectedPhase.phaseId,
-                entries,
-              });
-              setIsGenerateWeightliftingModalOpen(false);
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignClimbingMutation.mutateAsync(registrationId);
             }}
-            isLoading={initializeWeightliftingMutation.isPending}
+            isLoading={assignClimbingMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (isCombined()) {
+    const combinedType = getCombinedType()!;
+    const combinedTitle =
+      combinedType === "decatlon" ? "Decatlón" : "Heptatlón";
+
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title={combinedTitle}
+          actions={
+            phases.length === 0 ? (
+              <Button
+                onClick={() => setIsGenerateCombinedModalOpen(true)}
+                variant="gradient"
+                size="lg"
+                icon={<Zap className="h-5 w-5" />}
+              >
+                Generar Fases
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setIsPhaseModalOpen(true)}
+                variant="outline"
+                size="lg"
+                icon={<Plus className="h-5 w-5" />}
+              >
+                Agregar Prueba
+              </Button>
+            )
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No hay pruebas creadas"
+            description={`Genera las pruebas del ${combinedTitle} con el botón de arriba.`}
+            action={{
+              label: "Generar Fases",
+              onClick: () => setIsGenerateCombinedModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => (
+              <Card
+                key={phase.phaseId}
+                variant="elevated"
+                padding="none"
+                hover
+                onClick={() =>
+                  setSelectedPhase(
+                    selectedPhase?.phaseId === phase.phaseId ? null : phase,
+                  )
+                }
+                className={`cursor-pointer transition-all ${
+                  selectedPhase?.phaseId === phase.phaseId
+                    ? "ring-2 ring-orange-500 shadow-strong"
+                    : ""
+                }`}
+              >
+                <div className="relative h-24 bg-gradient-to-br from-orange-500 to-red-600 overflow-hidden rounded-t-xl">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute top-4 left-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhase(phase.phaseId);
+                    }}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+                <CardBody>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2">
+                    {phase.name}
+                  </h4>
+                  <Badge variant="primary" size="sm">
+                    {phase.type === "combined_pista"
+                      ? "Pista"
+                      : phase.type === "combined_distancia"
+                        ? "Distancia"
+                        : phase.type === "combined_altura"
+                          ? "Altura"
+                          : phase.type}
+                  </Badge>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Panel de prueba seleccionada */}
+        {selectedPhase && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-orange-500" />
+                <h4 className="text-lg font-bold text-slate-800">
+                  {selectedPhase.name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAssignSeriesModalOpen(true)}
+                >
+                  Asignar Participante
+                </Button>
+                <button
+                  onClick={() => setSelectedPhase(null)}
+                  className="text-slate-400 hover:text-slate-600 text-sm"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+            {renderAthleticsPhaseTable(selectedPhase)}{" "}
+            {/* ← antes: renderCombinedPhaseTable */}
+          </div>
+        )}
+
+        {/* Modal agregar prueba manual */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Agregar Prueba"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+            typeOptions={[
+              { value: "combined_pista", label: "Pista (tiempo)" },
+              { value: "combined_distancia", label: "Distancia (m)" },
+              { value: "combined_altura", label: "Altura (m)" },
+            ]}
+            defaultType="combined_pista"
+          />
+        </Modal>
+
+        {/* Modal generar todas las fases del combinado */}
+        <GenerateCombinedModal
+          isOpen={isGenerateCombinedModalOpen}
+          onClose={() => setIsGenerateCombinedModalOpen(false)}
+          combinedType={combinedType}
+          onGenerate={handleGenerateCombined}
+          isLoading={createPhaseMutation.isPending}
+        />
+
+        {/* Modal asignar participante */}
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: FIELD_TABLE_KEY(selectedPhase.phaseId),
+              });
+              await queryClient.invalidateQueries({
+                queryKey: TRACK_TABLE_KEY(selectedPhase.phaseId),
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
           />
         )}
       </div>
@@ -576,7 +831,7 @@ export function CategorySchedulePage() {
               onClick={() => setIsPhaseModalOpen(true)}
               variant="gradient"
               size="lg"
-              className="h-5 w-5"
+              className="h-50 w-50"
             >
               Nueva Serie
             </Button>
@@ -675,20 +930,7 @@ export function CategorySchedulePage() {
             </div>
 
             {/* ── Switch pista / campo ── */}
-            {(() => {
-              const fieldType = getAthleticsFieldType();
-              if (fieldType) {
-                // Eventos de campo: saltos y lanzamientos
-                return (
-                  <AthleticsFieldTable
-                    phaseId={selectedPhase.phaseId}
-                    eventType={fieldType}
-                  />
-                );
-              }
-              // Eventos de pista: metros, vallas, postas, marcha, combinados
-              return <AthleticsResultsTable phaseId={selectedPhase.phaseId} />;
-            })()}
+            {renderAthleticsPhaseTable(selectedPhase)}
           </div>
         )}
 
@@ -705,6 +947,21 @@ export function CategorySchedulePage() {
             onSubmit={handleCreatePhase}
             onCancel={() => setIsPhaseModalOpen(false)}
             isLoading={createPhaseMutation.isPending}
+            typeOptions={[
+              {
+                value: "combined_pista",
+                label: "Pista / Vallas / Postas / Marcha",
+              },
+              {
+                value: "combined_distancia",
+                label: "Saltos y Lanzamientos (distancia)",
+              },
+              {
+                value: "combined_altura",
+                label: "Salto alto / Salto Triple / Garrocha (altura)",
+              },
+            ]}
+            defaultType="combined_pista"
           />
         </Modal>
 
@@ -719,6 +976,12 @@ export function CategorySchedulePage() {
               await assignPhaseRegistrationMutation.mutateAsync({
                 phaseId: selectedPhase.phaseId,
                 registrationId,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: FIELD_TABLE_KEY(selectedPhase.phaseId),
+              });
+              await queryClient.invalidateQueries({
+                queryKey: TRACK_TABLE_KEY(selectedPhase.phaseId),
               });
             }}
             isLoading={assignPhaseRegistrationMutation.isPending}
@@ -881,6 +1144,9 @@ export function CategorySchedulePage() {
               await assignPhaseRegistrationMutation.mutateAsync({
                 phaseId: selectedPhase.phaseId,
                 registrationId,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: FIELD_TABLE_KEY(selectedPhase.phaseId),
               });
             }}
             isLoading={assignPhaseRegistrationMutation.isPending}

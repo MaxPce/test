@@ -56,7 +56,6 @@ const STATUS_CONFIG: Record<
   DQ: { label: "DQ", bg: "bg-amber-100", text: "text-amber-700" },
 };
 
-// Interpreta el campo notes como RaceStatus
 const parseStatus = (notes: string | null): RaceStatus => {
   if (notes === "DNF" || notes === "DNS" || notes === "DQ") return notes;
   return null;
@@ -66,6 +65,79 @@ const parseStatus = (notes: string | null): RaceStatus => {
 
 const EMPTY_ROWS: AthleticsRow[] = [];
 const EMPTY_SECTIONS: AthlSection[] = [];
+
+// ── Panel atletas sin sección ─────────────────────────────────────────────────
+
+function AllAthletesPanel({ rows }: { rows: AthleticsRow[] }) {
+  const [open, setOpen] = useState(false);
+  const unassignedCount = rows.filter((r) => r.sections.length === 0).length;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
+      {/* Header — siempre visible */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-left hover:bg-slate-100 transition-colors"
+      >
+        <Users className="h-4 w-4 flex-shrink-0 text-slate-400" />
+        <span className="flex-1 text-sm text-slate-600">
+          <span className="font-semibold">{rows.length}</span> atleta
+          {rows.length !== 1 ? "s" : ""} en esta fase
+        </span>
+        {open ? (
+          <ChevronUp className="h-4 w-4 text-slate-400" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-slate-400" />
+        )}
+      </button>
+
+      {/* Lista expandible */}
+      {open && (
+        <div className="border-t border-slate-200">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="px-4 py-2 text-left">
+                  {rows.some((r) => r.isTeam) ? "Equipo" : "Atleta"}
+                </th>
+                <th className="hidden px-4 py-2 text-center md:table-cell">
+                  Institución
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {rows.map((row) => (
+                <tr
+                  key={row.phaseRegistrationId}
+                  className={`bg-white hover:bg-slate-50 transition-colors ${
+                    row.sections.length === 0 ? "opacity-60" : ""
+                  }`}
+                >
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-700">
+                        {row.athleteName}
+                      </span>
+                      {row.isTeam && (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
+                          Equipo
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="hidden px-4 py-2 text-slate-400 md:table-cell">
+                    {row.institutionName || "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Modal asignar atletas ─────────────────────────────────────────────────────
 
@@ -452,10 +524,10 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
     await upsertEntryMutation.mutateAsync({
       athleticsSectionId: sectionId,
       phaseRegistrationId,
-      lane: entry.lane,
+      lane: entry.lane != null ? Number(entry.lane) : null,
       time: entry.time,
-      wind: entry.wind,
-      notes: entry.notes, // ← aquí viaja "DNF" / "DNS" / "DQ" / null
+      wind: entry.wind != null ? Number(entry.wind) : null,
+      notes: entry.notes,
     });
     toast.success("Guardado");
   };
@@ -544,7 +616,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
         }),
       ),
     );
-    await queryClient.refetchQueries({ queryKey: TRACK_TABLE_KEY(phaseId) });
+    await queryClient.invalidateQueries({ queryKey: TRACK_TABLE_KEY(phaseId) });
     toast.success(`"${sectionName}" guardada`);
   };
 
@@ -618,16 +690,8 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
         </button>
       </div>
 
-      {/* Contador sin asignar */}
-      {unassigned.length > 0 && (
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-2.5">
-          <Users className="h-4 w-4 text-slate-400" />
-          <span className="text-sm text-slate-600">
-            <span className="font-semibold">{unassigned.length}</span> atleta
-            {unassigned.length !== 1 ? "s" : ""} sin sección
-          </span>
-        </div>
-      )}
+      {/* Todos los atletas de la fase — colapsable */}
+      {rows.length > 0 && <AllAthletesPanel rows={rows} />}
 
       {sections.length === 0 && rows.length === 0 && (
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
@@ -890,6 +954,11 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                                 <span className="font-semibold text-slate-900">
                                   {row.athleteName}
                                 </span>
+                                {row.isTeam && (
+                                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
+                                    Equipo
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="hidden px-4 py-2 text-slate-500 md:table-cell">
