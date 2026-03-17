@@ -85,6 +85,9 @@ export const resultsApi = {
     return response.data;
   },
 
+  createDNSResult: (registrationId: number, phaseId: number) =>
+    apiClient.post('/results/dns', { registrationId, phaseId }).then(r => r.data),
+
   getSwimmingResults: async (
     eventCategoryId: number,
   ): Promise<SwimmingResult[]> => {

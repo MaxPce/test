@@ -24,12 +24,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br  relative ">
       {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-blue-400/20 rounded-full blur-3xl"></div>
-      </div>
+      
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo y header mejorado */}
@@ -204,16 +201,7 @@ export function LoginPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8 space-y-3 animate-in">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 font-medium transition-colors"
-          >
-            <ArrowRight className="h-4 w-4 rotate-180" />
-            Volver al inicio
-          </Link>
-        </div>
+        
       </div>
     </div>
   );

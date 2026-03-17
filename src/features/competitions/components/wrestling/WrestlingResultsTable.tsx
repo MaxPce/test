@@ -3,7 +3,7 @@ import { useMatches } from "@/features/competitions/api/matches.queries";
 type Props = {
   phaseId: number;
   title?: string;
-  categoryLabel?: string; // ej: "WW - 53kg"
+  categoryLabel?: string; 
 };
 
 type MatchLike = {

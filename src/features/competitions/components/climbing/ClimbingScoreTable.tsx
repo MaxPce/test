@@ -55,14 +55,7 @@ export function ClimbingScoreTable({ phaseId }: Props) {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <h4 className="font-bold text-gray-900 text-lg">
-            Tabla de Resultados — Escalada
-          </h4>
-          <Badge variant="primary">{scores.length} atletas</Badge>
-        </div>
-      </CardHeader>
+      
       <CardBody className="p-0">
         {isLoading ? (
           <div className="flex justify-center py-12">

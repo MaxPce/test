@@ -16,11 +16,7 @@ export default function AthleticsFieldTable({ phaseId, eventType }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-900">{config.label}</h2>
-          <p className="text-xs text-slate-500">
-            {config.format === "distance"
-              ? `${config.maxAttempts} intentos · se clasifica por mejor distancia válida`
-              : "Se clasifica por mayor altura superada"}
-          </p>
+          
         </div>
       </div>
 

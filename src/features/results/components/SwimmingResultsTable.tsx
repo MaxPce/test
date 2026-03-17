@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { usePhases } from "@/features/competitions/api/phases.queries";
-import { usePhaseResults, useDeleteTimeResult } from "../api/results.queries";
+import { usePhaseResults, useDeleteTimeResult, useCreateDNSResult } from "../api/results.queries";
 import {
   usePhaseRegistrations,
   useRemovePhaseRegistration,
 } from "@/features/competitions/api/phaseRegistrations.queries";
+
+
 
 interface Registration {
   registrationId: number;
@@ -94,6 +96,7 @@ export function SwimmingResultsTable({
 
   const removePhaseRegMutation = useRemovePhaseRegistration();
   const deleteResultMutation = useDeleteTimeResult();
+  const createDNSMutation = useCreateDNSResult(); 
 
   const activeRegistrations: Registration[] = forcedPhaseId
     ? phaseRegistrations.map((pr: any) => pr.registration as Registration)
@@ -282,17 +285,15 @@ export function SwimmingResultsTable({
                         >
                           <td className="px-4 py-4">
                             {isDQ ? (
-                              <Badge
-                                variant="default"
-                                className="bg-red-100 text-red-700 text-xs"
-                              >
+                              <Badge variant="default" className="bg-red-100 text-red-700 text-xs">
                                 DQ
                               </Badge>
+                            ) : result?.notes?.includes("DNS") ? (
+                              <Badge variant="default" className="bg-orange-100 text-orange-700 text-xs">
+                                DNS
+                              </Badge>
                             ) : result ? (
-                              <Badge
-                                variant="default"
-                                className="bg-green-100 text-green-700 text-xs"
-                              >
+                              <Badge variant="default" className="bg-green-100 text-green-700 text-xs">
                                 ✓
                               </Badge>
                             ) : (
@@ -341,20 +342,16 @@ export function SwimmingResultsTable({
                           </td>
 
                           <td className="px-4 py-4 text-center whitespace-nowrap">
-                            {result ? (
-                              <span
-                                className={`text-sm font-mono font-bold ${
-                                  isDQ
-                                    ? "text-red-500 line-through"
-                                    : "text-blue-700"
-                                }`}
-                              >
+                            {result?.notes?.includes("DNS") ? (
+                              <span className="text-sm font-mono font-bold text-orange-500">DNS</span>
+                            ) : result ? (
+                              <span className={`text-sm font-mono font-bold ${
+                                isDQ ? "text-red-500 line-through" : "text-blue-700"
+                              }`}>
                                 {result.timeValue}
                               </span>
                             ) : (
-                              <span className="text-sm text-gray-400 italic">
-                                Sin tiempo
-                              </span>
+                              <span className="text-sm text-gray-400 italic">Sin tiempo</span>
                             )}
                           </td>
 
@@ -384,8 +381,37 @@ export function SwimmingResultsTable({
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
+                                  {result.notes?.includes("DNS") ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteResult(result.resultId)}
+                                      disabled={deleteResultMutation.isPending}
+                                      className="text-orange-500 hover:text-gray-600 hover:bg-gray-50"
+                                      title="Quitar DNS"
+                                    >
+                                      ✕ DNS
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        createDNSMutation.mutate({
+                                          registrationId: registration.registrationId,
+                                          phaseId: effectivePhaseId,
+                                        })
+                                      }
+                                      disabled={createDNSMutation.isPending}
+                                      className="text-gray-500 hover:text-orange-600 hover:bg-orange-50"
+                                      title="Marcar como no presentado"
+                                    >
+                                      DNS
+                                    </Button>
+                                  )}
                                 </>
                               ) : (
+                              <>
                                 <Button
                                   variant="primary"
                                   size="sm"
@@ -394,7 +420,23 @@ export function SwimmingResultsTable({
                                   <Timer className="h-4 w-4 mr-1" />
                                   Registrar
                                 </Button>
-                              )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    createDNSMutation.mutate({
+                                      registrationId: registration.registrationId,
+                                      phaseId: effectivePhaseId,
+                                    })
+                                  }
+                                  disabled={createDNSMutation.isPending}
+                                  className="text-gray-500 hover:text-orange-600 hover:bg-orange-50"
+                                  title="No se presentó"
+                                >
+                                  DNS
+                                </Button>
+                              </>
+                            )}
 
                               {forcedPhaseId && (
                                 <Button

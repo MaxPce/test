@@ -32,12 +32,22 @@ function findMatchingParam(
 ): SportCategoryParam | undefined {
   const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const target = normalize(localName);
-  return (
-    params.find((p) => normalize(p.name) === target) ??
-    params.find((p) => normalize(p.name).includes(target)) ??
-    params.find((p) => target.includes(normalize(p.name)))
-  );
+
+  // 1. Exacto
+  const exact = params.find((p) => normalize(p.name) === target);
+  if (exact) return exact;
+
+  
+  const contained = params.find((p) => {
+    const pName = normalize(p.name);
+    return pName.includes(target) && Math.abs(pName.length - target.length) <= 8;
+  });
+  if (contained) return contained;
+
+  
+  return undefined;
 }
+
 
 export function BulkRegistrationModal({
   isOpen,
@@ -398,7 +408,14 @@ export function BulkRegistrationModal({
                             <p className="text-sm text-gray-600 truncate mt-0.5">
                               {athlete.institutionName || "Sin institución"}
                             </p>
+                            
+                            {athlete.docnumber && (
+                              <p className="text-xs text-gray-400 mt-0.5 font-mono">
+                                {athlete.docnumber}
+                              </p>
+                            )}
                           </div>
+
                         </div>
                       </label>
                     );

@@ -541,9 +541,12 @@ export function CategorySchedulePage() {
                       <h4 className="text-base font-bold text-slate-900 mb-1 group-hover:text-emerald-600 transition-colors">
                         {phase.name}
                       </h4>
-                      <Badge variant="primary" size="sm">
-                        {phaseTypeConfig.label}
-                      </Badge>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="primary" size="sm">
+                          {phaseTypeConfig.label}
+                        </Badge>
+                        <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                      </div>
                     </CardBody>
                   </Card>
                 );
@@ -643,7 +646,7 @@ export function CategorySchedulePage() {
                 onClick={() => setIsGenerateCombinedModalOpen(true)}
                 variant="gradient"
                 size="lg"
-                icon={<Zap className="h-5 w-5" />}
+                
               >
                 Generar Fases
               </Button>
@@ -714,16 +717,20 @@ export function CategorySchedulePage() {
                   <h4 className="text-lg font-bold text-slate-900 mb-2">
                     {phase.name}
                   </h4>
-                  <Badge variant="primary" size="sm">
-                    {phase.type === "combined_pista"
-                      ? "Pista"
-                      : phase.type === "combined_distancia"
-                        ? "Distancia"
-                        : phase.type === "combined_altura"
-                          ? "Altura"
-                          : phase.type}
-                  </Badge>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="primary" size="sm">
+                      {phase.type === "combined_pista"
+                        ? "Pista"
+                        : phase.type === "combined_distancia"
+                          ? "Distancia"
+                          : phase.type === "combined_altura"
+                            ? "Altura"
+                            : phase.type}
+                    </Badge>
+                    <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                  </div>
                 </CardBody>
+
               </Card>
             ))}
           </div>
@@ -958,7 +965,7 @@ export function CategorySchedulePage() {
               },
               {
                 value: "combined_altura",
-                label: "Salto alto / Salto Triple / Garrocha (altura)",
+                label: "Salto alto / Garrocha (altura)",
               },
             ]}
             defaultType="combined_pista"
@@ -1243,9 +1250,12 @@ export function CategorySchedulePage() {
                       <h4 className="text-base font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
                         {phase.name}
                       </h4>
-                      <Badge variant="primary" size="sm">
-                        {phaseTypeConfig.label}
-                      </Badge>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="primary" size="sm">
+                          {phaseTypeConfig.label}
+                        </Badge>
+                        <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                      </div>
                     </CardBody>
                   </Card>
                 );
@@ -1400,9 +1410,12 @@ export function CategorySchedulePage() {
                     <h4 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
                       {phase.name}
                     </h4>
-                    <Badge variant="primary" size="sm" className="mb-4">
-                      {phaseTypeConfig.label}
-                    </Badge>
+                    <div className="flex items-center justify-between mb-4">
+                      <Badge variant="primary" size="sm">
+                        {phaseTypeConfig.label}
+                      </Badge>
+                      <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-blue-50 rounded-lg p-2 text-center">
                         <p className="text-xl font-bold text-blue-900">
@@ -1472,7 +1485,7 @@ export function CategorySchedulePage() {
                         <Button
                           variant="gradient"
                           size="sm"
-                          icon={<Zap className="h-4 w-4" />}
+                          
                           onClick={() => setIsInitPoomsaeModalOpen(true)}
                         >
                           Inicializar Fase Poomsae
@@ -1485,7 +1498,7 @@ export function CategorySchedulePage() {
                         <Button
                           variant="gradient"
                           size="sm"
-                          icon={<Zap className="h-4 w-4" />}
+                          
                           onClick={() => setIsInitShootingModalOpen(true)}
                         >
                           Inicializar Fase Tiro

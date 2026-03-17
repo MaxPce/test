@@ -66,3 +66,15 @@ export function useDeleteTimeResult() {
     },
   });
 }
+
+export function useCreateDNSResult() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ registrationId, phaseId }: { registrationId: number; phaseId: number }) =>
+      resultsApi.createDNSResult(registrationId, phaseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["phase-results"] });
+      queryClient.invalidateQueries({ queryKey: ["swimming-results"] });
+    },
+  });
+}
