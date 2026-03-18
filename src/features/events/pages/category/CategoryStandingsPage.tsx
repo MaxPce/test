@@ -158,7 +158,8 @@ export function CategoryStandingsPage() {
 
   type WrestlingView = "results" | "bracket" | "ranking";
   const [wrestlingView, setWrestlingView] = useState<WrestlingView>("results");
-
+  const [selectedGroupPhaseId, setSelectedGroupPhaseId] = useState<number>(0);
+  const [selectedAnyPhaseId, setSelectedAnyPhaseId] = useState<number>(0);
   const { data: phases = [] } = usePhases(eventCategory.eventCategoryId);
 
   const sportName = eventCategory?.category?.sport?.name?.toLowerCase() || "";
@@ -615,229 +616,94 @@ export function CategoryStandingsPage() {
 
   return (
     <div className="space-y-8">
-      {/* ── Mejor de 3 ────────────────────────────────────────────────────── */}
-      {bestOf3Phases.map((bestOf3Phase) => (
-        <div key={bestOf3Phase.phaseId} className="space-y-6">
-          <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                <Trophy className="h-8 w-8" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold">
-                  {bestOf3Phase.name || "Mejor de 3"}
-                </h3>
-                <p className="text-orange-100 mt-1">
-                  Serie de partidos al mejor de tres
-                </p>
-              </div>
-            </div>
-          </div>
-          <BestOf3ResultsTable
-            phaseId={bestOf3Phase.phaseId}
-            eventCategory={eventCategory}
-          />
-          <PhaseFeaturedAthlete
-            phaseId={bestOf3Phase.phaseId}
-            eventCategoryId={eventCategory.eventCategoryId}
-          />
-        </div>
-      ))}
-
-      {/* ── Eliminación ───────────────────────────────────────────────────── */}
-      {eliminationPhases.map((eliminationPhase) => (
-        <div key={eliminationPhase.phaseId} className="space-y-6">
-          {multipleTypes && bestOf3Phases.length > 0 && (
-            <div className="border-t-2 border-gray-200 pt-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
-                Fase de Eliminación
-              </h3>
-            </div>
-          )}
-          {renderBracketWithToggle(eliminationPhase)}
-          <PhaseFeaturedAthlete
-            phaseId={eliminationPhase.phaseId}
-            eventCategoryId={eventCategory.eventCategoryId}
-          />
-        </div>
-      ))}
-
-      {/* ── Grupos ────────────────────────────────────────────────────────── */}
-      {groupPhases.length > 0 && (
-        <div className="space-y-6">
-          {multipleTypes && (
-            <div className="border-t-2 border-gray-200 pt-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
-                Fase de Grupos
-              </h3>
-            </div>
-          )}
-
-          {isTiroDeportivo ? (
-            <div className="space-y-4">
-              {groupPhases.map((phase) => (
-                <div key={phase.phaseId}>
-                  <TiroDeportivoStandingsTable
-                    phaseId={phase.phaseId}
-                    phaseName={phase.name}
-                  />
-                  <PhaseFeaturedAthlete
-                    phaseId={phase.phaseId}
-                    eventCategoryId={eventCategory.eventCategoryId}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : isWeightlifting ? (
-            <div className="space-y-4">
-              {groupPhases.map((phase) => (
-                <div key={phase.phaseId}>
-                  <WeightliftingResultsTable
-                    phaseId={phase.phaseId}
-                    phaseName={phase.name}
-                  />
-                  <PhaseFeaturedAthlete
-                    phaseId={phase.phaseId}
-                    eventCategoryId={eventCategory.eventCategoryId}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : isTaekwondoPoomsae ? (
-            <>
-              <PoomsaeResultsTable
-                eventCategoryId={eventCategory.eventCategoryId}
-              />
-              {groupPhases[0] && (
-                <PhaseFeaturedAthlete
-                  phaseId={groupPhases[0].phaseId}
-                  eventCategoryId={eventCategory.eventCategoryId}
-                />
-              )}
-            </>
-          ) : isWushuTaolu ? (
-            <>
-              <WushuTaoluResultsTable
-                eventCategoryId={eventCategory.eventCategoryId}
-              />
-              {groupPhases[0] && (
-                <PhaseFeaturedAthlete
-                  phaseId={groupPhases[0].phaseId}
-                  eventCategoryId={eventCategory.eventCategoryId}
-                />
-              )}
-            </>
-          ) : isWrestling ? (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-r from-orange-700 to-red-600 rounded-2xl p-6 text-white shadow-lg">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                      <BarChart3 className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold">
-                        {wrestlingView === "results"
-                          ? "Results"
-                          : wrestlingView === "bracket"
-                            ? "Bracket"
-                            : "Ranking"}
-                      </h3>
-                      <p className="text-orange-100 mt-1">
-                        Round Robin — Lucha Olímpica
-                      </p>
-                    </div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
-                    <div className="flex gap-1">
-                      {(
-                        [
-                          { key: "results", label: "Results" },
-                          { key: "bracket", label: "Bracket" },
-                          { key: "ranking", label: "Ranking" },
-                        ] as { key: WrestlingView; label: string }[]
-                      ).map(({ key, label }) => (
-                        <button
-                          key={key}
-                          onClick={() => setWrestlingView(key)}
-                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                            wrestlingView === key
-                              ? "bg-white text-orange-700 shadow"
-                              : "text-white/80 hover:text-white hover:bg-white/20"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {wrestlingView === "results" &&
-                groupPhases.map((phase) => (
-                  <div key={phase.phaseId}>
-                    <WrestlingResultsTable
-                      phaseId={phase.phaseId}
-                      title={phase.name}
-                      categoryLabel={eventCategory?.category?.name}
-                    />
-                    <PhaseFeaturedAthlete
-                      phaseId={phase.phaseId}
-                      eventCategoryId={eventCategory.eventCategoryId}
-                    />
-                  </div>
-                ))}
-              {wrestlingView === "bracket" &&
-                groupPhases.map((phase) => (
-                  <div key={phase.phaseId}>
-                    <WrestlingBracket phaseId={phase.phaseId} />
-                    <PhaseFeaturedAthlete
-                      phaseId={phase.phaseId}
-                      eventCategoryId={eventCategory.eventCategoryId}
-                    />
-                  </div>
-                ))}
-              {wrestlingView === "ranking" &&
-                groupPhases.map((phase) => (
-                  <div key={phase.phaseId}>
-                    <WrestlingRanking phaseId={phase.phaseId} />
-                    <PhaseFeaturedAthlete
-                      phaseId={phase.phaseId}
-                      eventCategoryId={eventCategory.eventCategoryId}
-                    />
-                  </div>
-                ))}
-            </div>
-          ) : isTableTennis ? (
-            <div className="space-y-4">
-              {groupPhases.map((phase) => (
-                <div key={phase.phaseId}>
-                  <TableTennisPhaseBlock phase={phase} />
-                  <PhaseFeaturedAthlete
-                    phaseId={phase.phaseId}
-                    eventCategoryId={eventCategory.eventCategoryId}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : isClimbing ? (
-            <>
-              <ClimbingResultsTable
-                eventCategoryId={eventCategory.eventCategoryId}
-              />
-              {groupPhases[0] && (
-                <PhaseFeaturedAthlete
-                  phaseId={groupPhases[0].phaseId}
-                  eventCategoryId={eventCategory.eventCategoryId}
-                />
-              )}
-            </>
-          ) : (
-            renderGroupStandings()
-          )}
-        </div>
+      {/* ── Selector global de fase ──────────────────────────────────────── */}
+      {phases.filter(p => !['combined_pista','combined_distancia','combined_altura'].includes(p.type)).length > 1 && (
+        <Card>
+          <CardBody className="py-3">
+            <Select
+              label="Seleccionar Fase"
+              value={String(selectedAnyPhaseId || phases[0]?.phaseId)}
+              onChange={(e) => setSelectedAnyPhaseId(Number(e.target.value))}
+              options={phases
+                .filter(p => !['combined_pista','combined_distancia','combined_altura'].includes(p.type))
+                .map((p) => ({ value: String(p.phaseId), label: p.name }))}
+            />
+          </CardBody>
+        </Card>
       )}
+
+      {/* ── Render de la fase seleccionada ───────────────────────────────── */}
+      {(() => {
+        const allPhases = phases.filter(p => !['combined_pista','combined_distancia','combined_altura'].includes(p.type));
+        const activePhase = allPhases.find(p => p.phaseId === (selectedAnyPhaseId || allPhases[0]?.phaseId));
+        if (!activePhase) return null;
+
+        if (activePhase.type === 'mejor_de_3') return (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm"><Trophy className="h-8 w-8" /></div>
+                <div>
+                  <h3 className="text-2xl font-bold">{activePhase.name || "Mejor de 3"}</h3>
+                  <p className="text-orange-100 mt-1">Serie de partidos al mejor de tres</p>
+                </div>
+              </div>
+            </div>
+            <BestOf3ResultsTable phaseId={activePhase.phaseId} eventCategory={eventCategory} />
+            <PhaseFeaturedAthlete phaseId={activePhase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+          </div>
+        );
+
+        if (activePhase.type === 'eliminacion') return (
+          <div className="space-y-6">
+            {renderBracketWithToggle(activePhase)}
+            <PhaseFeaturedAthlete phaseId={activePhase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+          </div>
+        );
+
+        if (activePhase.type === 'grupo') return (
+          <div className="space-y-6">
+            {isTiroDeportivo && <TiroDeportivoStandingsTable phaseId={activePhase.phaseId} phaseName={activePhase.name} />}
+            {isWeightlifting && <WeightliftingResultsTable phaseId={activePhase.phaseId} phaseName={activePhase.name} />}
+            {isTaekwondoPoomsae && <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />}
+            {isWushuTaolu && <WushuTaoluResultsTable eventCategoryId={eventCategory.eventCategoryId} />}
+            {isWrestling && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-orange-700 to-red-600 rounded-2xl p-6 text-white shadow-lg">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm"><BarChart3 className="h-8 w-8" /></div>
+                      <div>
+                        <h3 className="text-2xl font-bold">{activePhase.name}</h3>
+                        <p className="text-orange-100 mt-1">Round Robin — Lucha Olímpica</p>
+                      </div>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-1">
+                      <div className="flex gap-1">
+                        {([{ key: "results", label: "Results" }, { key: "bracket", label: "Bracket" }, { key: "ranking", label: "Ranking" }] as { key: WrestlingView; label: string }[]).map(({ key, label }) => (
+                          <button key={key} onClick={() => setWrestlingView(key)}
+                            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${wrestlingView === key ? "bg-white text-orange-700 shadow" : "text-white/80 hover:text-white hover:bg-white/20"}`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {wrestlingView === "results" && <WrestlingResultsTable phaseId={activePhase.phaseId} title={activePhase.name} categoryLabel={eventCategory?.category?.name} />}
+                {wrestlingView === "bracket" && <WrestlingBracket phaseId={activePhase.phaseId} />}
+                {wrestlingView === "ranking" && <WrestlingRanking phaseId={activePhase.phaseId} />}
+              </div>
+            )}
+            {isTableTennis && <TableTennisPhaseBlock phase={activePhase} />}
+            {isClimbing && <ClimbingResultsTable eventCategoryId={eventCategory.eventCategoryId} />}
+            {!isTiroDeportivo && !isWeightlifting && !isTaekwondoPoomsae && !isWushuTaolu && !isWrestling && !isTableTennis && !isClimbing && renderGroupStandings()}
+            <PhaseFeaturedAthlete phaseId={activePhase.phaseId} eventCategoryId={eventCategory.eventCategoryId} />
+          </div>
+        );
+
+        return null;
+      })()}
     </div>
   );
 }

@@ -80,37 +80,22 @@ interface PhaseRowProps {
 }
 
 function PhaseFeaturedAthleteRow({ phase, eventCategoryId, fallbackRegistrations }: PhaseRowProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [regId,     setRegId]     = useState('');
-  const [reason,    setReason]    = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [regId,    setRegId]    = useState('');
+  const [reason,   setReason]   = useState('');
 
   const { data: featuredList = [] } = useFeaturedAthletesByPhase(phase.phaseId);
   const { data: phaseRegs    = [] } = usePhaseRegistrations(phase.phaseId);
   const upsert = useUpsertFeaturedAthleteByPhase();
   const remove = useDeleteFeaturedAthleteByPhase(phase.phaseId);
 
-  // ← FIX #1: Si la fase no tiene registrations asignadas,
-  //           usar las registrations de la categoría como fallback
   const normalizedRegs = toNormalizedRegs(phaseRegs, fallbackRegistrations);
 
-  const current = featuredList[0] ?? null;
+  // Excluir del select los atletas ya destacados en esta fase
+  const featuredRegIds  = new Set(featuredList.map((f) => f.registrationId));
+  const availableRegs   = normalizedRegs.filter((r) => !featuredRegIds.has(r.registrationId));
 
-  // ← FIX #2: Buscar en normalizedRegs (no en phaseRegs vacío)
-  const currentRegistration = current
-    ? normalizedRegs.find((r) => r.registrationId === current.registrationId)?.registration ?? null
-    : null;
-
-  const handleOpenEdit = () => {
-    setRegId(current ? String(current.registrationId) : '');
-    setReason(current?.reason ?? '');
-    setIsEditing(true);
-  };
-
-  const handleCancel = () => {
-    setRegId('');
-    setReason('');
-    setIsEditing(false);
-  };
+  const handleCancel = () => { setRegId(''); setReason(''); setIsAdding(false); };
 
   const handleSave = () => {
     if (!regId) return;
@@ -120,14 +105,10 @@ function PhaseFeaturedAthleteRow({ phase, eventCategoryId, fallbackRegistrations
     );
   };
 
-  const handleDelete = () => {
-    if (current) remove.mutate(current.featuredAthleteId);
-  };
-
   return (
     <li className="rounded-lg border p-3 bg-white shadow-sm space-y-2">
 
-      {/* ── Cabecera de la fase ─────────────────────────────────────────── */}
+      {/* ── Cabecera ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-gray-800">{phase.name}</p>
@@ -135,45 +116,55 @@ function PhaseFeaturedAthleteRow({ phase, eventCategoryId, fallbackRegistrations
             {phaseTypeLabel[phase.type] ?? phase.type}
           </p>
         </div>
-        {!isEditing && (
+        {!isAdding && availableRegs.length > 0 && (
           <button
-            onClick={handleOpenEdit}
+            onClick={() => setIsAdding(true)}
             className="text-xs px-2.5 py-1 rounded-md border border-blue-300
                        text-blue-600 hover:bg-blue-50 transition-colors"
           >
-            {current ? 'Editar' : '+ Designar'}
+            + Agregar
           </button>
         )}
       </div>
 
-      {/* ── Atleta designado (solo lectura) ────────────────────────────── */}
-      {current && !isEditing && (
-        <div className="flex items-center justify-between bg-amber-50
-                        border border-amber-200 rounded-lg px-3 py-2">
-          <div className="min-w-0">
-            {/* ← FIX #2: Ahora usa currentRegistration en lugar de athleteReg?.registration */}
-            <p className="text-sm font-medium text-amber-900 truncate">
-              ⭐ {getNameFromRegistration(currentRegistration)}
-            </p>
-            {current.reason && (
-              <p className="text-xs text-amber-700 mt-0.5 truncate max-w-xs">
-                {current.reason}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={handleDelete}
-            disabled={remove.isPending}
-            className="shrink-0 ml-3 text-xs text-red-500 hover:text-red-700
-                       disabled:opacity-50 transition-colors"
+      {/* ── Lista de destacados actuales ───────────────────────────────── */}
+      {featuredList.map((fa) => {
+        const reg = normalizedRegs.find((r) => r.registrationId === fa.registrationId)
+          ?.registration ?? null;
+        return (
+          <div
+            key={fa.featuredAthleteId}
+            className="flex items-center justify-between bg-amber-50
+                       border border-amber-200 rounded-lg px-3 py-2"
           >
-            Quitar
-          </button>
-        </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-amber-900 truncate">
+                ⭐ {getNameFromRegistration(reg)}
+              </p>
+              {fa.reason && (
+                <p className="text-xs text-amber-700 mt-0.5 truncate max-w-xs">
+                  {fa.reason}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => remove.mutate(fa.featuredAthleteId)}
+              disabled={remove.isPending}
+              className="shrink-0 ml-3 text-xs text-red-500 hover:text-red-700
+                         disabled:opacity-50 transition-colors"
+            >
+              Quitar
+            </button>
+          </div>
+        );
+      })}
+
+      {featuredList.length === 0 && !isAdding && (
+        <p className="text-xs text-gray-400 text-center py-1">Sin atletas destacados</p>
       )}
 
-      {/* ── Formulario de designación / edición ────────────────────────── */}
-      {isEditing && (
+      {/* ── Formulario agregar ─────────────────────────────────────────── */}
+      {isAdding && (
         <div className="space-y-2 pt-1">
           <select
             value={regId}
@@ -182,8 +173,7 @@ function PhaseFeaturedAthleteRow({ phase, eventCategoryId, fallbackRegistrations
                        focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
             <option value="">— Seleccionar atleta —</option>
-            {/* ← FIX #1: Ahora usa normalizedRegs (nunca vacío si hay inscritos) */}
-            {normalizedRegs.map((nr) => (
+            {availableRegs.map((nr) => (
               <option key={nr.key} value={String(nr.registrationId)}>
                 {getNameFromRegistration(nr.registration)}
               </option>
@@ -223,6 +213,7 @@ function PhaseFeaturedAthleteRow({ phase, eventCategoryId, fallbackRegistrations
     </li>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Componente principal
@@ -275,60 +266,7 @@ export function FeaturedAthletesManager({ eventCategoryId }: Props) {
   return (
     <div className="space-y-6">
 
-      {/* ── Sección: Por Categoría ──────────────────────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold">Atletas Destacados</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Destacados generales de la categoría</p>
-          </div>
-          <button
-            onClick={() => setOpen(true)}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
-          >
-            + Agregar destacado
-          </button>
-        </div>
-
-        <ul className="space-y-2">
-          {featured.map((fa) => {
-            const name =
-              fa.registration?.athlete?.name ??
-              fa.registration?.team?.name ??
-              '—';
-            return (
-              <li
-                key={fa.featuredAthleteId}
-                className="flex items-start justify-between rounded-lg border p-3 bg-white shadow-sm"
-              >
-                <div>
-                  <p className="font-medium text-sm">{name}</p>
-                  <p className="text-xs text-gray-500 mt-1">{fa.reason}</p>
-                </div>
-                <div className="flex gap-2 ml-4">
-                  <button
-                    onClick={() => handleEdit(fa.featuredAthleteId, fa.reason ?? '')}
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => deleteMutation.mutate(fa.featuredAthleteId)}
-                    className="text-xs text-red-500 hover:underline"
-                  >
-                    Quitar
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-          {featured.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">
-              No hay atletas destacados aún.
-            </p>
-          )}
-        </ul>
-      </div>
+      
 
       {/* ── Sección: Por Fase ───────────────────────────────────────────── */}
       {phases.length > 0 && (

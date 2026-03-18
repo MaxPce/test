@@ -93,7 +93,10 @@ import type { FieldEventType } from "@/features/competitions/types/athletics.typ
 import { GenerateCombinedModal } from "@/features/competitions/components/athletics/GenerateCombinedModal";
 import type { CombinedEventDraft } from "@/features/competitions/types/combined-events.config";
 import HeightAttemptsTable from "@/features/competitions/components/athletics/HeightAttemptsTable";
-import { queryClient } from "@/app/providers/queryClient";
+import ChessRoundsTable from "../../../competitions/components/chess/ChessRoundsTable";
+import { useChessParticipants } from "@/features/competitions/api/chess.queries";
+import type { ChessParticipant } from "@/features/competitions/types/chess.types";
+
 
 export function CategorySchedulePage() {
   const { eventCategory } = useOutletContext<{
@@ -447,6 +450,11 @@ export function CategorySchedulePage() {
     sportName.includes("escalada") ||
     sportName.includes("climbing") ||
     sportName.includes("boulder");
+
+
+  const isChess = () =>
+    sportName.includes("ajedrez") || sportName.includes("chess");
+
 
   const getCombinedType = (): "heptatlon" | "decatlon" | null => {
     const name = eventCategory.category?.name?.toLowerCase() || "";
@@ -999,6 +1007,170 @@ export function CategorySchedulePage() {
         )}
       </div>
     );
+
+  if (isChess()) {
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Ajedrez"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Fase
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Trophy}
+            title="No hay fases creadas"
+            description='Crea la primera fase de ajedrez. Ej: "Categoría Abierta", "Sub-18"'
+            action={{
+              label: "Nueva Fase",
+              onClick: () => setIsPhaseModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="space-y-8">
+            {/* Cards de fases */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {phases.map((phase) => (
+                <Card
+                  key={phase.phaseId}
+                  hover
+                  variant="elevated"
+                  padding="none"
+                  onClick={() =>
+                    setSelectedPhase(
+                      selectedPhase?.phaseId === phase.phaseId ? null : phase,
+                    )
+                  }
+                  className={`group cursor-pointer overflow-hidden transition-all ${
+                    selectedPhase?.phaseId === phase.phaseId
+                      ? "ring-2 ring-indigo-500 shadow-strong"
+                      : ""
+                  }`}
+                >
+                  <div className="relative h-20 bg-gradient-to-br from-indigo-600 to-violet-700 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    <div className="absolute top-3 left-4">
+                      <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-xl">♟</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePhase(phase.phaseId);
+                      }}
+                      className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors text-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <CardBody>
+                    <h4 className="text-base font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">
+                      {phase.name}
+                    </h4>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="primary" size="sm">
+                        Modalidad
+                      </Badge>
+                      <span className="text-xs text-slate-500">
+                        ID {phase.phaseId}
+                      </span>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+
+            {/* Panel de fase seleccionada */}
+            {selectedPhase && (
+              <Card variant="elevated">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
+                        <span className="text-lg">♟</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900">
+                        {selectedPhase.name}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<UserPlus className="h-4 w-4" />}
+                        onClick={() => setIsAssignSeriesModalOpen(true)}
+                      >
+                        Asignar Jugadores
+                      </Button>
+                      <button
+                        onClick={() => setSelectedPhase(null)}
+                        className="text-slate-400 hover:text-slate-600 text-sm"
+                      >
+                        × Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Modal crear fase */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Fase"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
+
+        {/* Modal asignar jugadores */}
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
+  }
+
 
   if (isTimedSport) {
     return (
