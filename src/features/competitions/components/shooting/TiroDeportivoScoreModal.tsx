@@ -44,13 +44,13 @@ export const TiroDeportivoScoreModal = ({
     .map((s) => parseFloat(s))
     .filter((n) => !isNaN(n));
 
-  const total = parseFloat(parsedSeries.reduce((a, b) => a + b, 0).toFixed(1));
+  const total = parseFloat(parsedSeries.reduce((a, b) => a + b, 0).toFixed(2));
 
   // Permite guardar con al menos 1 serie ingresada
   const hasAnySeries = parsedSeries.length > 0;
 
   const handleSeriesChange = (index: number, value: string) => {
-    if (value === '' || /^\d{1,3}(\.\d{0,1})?$/.test(value)) {
+    if (value === '' || /^\d{1,3}(\.\d{0,2})?$/.test(value)) {
       const num = parseFloat(value);
       if (value === '' || num >= 0) {
         const updated = [...series];
@@ -143,7 +143,7 @@ export const TiroDeportivoScoreModal = ({
                 <input
                   type="number"
                   min="0"
-                  step="0.1"
+                  step="0.01"
                   value={series[index]}
                   onChange={(e) => handleSeriesChange(index, e.target.value)}
                   className="w-full px-2 py-2 text-center border border-gray-200 rounded-lg
@@ -164,7 +164,7 @@ export const TiroDeportivoScoreModal = ({
             Total
           </p>
           <span className="text-3xl font-bold text-blue-600 font-mono">
-            {hasAnySeries ? total.toFixed(1) : '—'}
+            {hasAnySeries ? total.toFixed(2) : '—'}
           </span>
         </div>
 

@@ -1635,16 +1635,7 @@ export function CategorySchedulePage() {
                       <h4 className="text-xl font-bold text-slate-900">
                         {selectedPhase.name}
                       </h4>
-                      <p className="text-sm text-slate-600">
-                        {getTaekwondoType() === "poomsae" ||
-                        getWushuType() === "taolu"
-                          ? `${eventCategory.registrations?.length || 0} participante${
-                              eventCategory.registrations?.length !== 1
-                                ? "s"
-                                : ""
-                            }`
-                          : `${matches.length} partido${matches.length !== 1 ? "s" : ""}`}
-                      </p>
+                      
                     </div>
                   </div>
 

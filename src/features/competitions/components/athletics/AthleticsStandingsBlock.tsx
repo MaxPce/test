@@ -182,8 +182,8 @@ function TrackView({ phaseId }: { phaseId: number }) {
                   <tr>
                     <th className="w-10 px-3 py-2 text-center">Pos</th>
                     <th className="w-14 px-3 py-2 text-center">Carril</th>
-                    <th className="px-4 py-2 text-left">Atleta</th>
-                    <th className="hidden px-4 py-2 text-left md:table-cell">
+                    <th className="px-4 py-2 text-center">Atleta</th>
+                    <th className="hidden px-4 py-2 text-center md:table-cell">
                       Institución
                     </th>
                     <th className="px-4 py-2 text-right">Tiempo</th>
@@ -375,8 +375,8 @@ function DistanceView({
         <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
           <tr>
             <th className="w-10 px-3 py-2 text-center">Pos</th>
-            <th className="px-4 py-2 text-left">Atleta</th>
-            <th className="hidden px-4 py-2 text-left md:table-cell">
+            <th className="px-4 py-2 text-center">Atleta</th>
+            <th className="hidden px-4 py-2 text-center md:table-cell">
               Institución
             </th>
             {attemptCols.map((n) => (

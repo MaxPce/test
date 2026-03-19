@@ -126,7 +126,7 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                     </div>
                   </td>
 
-                  {/* ✅ INPUTS DE EDICIÓN: colSpan para ocupar las últimas 4 columnas */}
+                  
                   <td colSpan={4} className="px-4 py-3">
                     <PoomsaeScoreInput
                       participationId={participant.participationId}
@@ -182,7 +182,7 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                 <td className="px-4 py-3 text-center">
                   <span className="text-sm font-medium text-gray-900">
                     {participant.accuracy != null
-                      ? Number(participant.accuracy).toFixed(1)
+                      ? Number(participant.accuracy).toFixed(2)
                       : "-"}
                   </span>
                 </td>
@@ -191,7 +191,7 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                 <td className="px-4 py-3 text-center">
                   <span className="text-sm font-medium text-gray-900">
                     {participant.presentation != null
-                      ? Number(participant.presentation).toFixed(1)
+                      ? Number(participant.presentation).toFixed(2)
                       : "-"}
                   </span>
                 </td>
@@ -200,7 +200,7 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                 <td className="px-4 py-3 text-center">
                   <span className="text-lg font-bold text-blue-600">
                     {participant.total != null
-                      ? Number(participant.total).toFixed(1)
+                      ? Number(participant.total).toFixed(2)
                       : "-"}
                   </span>
                 </td>

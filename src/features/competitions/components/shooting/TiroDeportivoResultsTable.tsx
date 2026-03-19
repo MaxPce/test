@@ -151,7 +151,7 @@ export const TiroDeportivoResultsTable = ({
                     <td key={i} className="px-2 py-3 text-center">
                       <span className="font-mono text-gray-800">
                         {participant.series?.[i] != null
-                          ? participant.series[i].toFixed(1)
+                          ? participant.series[i].toFixed(2)
                           : '—'}
                       </span>
                     </td>
@@ -163,7 +163,7 @@ export const TiroDeportivoResultsTable = ({
                       <span className="text-sm font-bold text-gray-400">DNS</span>
                     ) : participant.total != null ? (
                       <span className="text-lg font-bold text-blue-700 font-mono">
-                        {Number(participant.total).toFixed(1)}
+                        {Number(participant.total).toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>

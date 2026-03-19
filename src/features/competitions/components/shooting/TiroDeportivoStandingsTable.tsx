@@ -155,7 +155,7 @@ export const TiroDeportivoStandingsTable = ({ phaseId, phaseName }: Props) => {
                         <span className="text-slate-200">—</span>
                       ) : participant.series?.[i] != null ? (
                         <span className="font-mono font-medium text-slate-700">
-                          {participant.series[i].toFixed(1)}
+                          {participant.series[i].toFixed(2)}
                         </span>
                       ) : (
                         <span className="text-slate-300">—</span>
@@ -171,7 +171,7 @@ export const TiroDeportivoStandingsTable = ({ phaseId, phaseName }: Props) => {
                       </span>
                     ) : participant.total != null ? (
                       <span className={`text-xl font-bold font-mono ${medal ? medal.text : 'text-blue-600'}`}>
-                        {Number(participant.total).toFixed(1)}
+                        {Number(participant.total).toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-slate-300">—</span>

@@ -901,13 +901,13 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                       <tr>
-                        <th className="w-20 px-4 py-2 text-left">Carril</th>
-                        <th className="px-4 py-2 text-left">
+                        <th className="w-20 px-4 py-2 text-center">Carril</th>
+                        <th className="px-4 py-2 text-center">
                           {sectionRows.some((r) => r.isTeam)
                             ? "Equipo"
                             : "Atleta"}
                         </th>
-                        <th className="hidden px-4 py-2 text-left md:table-cell">
+                        <th className="hidden px-4 py-2 text-centers md:table-cell">
                           Institución
                         </th>
                         <th className="px-4 py-2 text-left">Tiempo</th>

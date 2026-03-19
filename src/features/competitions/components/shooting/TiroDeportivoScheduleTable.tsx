@@ -101,7 +101,7 @@ export const TiroDeportivoScheduleTable = ({ phaseId }: Props) => {
                       <span className="text-slate-300">—</span>
                     ) : participant.series?.[i] != null ? (
                       <span className="font-mono font-medium text-slate-800">
-                        {participant.series[i].toFixed(1)}
+                        {participant.series[i].toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-slate-300">—</span>
@@ -117,7 +117,7 @@ export const TiroDeportivoScheduleTable = ({ phaseId }: Props) => {
                     </span>
                   ) : participant.total != null ? (
                     <span className="text-lg font-bold text-blue-600 font-mono">
-                      {Number(participant.total).toFixed(1)}
+                      {Number(participant.total).toFixed(2)}
                     </span>
                   ) : (
                     <span className="text-slate-300 text-sm">—</span>
