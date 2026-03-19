@@ -1,3 +1,4 @@
+// TiroDeportivoScheduleTable.tsx
 import { useState } from 'react';
 import { Target, Edit2 } from 'lucide-react';
 import { useShootingPhaseScores } from '../../api/shooting.queries';
@@ -12,7 +13,12 @@ interface Props {
 export const TiroDeportivoScheduleTable = ({ phaseId }: Props) => {
   const { data, isLoading } = useShootingPhaseScores(phaseId);
   const participants: ShootingParticipant[] = Array.isArray(data) ? data : [];
-  const [editingParticipant, setEditingParticipant] = useState<ShootingParticipant | null>(null);
+
+  
+  const [editingParticipantId, setEditingParticipantId] = useState<number | null>(null);
+  const editingParticipant = editingParticipantId != null
+    ? participants.find((p) => p.participationId === editingParticipantId) ?? null
+    : null;
 
   if (isLoading) {
     return (
@@ -31,7 +37,8 @@ export const TiroDeportivoScheduleTable = ({ phaseId }: Props) => {
     );
   }
 
-  const seriesCount = Math.max(...participants.map((p) => p.series?.length || 0), 0);
+  // FIX 2: seriesCount con fallback mínimo de 6 desde el inicio
+  const seriesCount = Math.max(...participants.map((p) => p.series?.length || 0), 6);
 
   return (
     <>
@@ -127,7 +134,7 @@ export const TiroDeportivoScheduleTable = ({ phaseId }: Props) => {
                 {/* Acciones */}
                 <td className="px-4 py-3 text-center">
                   <button
-                    onClick={() => setEditingParticipant(participant)}
+                    onClick={() => setEditingParticipantId(participant.participationId)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                                text-xs font-semibold text-blue-600 border border-blue-200
                                hover:bg-blue-50 hover:border-blue-400 transition-all"
@@ -147,8 +154,8 @@ export const TiroDeportivoScheduleTable = ({ phaseId }: Props) => {
           participant={editingParticipant}
           phaseId={phaseId}
           isOpen={!!editingParticipant}
-          onClose={() => setEditingParticipant(null)}
-          seriesCount={seriesCount || 6}
+          onClose={() => setEditingParticipantId(null)}
+          seriesCount={seriesCount}
         />
       )}
     </>

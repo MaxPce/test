@@ -25,6 +25,7 @@ export const TiroDeportivoScoreModal = ({
   const updateMutation = useUpdateShootingScore();
   const dnsMutation = useSetShootingDns();
 
+  
   useEffect(() => {
     if (participant.series && participant.series.length > 0) {
       const filled = Array(seriesCount).fill('');
@@ -35,7 +36,8 @@ export const TiroDeportivoScoreModal = ({
     } else {
       setSeries(Array(seriesCount).fill(''));
     }
-  }, [participant, seriesCount]);
+  }, [participant.participationId, seriesCount, isOpen]); 
+
 
   if (!isOpen) return null;
 
@@ -141,18 +143,19 @@ export const TiroDeportivoScoreModal = ({
                   {label}
                 </label>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={series[index]}
-                  onChange={(e) => handleSeriesChange(index, e.target.value)}
-                  className="w-full px-2 py-2 text-center border border-gray-200 rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                             font-mono text-lg font-bold text-gray-800
-                             hover:border-gray-300 transition-colors"
-                  placeholder="—"
-                  disabled={isLoading}
-                />
+                type="text"          
+                inputMode="decimal"  
+                min="0"
+                step="0.01"
+                value={series[index]}
+                onChange={(e) => handleSeriesChange(index, e.target.value)}
+                className="w-full px-2 py-2 text-center border border-gray-200 rounded-lg
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                          font-mono text-lg font-bold text-gray-800
+                          hover:border-gray-300 transition-colors"
+                placeholder="—"
+                disabled={isLoading}
+              />
               </div>
             ))}
           </div>
