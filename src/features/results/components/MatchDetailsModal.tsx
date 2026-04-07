@@ -27,9 +27,14 @@ export function MatchDetailsModal({
   onClose,
   sportConfig,
 }: MatchDetailsModalProps) {
-  // ── Hooks siempre al tope (antes de cualquier return) ──────────────────
-  const { data, isLoading, refetch } = useMatchDetails(matchId);
-  const { data: fullMatchData } = useMatch(matchId); // ← trae team.members populados
+  // ✅ Calcular ANTES de los hooks para usarlo en enabled
+  const isTableTennis = sportConfig?.sportType === "table-tennis";
+
+  // ✅ Solo llama la API de table-tennis si corresponde
+  const { data, isLoading, refetch } = useMatchDetails(matchId, {
+    enabled: isTableTennis,
+  });
+  const { data: fullMatchData } = useMatch(matchId);
   const advanceWinnerMutation = useAdvanceWinner();
   const updateMatchMutation = useUpdateMatch();
 
@@ -55,10 +60,13 @@ export function MatchDetailsModal({
 
   if (!data) return null;
 
-  const match = (data as any).match ?? data;
-  const lineups: any[] = (data as any).lineups ?? [];
-  const games: any[] = (data as any).games ?? [];
-  const result: any = (data as any).result ?? null;
+  const match = isTableTennis
+    ? ((data as any)?.match ?? data ?? matchProp)
+    : matchProp ?? fullMatchData;
+
+  const lineups: any[] = isTableTennis ? ((data as any)?.lineups ?? []) : [];
+  const games: any[]   = isTableTennis ? ((data as any)?.games ?? [])   : [];
+  const result: any    = isTableTennis ? ((data as any)?.result ?? null) : null;
 
   // ── Reconstruir participations desde lineups si vienen vacías ──────────
   const rawParticipations: any[] = match.participations ?? [];
@@ -98,7 +106,6 @@ export function MatchDetailsModal({
 
   const sportType = detectSportType();
   const isTeamMatch = lineups.length > 0 && lineups[0]?.lineups?.length > 0;
-  const isTableTennis = sportType === "table-tennis";
   const isJudo = sportType === "judo";
   const isKyorugi = sportType === "kyorugi";
 

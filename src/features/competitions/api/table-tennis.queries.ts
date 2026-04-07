@@ -43,13 +43,17 @@ export function useMatchGames(matchId: number) {
 /**
  * Hook para obtener detalles completos del match
  */
-export function useMatchDetails(matchId: number) {
+export function useMatchDetails(
+  matchId: number,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: tableTennisKeys.details(matchId),
     queryFn: () => tableTennisApi.getMatchDetails(matchId),
-    enabled: matchId > 0,
+    enabled: (options?.enabled ?? true) && matchId > 0,  
   });
 }
+
 
 /**
  * Hook para obtener resultado del match

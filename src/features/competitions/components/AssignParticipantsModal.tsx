@@ -31,6 +31,7 @@ export function AssignParticipantsModal({
 }: AssignParticipantsModalProps) {
   const [participant1, setParticipant1] = useState<number>(0);
   const [participant2, setParticipant2] = useState<number>(0);
+  
 
   const phaseId = match.phase?.phaseId;
 

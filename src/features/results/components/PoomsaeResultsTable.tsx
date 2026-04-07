@@ -102,22 +102,7 @@ export function PoomsaeResultsTable({
         </div>
       </div>
 
-      {groupPhases.length > 1 && (
-        <Card>
-          <CardBody>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 max-w-md">
-                <Select
-                  label="Seleccionar Fase"
-                  value={String(effectivePhaseId)}
-                  onChange={(e) => setSelectedPhaseId(Number(e.target.value))}
-                  options={phaseOptions}
-                />
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      )}
+      
 
       {effectivePhaseId > 0 ? (
         <Card>

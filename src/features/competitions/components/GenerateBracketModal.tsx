@@ -66,6 +66,7 @@ export function GenerateBracketModal({
   );
   const [selectedNiv, setSelectedNiv] = useState<string>("");
   const [selectedCat, setSelectedCat] = useState<string>("");
+  const [search, setSearch]           = useState<string>("");
 
   const generateBracket = useGenerateBracket();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
@@ -78,6 +79,7 @@ export function GenerateBracketModal({
       setSelectedIds(new Set(availableRegistrations.map((r) => r.registrationId)));
       setSelectedNiv("");
       setSelectedCat("");
+      setSearch("");
       setBracketType("with-participants");
     }
   }, [isOpen, availableRegistrations]);
@@ -341,6 +343,15 @@ export function GenerateBracketModal({
             </div>
           )}
 
+          {/* Buscador */}
+          <input
+            type="text"
+            placeholder="Buscar por nombre..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
           {/* Contador */}
           <p className="text-sm text-gray-500">
             <span className="font-semibold text-blue-600">{selectedIds.size}</span>
@@ -349,30 +360,35 @@ export function GenerateBracketModal({
 
           {/* Lista de participantes */}
           <div className="border rounded-lg divide-y max-h-52 overflow-y-auto">
-            {availableRegistrations.map((reg) => {
-              const isFiltered =
-                isFilterActive &&
-                !loadingFilter &&
-                nivCatResult !== undefined &&
-                !nivCatResult.registrationIds.includes(reg.registrationId);
+            {availableRegistrations
+              .filter((reg) => {
+                const q = search.toLowerCase().trim();
+                return !q || reg.displayName.toLowerCase().includes(q);  // ← solo filtra lo visible
+              })
+              .map((reg) => {
+                const isFiltered =
+                  isFilterActive &&
+                  !loadingFilter &&
+                  nivCatResult !== undefined &&
+                  !nivCatResult.registrationIds.includes(reg.registrationId);
 
-              return (
-                <label
-                  key={reg.registrationId}
-                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-opacity ${
-                    isFiltered ? "opacity-30" : ""
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(reg.registrationId)}
-                    onChange={() => toggleParticipant(reg.registrationId)}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-800">{reg.displayName}</span>
-                </label>
-              );
-            })}
+                return (
+                  <label
+                    key={reg.registrationId}
+                    className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-opacity ${
+                      isFiltered ? "opacity-30" : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(reg.registrationId)}
+                      onChange={() => toggleParticipant(reg.registrationId)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-800">{reg.displayName}</span>
+                  </label>
+                );
+              })}
           </div>
 
           {bracketType === "with-participants" && selectedIds.size < 2 && (

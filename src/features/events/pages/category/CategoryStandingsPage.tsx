@@ -299,7 +299,7 @@ export function CategoryStandingsPage() {
     if (isTaekwondoPoomsae)
       return { sportType: "poomsae", scoreLabel: "Puntos", showScores: true };
     if (isTaekwondoKyorugi)
-      return { sportType: " ", scoreLabel: "Puntos", showScores: true };
+      return { sportType: "kyorugi", scoreLabel: "Puntos", showScores: true };
     if (isJudo)
       return { sportType: "judo", scoreLabel: "Puntos", showScores: true };
     if (isKarate)

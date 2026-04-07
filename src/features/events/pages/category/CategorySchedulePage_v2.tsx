@@ -1,0 +1,2384 @@
+import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useOutletContext, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import {
+  Plus,
+  Calendar,
+  Trophy,
+  Clock,
+  MapPin,
+  Zap,
+  Grid3x3,
+  TrendingUp,
+  Award,
+  Timer,
+  UserPlus,
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
+import { PhaseForm } from "@/features/competitions/components/PhaseForm";
+import { MatchForm } from "@/features/competitions/components/MatchForm";
+import { AssignParticipantsModal } from "@/features/competitions/components/AssignParticipantsModal";
+import { ResultModal } from "@/features/competitions/components/ResultModal";
+import { BracketView } from "@/features/competitions/components/BracketView";
+import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
+import { KyoruguiBracketView } from "@/features/competitions/components/taekwondo/KyoruguiBracketView";
+import { PoomsaeScoreModal } from "@/features/competitions/components/taekwondo/PoomsaeScoreModal";
+import { PoomsaeScoreTable } from "@/features/competitions/components/taekwondo/PoomsaeScoreTable";
+import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwondo/KyoruguiRoundsModal";
+import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
+import { KarateScoreModal } from "@/features/competitions/components/karate/KarateScoreModal";
+import { WushuScoreModal } from "@/features/competitions/components/wushu/WushuScoreModal";
+import { WushuTaoluScoreTable } from "@/features/competitions/components/wushu/WushuTaoluScoreTable";
+import { WushuTaoluScoreModal } from "@/features/competitions/components/wushu/WushuTaoluScoreModal";
+import { useAdvanceWinner } from "@/features/competitions/api/bracket.mutations";
+import { usePhases } from "@/features/competitions/api/phases.queries";
+import { CollectiveScoreModal } from "@/features/competitions/components/collective/CollectiveScoreModal";
+import { WrestlingScoreModal } from "@/features/competitions/components/wrestling/WrestlingScoreModal";
+import { TiroDeportivoResultsTable } from "@/features/competitions/components/shooting/TiroDeportivoResultsTable";
+import { TiroDeportivoScheduleTable } from "@/features/competitions/components/shooting/TiroDeportivoScheduleTable";
+import { GenerateWeightliftingModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingModal";
+import { useInitializeWeightliftingPhase } from "@/features/competitions/api/weightlifting.mutations";
+import { ClimbingScoreTable } from "@/features/competitions/components/climbing/ClimbingScoreTable";
+import { InitializePoomsaeGroupModal } from "@/features/competitions/components/InitializePoomsaeGroupModal";
+import { InitializeShootingGroupModal } from "@/features/competitions/components/InitializeShootingGroupModal";
+import AthleticsResultsTable from "../../../competitions/components/athletics/AthleticsResultsTable";
+import { useAssignClimbingParticipant } from "@/features/competitions/api/climbing.queries";
+import {
+  FIELD_TABLE_KEY,
+  TRACK_TABLE_KEY,
+} from "@/features/competitions/api/athletics.queries";
+import {
+  useMatches,
+  useMatch,
+} from "@/features/competitions/api/matches.queries";
+import {
+  useCreatePhase,
+  useDeletePhase,
+} from "@/features/competitions/api/phases.mutations";
+import {
+  useCreateMatch,
+  useUpdateMatch,
+  useDeleteMatch,
+} from "@/features/competitions/api/matches.mutations";
+import { useCreateParticipation } from "@/features/competitions/api/participations.mutations";
+import type { EventCategory } from "../../types";
+import type { Phase, Match } from "@/features/competitions/types";
+import { GenerateRoundRobinModal } from "@/features/competitions/components/GenerateRoundRobinModal";
+import { useInitializeRoundRobin } from "@/features/competitions/api/round-robin.mutations";
+import { useUpdateStandings } from "@/features/competitions/api/standings.mutations";
+import { BestOf3View } from "@/features/competitions/components/BestOf3View";
+import { GenerateBestOf3Modal } from "@/features/competitions/components/GenerateBestOf3Modal";
+import { useInitializeBestOf3 } from "@/features/competitions/api/best-of-3.mutations";
+import { GenerateBracketModal } from "@/features/competitions/components/GenerateBracketModal";
+import { useGenerateBracket } from "@/features/competitions/api/bracket.mutations";
+import { getImageUrl } from "@/lib/utils/imageUrl";
+import { SwimmingResultsTable } from "@/features/results/components/SwimmingResultsTable";
+import {
+  usePhaseRegistrations,
+  useAssignPhaseRegistration,
+} from "@/features/competitions/api/phaseRegistrations.queries";
+import { AssignSeriesParticipantModal } from "@/features/competitions/components/AssignSeriesParticipantModal";
+import { WeightliftingAttemptsTable } from "@/features/competitions/components/weightlifting/WeightliftingAttemptsTable";
+import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
+
+import { useInitializePoomsaeGroupPhase } from "@/features/competitions/api/taekwondo.mutations";
+import AthleticsFieldTable from "../../../competitions/components/athletics/AthleticsFieldTable";
+import type { FieldEventType } from "@/features/competitions/types/athletics.types";
+import { GenerateCombinedModal } from "@/features/competitions/components/athletics/GenerateCombinedModal";
+import type { CombinedEventDraft } from "@/features/competitions/types/combined-events.config";
+import HeightAttemptsTable from "@/features/competitions/components/athletics/HeightAttemptsTable";
+import ChessRoundsTable from "../../../competitions/components/chess/ChessRoundsTable";
+import { useChessParticipants } from "@/features/competitions/api/chess.queries";
+import type { ChessParticipant } from "@/features/competitions/types/chess.types";
+
+
+export function CategorySchedulePage() {
+  const { eventCategory } = useOutletContext<{
+    eventCategory: EventCategory;
+  }>();
+
+  const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
+  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
+  const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isCollectiveModalOpen, setIsCollectiveModalOpen] = useState(false);
+  const [isGenerateBestOf3ModalOpen, setIsGenerateBestOf3ModalOpen] =
+    useState(false);
+  const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] =
+    useState(false);
+  const [isAssignSeriesModalOpen, setIsAssignSeriesModalOpen] = useState(false);
+  const [isInitPoomsaeModalOpen, setIsInitPoomsaeModalOpen] = useState(false);
+  const [isInitShootingModalOpen, setIsInitShootingModalOpen] = useState(false);
+  const [isGenerateCombinedModalOpen, setIsGenerateCombinedModalOpen] =
+    useState(false);
+
+  const assignPhaseRegistrationMutation = useAssignPhaseRegistration();
+
+  const [
+    isGenerateWeightliftingModalOpen,
+    setIsGenerateWeightliftingModalOpen,
+  ] = useState(false);
+  const initializeWeightliftingMutation = useInitializeWeightliftingPhase();
+
+  const initializeRoundRobinMutation = useInitializeRoundRobin();
+  const updateStandingsMutation = useUpdateStandings();
+  const initializeBestOf3Mutation = useInitializeBestOf3();
+  const generateBracketMutation = useGenerateBracket();
+  const advanceWinnerMutation = useAdvanceWinner();
+
+  const { data: phases = [], isLoading: phasesLoading } = usePhases(
+    eventCategory.eventCategoryId,
+  );
+  const { data: matches = [], isLoading: matchesLoading } = useMatches(
+    selectedPhase?.phaseId,
+  );
+  const { data: fullMatch, isLoading: fullMatchLoading } = useMatch(
+    selectedMatchId || 0,
+  );
+
+  const queryClient = useQueryClient();
+  const createPhaseMutation = useCreatePhase();
+  const deletePhaseMutation = useDeletePhase();
+  const createMatchMutation = useCreateMatch();
+  const updateMatchMutation = useUpdateMatch();
+  const deleteMatchMutation = useDeleteMatch();
+  const createParticipationMutation = useCreateParticipation();
+
+  const isTableTennis = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sportName.includes("tenis de mesa") ||
+      sportName.includes("tennis de mesa") ||
+      sportName.includes("ping pong") ||
+      sportName.includes("table tennis")
+    );
+  };
+
+  const isJudo = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return sportName.includes("judo");
+  };
+
+  const isKarate = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return sportName.includes("karate");
+  };
+
+  const isWushu = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return sportName.includes("wushu");
+  };
+
+  const isWrestling = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sportName.includes("lucha olímpica") ||
+      sportName.includes("lucha olimpica")
+    );
+  };
+
+  const isCollectiveSport = () => {
+    const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sportName.includes("fútbol") ||
+      sportName.includes("futbol") ||
+      sportName.includes("futsal") ||
+      sportName.includes("basquetbol") ||
+      sportName.includes("básquetbol") ||
+      sportName.includes("basketball") ||
+      sportName.includes("voleybol") ||
+      sportName.includes("voleibol") ||
+      sportName.includes("volleyball") ||
+      sportName.includes("rugby")
+    );
+  };
+
+  const isWeightlifting = () => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    return (
+      sport.includes("halterofilia") ||
+      sport.includes("weightlifting") ||
+      sport.includes("levantamiento de pesas")
+    );
+  };
+
+  const getTaekwondoType = (): "poomsae" | "kyorugui" | null => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    if (!sport.includes("taekwondo")) return null;
+
+    const resultType = eventCategory.category?.resultType;
+
+    if (resultType === "score") return "poomsae";
+    if (resultType === "combat") return "kyorugui";
+
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (name.includes("poomsae") || name.includes("forma")) return "poomsae";
+    if (name.includes("kyorugi") || name.includes("combate")) return "kyorugui";
+
+    if (
+      selectedPhase?.type === "eliminacion" ||
+      selectedPhase?.type === "grupo"
+    ) {
+      return "kyorugui";
+    }
+
+    return null;
+  };
+
+  const getWushuType = (): "taolu" | "sanda" | null => {
+    const sport = eventCategory.category?.sport?.name?.toLowerCase() || "";
+    if (!sport.includes("wushu")) return null;
+
+    const resultType = eventCategory.category?.resultType;
+
+    if (resultType === "score") return "taolu";
+    if (resultType === "combat") return "sanda";
+
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (name.includes("taolu") || name.includes("forma")) return "taolu";
+
+    return "sanda";
+  };
+
+  const handleCreatePhase = async (data: any) => {
+    await createPhaseMutation.mutateAsync(data);
+    setIsPhaseModalOpen(false);
+  };
+
+  const handleDeletePhase = async (phaseId: number) => {
+    if (
+      confirm(
+        "¿Estás seguro de eliminar esta fase? Se eliminarán todos sus partidos.",
+      )
+    ) {
+      await deletePhaseMutation.mutateAsync(phaseId);
+      if (selectedPhase?.phaseId === phaseId) {
+        setSelectedPhase(null);
+      }
+    }
+  };
+
+  const handleCreateMatch = async (data: any) => {
+    await createMatchMutation.mutateAsync(data);
+    setIsMatchModalOpen(false);
+  };
+
+  const handleDeleteMatch = async (matchId: number) => {
+    if (confirm("¿Estás seguro de eliminar este partido?")) {
+      await deleteMatchMutation.mutateAsync(matchId);
+    }
+  };
+
+  const handleAssignParticipant = async (data: any) => {
+    await createParticipationMutation.mutateAsync(data);
+  };
+
+  const handleRegisterResult = async (matchId: number, winnerId: number) => {
+    if (selectedPhase?.type === "eliminacion") {
+      await advanceWinnerMutation.mutateAsync({
+        matchId,
+        winnerRegistrationId: winnerId,
+      });
+    } else {
+      await updateMatchMutation.mutateAsync({
+        id: matchId,
+        data: {
+          status: "finalizado",
+          winnerRegistrationId: winnerId,
+        },
+      });
+
+      if (selectedPhase?.type === "grupo") {
+        await updateStandingsMutation.mutateAsync(selectedPhase.phaseId);
+      }
+    }
+  };
+
+  const handleGenerateBestOf3 = async (data: {
+    phaseId: number;
+    registrationIds: number[];
+  }) => {
+    await initializeBestOf3Mutation.mutateAsync(data);
+    setIsGenerateBestOf3ModalOpen(false);
+  };
+
+  const handleGenerateBracket = async (data: {
+    phaseId: number;
+    registrationIds: number[];
+    includeThirdPlace?: boolean;
+  }) => {
+    await generateBracketMutation.mutateAsync(data);
+    setIsGenerateBracketModalOpen(false);
+  };
+
+  const handleGenerateCombined = async (drafts: CombinedEventDraft[]) => {
+    for (const draft of drafts) {
+      await createPhaseMutation.mutateAsync({
+        eventCategoryId: eventCategory.eventCategoryId,
+        name: draft.name,
+        type: `combined_${draft.tableType}`,
+      });
+    }
+    setIsGenerateCombinedModalOpen(false);
+  };
+
+  const getStatusConfig = (status: string) => {
+    const configs = {
+      programado: {
+        variant: "primary" as const,
+        label: "Programado",
+        dot: true,
+      },
+      en_curso: { variant: "success" as const, label: "En Curso", dot: true },
+      finalizado: {
+        variant: "default" as const,
+        label: "Finalizado",
+        dot: false,
+      },
+      cancelado: {
+        variant: "warning" as const,
+        label: "Cancelado",
+        dot: false,
+      },
+    };
+    return configs[status as keyof typeof configs] || configs.programado;
+  };
+
+  const getPhaseTypeConfig = (type: string) => {
+    const configs = {
+      grupo: { label: "Grupos", icon: Grid3x3, color: "blue" },
+      eliminacion: { label: "Eliminación", icon: Trophy, color: "purple" },
+      repechaje: { label: "Repechaje", icon: TrendingUp, color: "amber" },
+      mejor_de_3: { label: "Mejor de 3", icon: Award, color: "emerald" },
+    };
+    return (
+      configs[type as keyof typeof configs] || {
+        label: type,
+        icon: Trophy,
+        color: "blue",
+      }
+    );
+  };
+
+  const handleGenerateRoundRobin = async (data: {
+    phaseId: number;
+    registrationIds: number[];
+    emptyParticipantCount?: number;
+  }) => {
+    await initializeRoundRobinMutation.mutateAsync(data);
+    setIsGenerateModalOpen(false);
+  };
+
+  const totalMatches = phases.reduce(
+    (sum, phase) => sum + (phase.matches?.length || 0),
+    0,
+  );
+  const finishedMatches = phases.reduce(
+    (sum, phase) =>
+      sum +
+      (phase.matches?.filter((m) => m.status === "finalizado").length || 0),
+    0,
+  );
+
+  const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
+  const isAtletismo = sportName.includes("atletismo");
+
+  const isTimedSport =
+    sportName.includes("natación") ||
+    sportName.includes("natacion") ||
+    sportName.includes("ciclismo");
+
+  const isTiroDeportivo =
+    sportName.includes("tiro deportivo") ||
+    sportName.includes("tiro al blanco") ||
+    sportName.includes("shooting");
+
+  const getFieldEventTypeFromName = (phase: Phase): FieldEventType => {
+    const n = phase.name.toLowerCase();
+    if (n.includes("garrocha") || n.includes("pértiga")) return "pole_vault";
+    if (n.includes("salto alto")) return "high_jump";
+    if (n.includes("triple")) return "triple_jump";
+    if (n.includes("salto largo")) return "long_jump";
+    if (n.includes("bala")) return "shot_put";
+    if (n.includes("disco")) return "discus";
+    if (n.includes("jabalina")) return "javelin";
+    if (n.includes("martillo")) return "hammer";
+    return "long_jump"; // fallback
+  };
+
+  // Renderiza la tabla correcta según phase.type — usado en atletismo Y combinados
+  const renderAthleticsPhaseTable = (phase: Phase) => {
+    if (phase.type === "combined_altura") {
+      return (
+        <HeightAttemptsTable phaseId={phase.phaseId} /> // ← tabla específica de altura
+      );
+    }
+    if (phase.type === "combined_distancia") {
+      return (
+        <AthleticsFieldTable
+          phaseId={phase.phaseId}
+          eventType={getFieldEventTypeFromName(phase)}
+        />
+      );
+    }
+    // combined_pista, eliminacion (fases antiguas) → tabla de tiempos
+    return <AthleticsResultsTable phaseId={phase.phaseId} />;
+  };
+
+  const availableRegistrations = useMemo(
+    () =>
+      eventCategory.registrations?.map((r) => ({
+        registrationId: r.registrationId,
+        displayName: r.athlete
+          ? r.athlete.name
+          : (r.team?.name ?? `Registro #${r.registrationId}`),
+      })) ?? [],
+    [eventCategory.registrations],
+  );
+
+  const isClimbing = () =>
+    sportName.includes("escalada") ||
+    sportName.includes("climbing") ||
+    sportName.includes("boulder");
+
+
+  const isChess = () =>
+    sportName.includes("ajedrez") || sportName.includes("chess");
+
+
+  const getCombinedType = (): "heptatlon" | "decatlon" | null => {
+    const name = eventCategory.category?.name?.toLowerCase() || "";
+    if (
+      name.includes("heptatlón") ||
+      name.includes("heptatlon") ||
+      name.includes("heptathlon")
+    )
+      return "heptatlon";
+    if (
+      name.includes("decatlón") ||
+      name.includes("decatlon") ||
+      name.includes("decathlon")
+    )
+      return "decatlon";
+    return null;
+  };
+
+  const isCombined = () => getCombinedType() !== null;
+
+  const assignClimbingMutation = useAssignClimbingParticipant(
+    selectedPhase?.phaseId ?? 0,
+  );
+
+  if (isClimbing()) {
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Escalada"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Fase
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState title="No hay fases creadas" />
+        ) : (
+          <div className="space-y-8">
+            {/* Cards de fases */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {phases.map((phase) => {
+                const phaseTypeConfig = getPhaseTypeConfig(phase.type);
+                const Icon = phaseTypeConfig.icon;
+                return (
+                  <Card
+                    key={phase.phaseId}
+                    hover
+                    variant="elevated"
+                    padding="none"
+                    onClick={() =>
+                      setSelectedPhase(
+                        selectedPhase?.phaseId === phase.phaseId ? null : phase,
+                      )
+                    }
+                    className={`group cursor-pointer overflow-hidden transition-all ${
+                      selectedPhase?.phaseId === phase.phaseId
+                        ? "ring-2 ring-emerald-500 shadow-strong"
+                        : ""
+                    }`}
+                  >
+                    <div
+                      className={`relative h-20 bg-gradient-to-br from-emerald-600 to-teal-700 overflow-hidden`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      <div className="absolute top-3 left-4">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                          <Icon className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePhase(phase.phaseId);
+                        }}
+                        className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors text-sm"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <CardBody>
+                      <h4 className="text-base font-bold text-slate-900 mb-1 group-hover:text-emerald-600 transition-colors">
+                        {phase.name}
+                      </h4>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="primary" size="sm">
+                          {phaseTypeConfig.label}
+                        </Badge>
+                        <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Tabla de resultados de la fase seleccionada */}
+            {selectedPhase && (
+              <Card variant="elevated">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center">
+                        <Trophy className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          {selectedPhase.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<UserPlus className="h-4 w-4" />}
+                        onClick={() => setIsAssignSeriesModalOpen(true)}
+                      >
+                        Asignar atletas
+                      </Button>
+                      <button
+                        onClick={() => setSelectedPhase(null)}
+                        className="text-slate-400 hover:text-slate-600 text-sm"
+                      >
+                        × Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardBody className="p-0">
+                  <ClimbingScoreTable phaseId={selectedPhase.phaseId} />
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Modal crear fase */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Fase"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
+
+        {/* Modal asignar atletas */}
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignClimbingMutation.mutateAsync(registrationId);
+            }}
+            isLoading={assignClimbingMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (isCombined()) {
+    const combinedType = getCombinedType()!;
+    const combinedTitle =
+      combinedType === "decatlon" ? "Decatlón" : "Heptatlón";
+
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title={combinedTitle}
+          actions={
+            phases.length === 0 ? (
+              <Button
+                onClick={() => setIsGenerateCombinedModalOpen(true)}
+                variant="gradient"
+                size="lg"
+                
+              >
+                Generar Fases
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setIsPhaseModalOpen(true)}
+                variant="outline"
+                size="lg"
+                icon={<Plus className="h-5 w-5" />}
+              >
+                Agregar Prueba
+              </Button>
+            )
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No hay pruebas creadas"
+            description={`Genera las pruebas del ${combinedTitle} con el botón de arriba.`}
+            action={{
+              label: "Generar Fases",
+              onClick: () => setIsGenerateCombinedModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => (
+              <Card
+                key={phase.phaseId}
+                variant="elevated"
+                padding="none"
+                hover
+                onClick={() =>
+                  setSelectedPhase(
+                    selectedPhase?.phaseId === phase.phaseId ? null : phase,
+                  )
+                }
+                className={`cursor-pointer transition-all ${
+                  selectedPhase?.phaseId === phase.phaseId
+                    ? "ring-2 ring-orange-500 shadow-strong"
+                    : ""
+                }`}
+              >
+                <div className="relative h-24 bg-gradient-to-br from-orange-500 to-red-600 overflow-hidden rounded-t-xl">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute top-4 left-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhase(phase.phaseId);
+                    }}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+                <CardBody>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2">
+                    {phase.name}
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="primary" size="sm">
+                      {phase.type === "combined_pista"
+                        ? "Pista"
+                        : phase.type === "combined_distancia"
+                          ? "Distancia"
+                          : phase.type === "combined_altura"
+                            ? "Altura"
+                            : phase.type}
+                    </Badge>
+                    <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                  </div>
+                </CardBody>
+
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Panel de prueba seleccionada */}
+        {selectedPhase && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-orange-500" />
+                <h4 className="text-lg font-bold text-slate-800">
+                  {selectedPhase.name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAssignSeriesModalOpen(true)}
+                >
+                  Asignar Participante
+                </Button>
+                <button
+                  onClick={() => setSelectedPhase(null)}
+                  className="text-slate-400 hover:text-slate-600 text-sm"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+            {renderAthleticsPhaseTable(selectedPhase)}{" "}
+            {/* ← antes: renderCombinedPhaseTable */}
+          </div>
+        )}
+
+        {/* Modal agregar prueba manual */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Agregar Prueba"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+            typeOptions={[
+              { value: "combined_pista", label: "Pista (tiempo)" },
+              { value: "combined_distancia", label: "Distancia (m)" },
+              { value: "combined_altura", label: "Altura (m)" },
+            ]}
+            defaultType="combined_pista"
+          />
+        </Modal>
+
+        {/* Modal generar todas las fases del combinado */}
+        <GenerateCombinedModal
+          isOpen={isGenerateCombinedModalOpen}
+          onClose={() => setIsGenerateCombinedModalOpen(false)}
+          combinedType={combinedType}
+          onGenerate={handleGenerateCombined}
+          isLoading={createPhaseMutation.isPending}
+        />
+
+        {/* Modal asignar participante */}
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: FIELD_TABLE_KEY(selectedPhase.phaseId),
+              });
+              await queryClient.invalidateQueries({
+                queryKey: TRACK_TABLE_KEY(selectedPhase.phaseId),
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (isAtletismo)
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Atletismo"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              className="h-50 w-50"
+            >
+              Nueva Serie
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No hay series creadas"
+            description="Crea la primera serie. Ej: '100m Serie A', '4x100m Relevos'"
+            action={{
+              label: "Crear Primera Serie",
+              onClick: () => setIsPhaseModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => (
+              <Card
+                key={phase.phaseId}
+                variant="elevated"
+                padding="none"
+                hover
+                onClick={() => setSelectedPhase(phase)}
+                className={`cursor-pointer transition-all ${
+                  selectedPhase?.phaseId === phase.phaseId
+                    ? "ring-2 ring-orange-500 shadow-strong"
+                    : ""
+                }`}
+              >
+                <div className="relative h-24 bg-gradient-to-br from-orange-500 to-red-600 overflow-hidden rounded-t-xl">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute top-4 left-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhase(phase.phaseId);
+                    }}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+                <CardBody>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2">
+                    {phase.name}
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="primary" size="sm">
+                      Serie / Sección
+                    </Badge>
+                    <span className="text-xs text-slate-500">
+                      ID {phase.phaseId}
+                    </span>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {selectedPhase && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-orange-500" />
+                <h4 className="text-lg font-bold text-slate-800">
+                  {selectedPhase.name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Asignar participante solo en eventos de PISTA */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAssignSeriesModalOpen(true)}
+                >
+                  Asignar Participante
+                </Button>
+                <button
+                  onClick={() => setSelectedPhase(null)}
+                  className="text-slate-400 hover:text-slate-600 text-sm"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            {/* ── Switch pista / campo ── */}
+            {renderAthleticsPhaseTable(selectedPhase)}
+          </div>
+        )}
+
+        {/* Modal crear serie */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Serie"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+            typeOptions={[
+              {
+                value: "combined_pista",
+                label: "Pista / Vallas / Postas / Marcha",
+              },
+              {
+                value: "combined_distancia",
+                label: "Saltos y Lanzamientos (distancia)",
+              },
+              {
+                value: "combined_altura",
+                label: "Salto alto / Garrocha (altura)",
+              },
+            ]}
+            defaultType="combined_pista"
+          />
+        </Modal>
+
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: FIELD_TABLE_KEY(selectedPhase.phaseId),
+              });
+              await queryClient.invalidateQueries({
+                queryKey: TRACK_TABLE_KEY(selectedPhase.phaseId),
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
+
+  if (isChess()) {
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Ajedrez"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Fase
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Trophy}
+            title="No hay fases creadas"
+            description='Crea la primera fase de ajedrez. Ej: "Categoría Abierta", "Sub-18"'
+            action={{
+              label: "Nueva Fase",
+              onClick: () => setIsPhaseModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="space-y-8">
+            {/* Cards de fases */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {phases.map((phase) => (
+                <Card
+                  key={phase.phaseId}
+                  hover
+                  variant="elevated"
+                  padding="none"
+                  onClick={() =>
+                    setSelectedPhase(
+                      selectedPhase?.phaseId === phase.phaseId ? null : phase,
+                    )
+                  }
+                  className={`group cursor-pointer overflow-hidden transition-all ${
+                    selectedPhase?.phaseId === phase.phaseId
+                      ? "ring-2 ring-indigo-500 shadow-strong"
+                      : ""
+                  }`}
+                >
+                  <div className="relative h-20 bg-gradient-to-br from-indigo-600 to-violet-700 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    <div className="absolute top-3 left-4">
+                      <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <span className="text-xl">♟</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePhase(phase.phaseId);
+                      }}
+                      className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors text-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <CardBody>
+                    <h4 className="text-base font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">
+                      {phase.name}
+                    </h4>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="primary" size="sm">
+                        Modalidad
+                      </Badge>
+                      <span className="text-xs text-slate-500">
+                        ID {phase.phaseId}
+                      </span>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+
+            {/* Panel de fase seleccionada */}
+            {selectedPhase && (
+              <Card variant="elevated">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
+                        <span className="text-lg">♟</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-900">
+                        {selectedPhase.name}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<UserPlus className="h-4 w-4" />}
+                        onClick={() => setIsAssignSeriesModalOpen(true)}
+                      >
+                        Asignar Jugadores
+                      </Button>
+                      <button
+                        onClick={() => setSelectedPhase(null)}
+                        className="text-slate-400 hover:text-slate-600 text-sm"
+                      >
+                        × Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Modal crear fase */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Fase"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
+
+        {/* Modal asignar jugadores */}
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
+  }
+
+
+  if (isTimedSport) {
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Gestionar Series"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Serie
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No hay series creadas"
+            description='Crea la primera serie para registrar tiempos (ej: "Serie 1 Preliminares")'
+            action={{
+              label: "Crear Primera Serie",
+              onClick: () => setIsPhaseModalOpen(true),
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => (
+              <Card
+                key={phase.phaseId}
+                variant="elevated"
+                padding="none"
+                hover
+                onClick={() => setSelectedPhase(phase)}
+                className={`cursor-pointer transition-all ${
+                  selectedPhase?.phaseId === phase.phaseId
+                    ? "ring-2 ring-blue-500 shadow-strong"
+                    : ""
+                }`}
+              >
+                <div className="relative h-24 bg-gradient-to-br from-blue-600 to-cyan-500 overflow-hidden rounded-t-xl">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute top-4 left-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePhase(phase.phaseId);
+                    }}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+                <CardBody>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2">
+                    {phase.name}
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="primary" size="sm">
+                      Serie / Grupo
+                    </Badge>
+                    <span className="text-xs text-slate-500">
+                      ID: {phase.phaseId}
+                    </span>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* ── Panel de detalle al hacer clic en una serie ── */}
+        {selectedPhase && (
+          <div className="space-y-2">
+            {/* Título de la serie activa */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-blue-600" />
+                <h4 className="text-lg font-bold text-slate-800">
+                  {selectedPhase.name}
+                </h4>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<UserPlus className="h-4 w-4" />}
+                  onClick={() => setIsAssignSeriesModalOpen(true)}
+                >
+                  Asignar Participante
+                </Button>
+                <button
+                  onClick={() => setSelectedPhase(null)}
+                  className="text-slate-400 hover:text-slate-600 text-sm"
+                >
+                  × Cerrar
+                </button>
+              </div>
+            </div>
+
+            {/* Tabla de tiempos directamente */}
+            {sportName.includes("atletismo") ? (
+              <AthleticsResultsTable phaseId={selectedPhase.phaseId} />
+            ) : (
+              <SwimmingResultsTable
+                eventCategoryId={eventCategory.eventCategoryId}
+                registrations={eventCategory.registrations}
+                categoryName={selectedPhase.name}
+                forcedPhaseId={selectedPhase.phaseId}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Modal crear serie */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Serie"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
+
+        {selectedPhase && (
+          <AssignSeriesParticipantModal
+            isOpen={isAssignSeriesModalOpen}
+            onClose={() => setIsAssignSeriesModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            phaseName={selectedPhase.name}
+            allRegistrations={eventCategory.registrations || []}
+            onAssign={async (registrationId) => {
+              await assignPhaseRegistrationMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                registrationId,
+              });
+              await queryClient.invalidateQueries({
+                queryKey: FIELD_TABLE_KEY(selectedPhase.phaseId),
+              });
+            }}
+            isLoading={assignPhaseRegistrationMutation.isPending}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (phasesLoading) {
+    return (
+      <div className="flex justify-center items-center h-96">Cargando...</div>
+    );
+  }
+
+  console.log("isWeightlifting():", isWeightlifting());
+  console.log("isClimbing():", isClimbing());
+
+  console.log("category.name:", eventCategory.category?.name);
+  console.log("category.resultType:", eventCategory.category?.resultType);
+  console.log("selectedPhase.type:", selectedPhase?.type);
+  console.log("getTaekwondoType():", getTaekwondoType());
+
+  if (isWeightlifting()) {
+    return (
+      <div className="space-y-6 animate-in">
+        <PageHeader
+          title="Levantamiento de Pesas"
+          actions={
+            <Button
+              onClick={() => setIsPhaseModalOpen(true)}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Fase
+            </Button>
+          }
+        />
+
+        {phasesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full" />
+          </div>
+        ) : phases.length === 0 ? (
+          <EmptyState title="No hay fases creadas" />
+        ) : (
+          <div className="space-y-8">
+            {/* Cards de fases */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {phases.map((phase) => {
+                const phaseTypeConfig = getPhaseTypeConfig(phase.type);
+                const Icon = phaseTypeConfig.icon;
+                return (
+                  <Card
+                    key={phase.phaseId}
+                    hover
+                    variant="elevated"
+                    padding="none"
+                    onClick={() =>
+                      setSelectedPhase(
+                        selectedPhase?.phaseId === phase.phaseId ? null : phase,
+                      )
+                    }
+                    className={`group cursor-pointer overflow-hidden transition-all ${
+                      selectedPhase?.phaseId === phase.phaseId
+                        ? "ring-2 ring-blue-500 shadow-strong"
+                        : ""
+                    }`}
+                  >
+                    <div
+                      className={`relative h-20 bg-gradient-to-br from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 overflow-hidden`}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      <div className="absolute top-3 left-4">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                          <Icon className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePhase(phase.phaseId);
+                        }}
+                        className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors text-sm"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <CardBody>
+                      <h4 className="text-base font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                        {phase.name}
+                      </h4>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="primary" size="sm">
+                          {phaseTypeConfig.label}
+                        </Badge>
+                        <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Tabla de intentos de la fase seleccionada */}
+            {selectedPhase && (
+              <Card variant="elevated">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                        <Trophy className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                          {selectedPhase.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<UserPlus className="h-4 w-4" />}
+                        onClick={() =>
+                          setIsGenerateWeightliftingModalOpen(true)
+                        }
+                      >
+                        Asignar atletas
+                      </Button>
+                      <button
+                        onClick={() => setSelectedPhase(null)}
+                        className="text-slate-400 hover:text-slate-600 text-sm"
+                      >
+                        × Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardBody className="p-0">
+                  <WeightliftingAttemptsTable phaseId={selectedPhase.phaseId} />
+                </CardBody>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* Modal crear fase */}
+        <Modal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          title="Crear Nueva Fase"
+          size="md"
+        >
+          <PhaseForm
+            eventCategoryId={eventCategory.eventCategoryId}
+            existingPhases={phases.length}
+            onSubmit={handleCreatePhase}
+            onCancel={() => setIsPhaseModalOpen(false)}
+            isLoading={createPhaseMutation.isPending}
+          />
+        </Modal>
+
+        {/*  asignar atletas con división */}
+        {selectedPhase && (
+          <GenerateWeightliftingModal
+            isOpen={isGenerateWeightliftingModalOpen}
+            onClose={() => setIsGenerateWeightliftingModalOpen(false)}
+            phaseId={selectedPhase.phaseId}
+            registrations={eventCategory.registrations || []}
+            onGenerate={async (entries) => {
+              await initializeWeightliftingMutation.mutateAsync({
+                phaseId: selectedPhase.phaseId,
+                entries,
+              });
+              setIsGenerateWeightliftingModalOpen(false);
+            }}
+            isLoading={initializeWeightliftingMutation.isPending}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-in">
+      {/* Header */}
+      <PageHeader
+        title="Programación & Competencia"
+        actions={
+          <Button
+            onClick={() => setIsPhaseModalOpen(true)}
+            variant="gradient"
+            size="lg"
+            icon={<Plus className="h-5 w-5" />}
+          >
+            Nueva Fase
+          </Button>
+        }
+      />
+
+      {phases.length === 0 ? (
+        <EmptyState title="No hay fases creadas" />
+      ) : (
+        <>
+          {/* Grid de Fases */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {phases.map((phase) => {
+              const phaseTypeConfig = getPhaseTypeConfig(phase.type);
+              const Icon = phaseTypeConfig.icon;
+              const matchesCount = phase.matches?.length || 0;
+              const finishedCount =
+                phase.matches?.filter((m) => m.status === "finalizado")
+                  .length || 0;
+
+              return (
+                <Card
+                  key={phase.phaseId}
+                  hover
+                  variant="elevated"
+                  padding="none"
+                  onClick={() => setSelectedPhase(phase)}
+                  className={`group cursor-pointer overflow-hidden transition-all ${
+                    selectedPhase?.phaseId === phase.phaseId
+                      ? "ring-2 ring-blue-500 shadow-strong"
+                      : ""
+                  }`}
+                >
+                  <div
+                    className={`relative h-24 bg-gradient-to-br from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 overflow-hidden`}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    <div className="absolute top-4 left-4">
+                      <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Icon className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePhase(phase.phaseId);
+                      }}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <CardBody>
+                    <h4 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+                      {phase.name}
+                    </h4>
+                    <div className="flex items-center justify-between mb-4">
+                      <Badge variant="primary" size="sm">
+                        {phaseTypeConfig.label}
+                      </Badge>
+                      <span className="text-xs text-slate-500">ID {phase.phaseId}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-blue-50 rounded-lg p-2 text-center">
+                        <p className="text-xl font-bold text-blue-900">
+                          {matchesCount}
+                        </p>
+                        <p className="text-xs text-blue-700 font-medium">
+                          Partidos
+                        </p>
+                      </div>
+                      <div className="bg-emerald-50 rounded-lg p-2 text-center">
+                        <p className="text-xl font-bold text-emerald-900">
+                          {finishedCount}
+                        </p>
+                        <p className="text-xs text-emerald-700 font-medium">
+                          Finalizados
+                        </p>
+                      </div>
+                    </div>
+                  </CardBody>
+
+                  <div
+                    className={`h-1 bg-gradient-to-r from-${phaseTypeConfig.color}-600 to-${phaseTypeConfig.color}-700 opacity-0 group-hover:opacity-100 transition-opacity`}
+                  />
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Detalle de Fase Seleccionada */}
+          {selectedPhase && (
+            <Card variant="elevated">
+              <CardHeader>
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  {/* Info de la fase */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-strong">
+                      {(() => {
+                        const Icon = getPhaseTypeConfig(
+                          selectedPhase.type,
+                        ).icon;
+                        return <Icon className="h-7 w-7 text-white" />;
+                      })()}
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold text-slate-900">
+                        {selectedPhase.name}
+                      </h4>
+                      
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex flex-wrap gap-2">
+                    {/* Inicializar Poomsae Grupos → solo poomsae en grupo sin matches */}
+                    {getTaekwondoType() === "poomsae" &&
+                      selectedPhase.type === "grupo" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="gradient"
+                          size="sm"
+                          
+                          onClick={() => setIsInitPoomsaeModalOpen(true)}
+                        >
+                          Inicializar Fase Poomsae
+                        </Button>
+                      )}
+
+                    {isTiroDeportivo &&
+                      selectedPhase.type === "grupo" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="gradient"
+                          size="sm"
+                          
+                          onClick={() => setIsInitShootingModalOpen(true)}
+                        >
+                          Inicializar Fase Tiro
+                        </Button>
+                      )}
+
+                    {/* Generar Bracket → solo eliminacion sin partidos */}
+                    {selectedPhase.type === "eliminacion" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsGenerateBracketModalOpen(true)}
+                        >
+                          Generar Bracket
+                        </Button>
+                      )}
+
+                    {/* Generar Partidos → solo grupo, sin poomsae/taolu/tiro y sin partidos */}
+                    {!(
+                      getTaekwondoType() === "poomsae" ||
+                      getWushuType() === "taolu" ||
+                      isTiroDeportivo
+                    ) &&
+                      selectedPhase.type === "grupo" &&
+                      matches.length === 0 && (
+                        <Button onClick={() => setIsGenerateModalOpen(true)}>
+                          Generar Partidos
+                        </Button>
+                      )}
+
+                    {/* Generar Serie → mejor_de_3 sin partidos */}
+                    {selectedPhase.type === "mejor_de_3" &&
+                      matches.length === 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsGenerateBestOf3ModalOpen(true)}
+                        >
+                          Generar Serie
+                        </Button>
+                      )}
+
+                    {/* Nuevo Partido → para grupo y eliminacion, excluyendo poomsae/taolu/tiro */}
+                    {!(
+                      getTaekwondoType() === "poomsae" ||
+                      getWushuType() === "taolu" ||
+                      isTiroDeportivo
+                    ) &&
+                      (selectedPhase.type === "grupo" ||
+                        selectedPhase.type === "eliminacion") && (
+                        <Button
+                          size="sm"
+                          variant="gradient"
+                          onClick={() => setIsMatchModalOpen(true)}
+                          icon={<Plus className="h-4 w-4" />}
+                        >
+                          Nuevo Partido
+                        </Button>
+                      )}
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardBody>
+                {(() => {
+                  console.log("isClimbing():", isClimbing());
+                  console.log("getTaekwondoType():", getTaekwondoType());
+                  console.log("getWushuType():", getWushuType());
+                  console.log("selectedPhase.type:", selectedPhase.type);
+                  return null;
+                })()}
+
+                {matchesLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
+                    <p className="text-slate-600">Cargando partidos...</p>
+                  </div>
+                ) : isTiroDeportivo && selectedPhase.type === "grupo" ? (
+                  // ── Tiro Deportivo: tabla de series y totales ──────────────────────
+                  <TiroDeportivoScheduleTable phaseId={selectedPhase.phaseId} />
+                ) : (getTaekwondoType() === "poomsae" ||
+                    getWushuType() === "taolu") &&
+                  selectedPhase.type !== "eliminacion" &&
+                  selectedPhase.type !== "mejor_de_3" ? (
+                  getTaekwondoType() === "poomsae" ? (
+                    <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />
+                  ) : (
+                    <WushuTaoluScoreTable phaseId={selectedPhase.phaseId} />
+                  )
+                ) : selectedPhase.type === "mejor_de_3" ? (
+                  <BestOf3View
+                    matches={matches}
+                    phase={selectedPhase}
+                    eventCategory={eventCategory}
+                  />
+                ) : matches.length === 0 ? (
+                  <EmptyState title="No hay partidos" />
+                ) : (
+                  <div className="space-y-4">
+                    {matches.map((match) => {
+                      const participants = match.participations || [];
+                      const hasParticipants = participants.length > 0;
+                      const isTaekwondoKyorugui =
+                        getTaekwondoType() === "kyorugui";
+                      const isJudoMatch = isJudo();
+                      const isKarateMatch = isKarate();
+                      const isWushuMatch = isWushu();
+                      const isWrestlingMatch = isWrestling();
+                      const isCollectiveMatch = isCollectiveSport();
+                      const statusConfig = getStatusConfig(match.status);
+
+                      return (
+                        <Card
+                          key={match.matchId}
+                          variant="elevated"
+                          padding="md"
+                          hover
+                          className="group"
+                        >
+                          {/* Header del partido */}
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {match.matchNumber && (
+                                  <span className="text-sm font-bold text-slate-900">
+                                    Partido #{match.matchNumber}
+                                  </span>
+                                )}
+                                {match.round && (
+                                  <Badge variant="default" size="sm">
+                                    {match.round}
+                                  </Badge>
+                                )}
+                                <Badge
+                                  variant={statusConfig.variant}
+                                  dot={statusConfig.dot}
+                                  size="sm"
+                                >
+                                  {statusConfig.label}
+                                </Badge>
+                              </div>
+
+                              {/* Info adicional */}
+                              <div className="flex flex-wrap gap-3 text-sm text-slate-600">
+                                {match.scheduledTime && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Clock className="h-4 w-4" />
+                                    <span>
+                                      {new Date(
+                                        match.scheduledTime,
+                                      ).toLocaleString("es-ES")}
+                                    </span>
+                                  </div>
+                                )}
+                                {match.platformNumber && (
+                                  <div className="flex items-center gap-1.5">
+                                    <MapPin className="h-4 w-4" />
+                                    <span>
+                                      Plataforma {match.platformNumber}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Puntajes */}
+                              {(getTaekwondoType() === "poomsae" ||
+                                getTaekwondoType() === "kyorugui" ||
+                                isJudoMatch ||
+                                isKarateMatch ||
+                                isWushuMatch ||
+                                isWrestlingMatch ||
+                                isCollectiveMatch) &&
+                                match.participant1Score !== null &&
+                                match.participant2Score !== null && (
+                                  <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                                    <p className="text-sm font-semibold text-slate-700 mb-1">
+                                      Puntaje Final
+                                    </p>
+                                    <p className="text-2xl font-bold text-slate-900">
+                                      {getTaekwondoType() === "poomsae" ||
+                                      (isWushuMatch &&
+                                        getWushuType() === "taolu")
+                                        ? `${Number(match.participant1Score).toFixed(2)} - ${Number(match.participant2Score).toFixed(2)}`
+                                        : `${Math.floor(Number(match.participant1Score))} - ${Math.floor(Number(match.participant2Score))}`}
+                                    </p>
+                                    {(getTaekwondoType() === "poomsae" ||
+                                      (isWushuMatch &&
+                                        getWushuType() === "taolu")) &&
+                                      match.participant1Accuracy !== null && (
+                                        <p className="text-xs text-slate-600 mt-1">
+                                          {Number(
+                                            match.participant1Accuracy,
+                                          ).toFixed(2)}{" "}
+                                          +{" "}
+                                          {Number(
+                                            match.participant1Presentation,
+                                          ).toFixed(2)}{" "}
+                                          -{" "}
+                                          {Number(
+                                            match.participant2Accuracy,
+                                          ).toFixed(2)}{" "}
+                                          +{" "}
+                                          {Number(
+                                            match.participant2Presentation,
+                                          ).toFixed(2)}
+                                        </p>
+                                      )}
+                                  </div>
+                                )}
+                            </div>
+
+                            {/* Botón eliminar */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteMatch(match.matchId)}
+                              className="hover:bg-red-50 hover:text-red-600"
+                            >
+                              <span className="text-xl">×</span>
+                            </Button>
+                          </div>
+
+                          {/* Participantes */}
+                          {hasParticipants ? (
+                            <div className="space-y-2 mb-4">
+                              {participants.map((participation) => {
+                                const reg = participation.registration;
+                                const name = reg?.athlete
+                                  ? reg.athlete.name
+                                  : reg?.team?.name || "Sin nombre";
+                                const institution =
+                                  reg?.athlete?.institution ||
+                                  reg?.team?.institution;
+                                const logoUrl = institution?.logoUrl;
+                                const isWinner =
+                                  match.winnerRegistrationId ===
+                                  participation.registrationId;
+
+                                return (
+                                  <div
+                                    key={participation.participationId}
+                                    className={`flex items-center justify-between p-3 rounded-xl transition-all ${
+                                      isWinner
+                                        ? "bg-gradient-to-r from-emerald-100 to-emerald-50 border-2 border-emerald-300"
+                                        : "bg-slate-50 hover:bg-slate-100"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      {logoUrl ? (
+                                        <img
+                                          src={getImageUrl(logoUrl)}
+                                          alt={institution?.name || ""}
+                                          className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display =
+                                              "none";
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
+                                          <Trophy className="h-5 w-5 text-slate-400" />
+                                        </div>
+                                      )}
+
+                                      <div>
+                                        <p className="font-bold text-sm text-slate-900">
+                                          {name}
+                                        </p>
+                                        {institution && (
+                                          <p className="text-xs text-slate-600">
+                                            {institution.name}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      {isWinner && (
+                                        <Award className="h-5 w-5 text-emerald-600 ml-2" />
+                                      )}
+                                    </div>
+
+                                    <Badge
+                                      variant={
+                                        participation.corner === "blue" ||
+                                        participation.corner === "A"
+                                          ? "primary"
+                                          : "default"
+                                      }
+                                      size="sm"
+                                    >
+                                      {participation.corner === "blue" &&
+                                        "Azul"}
+                                      {participation.corner === "white" &&
+                                        "Blanco"}
+                                      {participation.corner === "A" &&
+                                        "Equipo A"}
+                                      {participation.corner === "B" &&
+                                        "Equipo B"}
+                                    </Badge>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 bg-slate-50 rounded-xl mb-4">
+                              <Trophy className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                              <p className="text-slate-500 text-sm">
+                                Sin participantes asignados
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Acciones del partido */}
+                          <div className="flex flex-wrap gap-2">
+                            {participants.length === 1 &&
+                              match.status !== "finalizado" && (
+                                <Button
+                                  variant="success"
+                                  size="sm"
+                                  onClick={async () => {
+                                    const participant = participants[0];
+                                    if (
+                                      confirm(
+                                        `¿Avanzar a ${
+                                          participant.registration?.athlete
+                                            ?.name ||
+                                          participant.registration?.team
+                                            ?.name ||
+                                          "este participante"
+                                        } automáticamente?`,
+                                      )
+                                    ) {
+                                      try {
+                                        await advanceWinnerMutation.mutateAsync(
+                                          {
+                                            matchId: match.matchId,
+                                            winnerRegistrationId:
+                                              participant.registrationId!,
+                                          },
+                                        );
+                                      } catch (error) {
+                                        console.error(
+                                          "Error al avanzar participante:",
+                                          error,
+                                        );
+                                      }
+                                    }
+                                  }}
+                                  disabled={advanceWinnerMutation.isPending}
+                                >
+                                  {advanceWinnerMutation.isPending
+                                    ? "Procesando..."
+                                    : "Pasar Participante"}
+                                </Button>
+                              )}
+
+                            {participants.length < 2 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedMatch(match);
+                                  setIsAssignModalOpen(true);
+                                }}
+                              >
+                                Asignar Participantes
+                              </Button>
+                            )}
+
+                            {participants.length === 2 && (
+                              <>
+                                {/* ── Taekwondo, Judo, Karate, Wushu → modal de puntaje propio ── */}
+                                {getTaekwondoType() === "poomsae" ||
+                                getTaekwondoType() === "kyorugui" ||
+                                isJudoMatch ||
+                                isKarateMatch ||
+                                isWrestlingMatch ||
+                                isWushuMatch ? (
+                                  <Button
+                                    variant="gradient"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMatchId(match.matchId);
+                                      setSelectedMatch(match);
+                                      setIsResultModalOpen(true);
+                                    }}
+                                  >
+                                    {(match.participant1Score !== null &&
+                                      match.participant1Score !== undefined) ||
+                                    (match.participant2Score !== null &&
+                                      match.participant2Score !== undefined) ||
+                                    match.status === "finalizado"
+                                      ? "Editar Puntaje"
+                                      : "Registrar Puntaje"}
+                                  </Button>
+                                ) : isTableTennis() ? (
+                                  <Button
+                                    variant="gradient"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMatch(match);
+                                      setIsResultModalOpen(true);
+                                    }}
+                                  >
+                                    {match.status === "finalizado"
+                                      ? "Ver/Editar Match"
+                                      : "Gestionar Match"}
+                                  </Button>
+                                ) : (
+                                  match.status !== "finalizado" && (
+                                    <Button
+                                      variant="gradient"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedMatch(match);
+                                        setIsResultModalOpen(true);
+                                      }}
+                                    >
+                                      Registrar Resultado
+                                    </Button>
+                                  )
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════
+          MODALES
+      ═══════════════════════════════════════ */}
+      <Modal
+        isOpen={isPhaseModalOpen}
+        onClose={() => setIsPhaseModalOpen(false)}
+        title="Crear Nueva Fase"
+        size="md"
+      >
+        <PhaseForm
+          eventCategoryId={eventCategory.eventCategoryId}
+          existingPhases={phases.length}
+          onSubmit={handleCreatePhase}
+          onCancel={() => setIsPhaseModalOpen(false)}
+          isLoading={createPhaseMutation.isPending}
+        />
+      </Modal>
+
+      {selectedPhase && (
+        <>
+          <Modal
+            isOpen={isMatchModalOpen}
+            onClose={() => setIsMatchModalOpen(false)}
+            title="Crear Nuevo Partido"
+            size="md"
+          >
+            <MatchForm
+              phase={selectedPhase}
+              existingMatches={matches}
+              onSubmit={handleCreateMatch}
+              onCancel={() => setIsMatchModalOpen(false)}
+              isLoading={createMatchMutation.isPending}
+            />
+          </Modal>
+
+          {selectedPhase.type === "grupo" && (
+            <GenerateRoundRobinModal
+              isOpen={isGenerateModalOpen}
+              onClose={() => setIsGenerateModalOpen(false)}
+              phase={selectedPhase}
+              registrations={eventCategory.registrations ?? []}
+              onGenerate={handleGenerateRoundRobin}
+              isLoading={initializeRoundRobinMutation.isPending}
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
+          )}
+
+          {selectedPhase.type === "mejor_de_3" && (
+            <GenerateBestOf3Modal
+              isOpen={isGenerateBestOf3ModalOpen}
+              onClose={() => setIsGenerateBestOf3ModalOpen(false)}
+              phase={selectedPhase}
+              registrations={eventCategory.registrations ?? []}
+              onGenerate={handleGenerateBestOf3}
+              isLoading={initializeBestOf3Mutation.isPending}
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
+          )}
+
+          {selectedPhase.type === "eliminacion" && (
+            <GenerateBracketModal
+              isOpen={isGenerateBracketModalOpen}
+              onClose={() => setIsGenerateBracketModalOpen(false)}
+              phase={selectedPhase}
+              availableRegistrations={availableRegistrations}
+              // Nuevas props — opcionales, activan el modo Sismaster si están presentes
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
+          )}
+
+          <InitializePoomsaeGroupModal
+            isOpen={isInitPoomsaeModalOpen}
+            onClose={() => setIsInitPoomsaeModalOpen(false)}
+            phase={selectedPhase}
+            availableRegistrations={availableRegistrations}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+
+          <InitializeShootingGroupModal
+            isOpen={isInitShootingModalOpen}
+            onClose={() => setIsInitShootingModalOpen(false)}
+            phase={selectedPhase}
+            availableRegistrations={availableRegistrations}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}
+            sismasterSportId={eventCategory.externalSportId ?? undefined}
+            eventCategoryId={eventCategory.eventCategoryId}
+          />
+
+          {selectedMatch && (
+            <>
+              <AssignParticipantsModal
+                isOpen={isAssignModalOpen}
+                onClose={() => {
+                  setIsAssignModalOpen(false);
+                  setSelectedMatch(null);
+                }}
+                match={selectedMatch}
+                registrations={eventCategory.registrations || []}
+                onAssign={handleAssignParticipant}
+                isLoading={createParticipationMutation.isPending}
+              />
+
+              {getTaekwondoType() === "poomsae" ? (
+                <PoomsaeScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={() => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                  }}
+                  match={selectedMatch}
+                  phase={selectedPhase}
+                />
+              ) : getTaekwondoType() === "kyorugui" ? (
+                <KyoruguiRoundsModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    setSelectedMatchId(null);
+                    if (
+                      selectedPhase?.type === "grupo" &&
+                      selectedPhase?.phaseId
+                    ) {
+                      await updateStandingsMutation.mutateAsync(
+                        selectedPhase.phaseId,
+                      );
+                    }
+                  }}
+                  match={fullMatch || (selectedMatch as any)}
+                />
+              ) : isJudo() ? (
+                <JudoScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (
+                      selectedPhase?.type === "grupo" &&
+                      selectedPhase?.phaseId
+                    ) {
+                      await updateStandingsMutation.mutateAsync(
+                        selectedPhase.phaseId,
+                      );
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : isKarate() ? (
+                <KarateScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (
+                      selectedPhase?.type === "grupo" &&
+                      selectedPhase?.phaseId
+                    ) {
+                      await updateStandingsMutation.mutateAsync(
+                        selectedPhase.phaseId,
+                      );
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : isWushu() && getWushuType() === "taolu" ? (
+                <WushuTaoluScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (
+                      selectedPhase?.type === "grupo" &&
+                      selectedPhase?.phaseId
+                    ) {
+                      await updateStandingsMutation.mutateAsync(
+                        selectedPhase.phaseId,
+                      );
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : isWushu() ? (
+                <WushuScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (
+                      selectedPhase?.type === "grupo" &&
+                      selectedPhase?.phaseId
+                    ) {
+                      await updateStandingsMutation.mutateAsync(
+                        selectedPhase.phaseId,
+                      );
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : isTableTennis() ? (
+                <Modal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (
+                      selectedPhase?.type === "grupo" &&
+                      selectedPhase?.phaseId
+                    ) {
+                      await updateStandingsMutation.mutateAsync(
+                        selectedPhase.phaseId,
+                      );
+                    }
+                  }}
+                  title="Gestionar Match - Tenis de Mesa"
+                  size="full"
+                >
+                  <TableTennisMatchWrapper
+                    match={selectedMatch}
+                    eventCategory={eventCategory}
+                  />
+                </Modal>
+              ) : isCollectiveSport() ? (
+                <CollectiveScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={() => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : isWrestling() ? (
+                <WrestlingScoreModal
+                  isOpen={isResultModalOpen}
+                  onClose={async () => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                    if (
+                      selectedPhase?.type === "grupo" &&
+                      selectedPhase?.phaseId
+                    ) {
+                      await updateStandingsMutation.mutateAsync(
+                        selectedPhase.phaseId,
+                      );
+                    }
+                  }}
+                  match={selectedMatch as any}
+                  phase={selectedPhase}
+                />
+              ) : (
+                <ResultModal
+                  isOpen={isResultModalOpen}
+                  onClose={() => {
+                    setIsResultModalOpen(false);
+                    setSelectedMatch(null);
+                  }}
+                  match={selectedMatch}
+                  onSubmit={handleRegisterResult}
+                  isLoading={
+                    selectedPhase?.type === "eliminacion"
+                      ? advanceWinnerMutation.isPending
+                      : updateMatchMutation.isPending
+                  }
+                />
+              )}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

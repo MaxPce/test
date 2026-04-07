@@ -63,10 +63,10 @@ export function GenerateRoundRobinModal({
 
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
 
-  // ✅ Antes de cualquier useEffect
+  
   const isFilterActive = Boolean(selectedNiv && selectedCat);
 
-  // Resetear al abrir
+
   useEffect(() => {
     if (isOpen) {
       setSelectedIds(new Set());
