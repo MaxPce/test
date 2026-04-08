@@ -4,6 +4,19 @@ export const ENDPOINTS = {
     LOGIN: "/auth/login",
     REGISTER: "/auth/register",
     PROFILE: "/auth/profile",
+    USERS: {
+      LIST:   "/auth/users",
+      DETAIL: (id: number) => `/auth/users/${id}`,  
+    },
+  },
+
+  // Operators
+  OPERATOR_PERMISSIONS: {
+    BASE:          '/operator-permissions',
+    BY_USER:       (userId: number) => `/operator-permissions/user/${userId}`,
+    SUMMARY:       (userId: number) => `/operator-permissions/user/${userId}/summary`,
+    MY_PERMISSIONS: '/operator-permissions/my-permissions',
+    REMOVE:        (id: number) => `/operator-permissions/${id}`,
   },
 
   // Companies

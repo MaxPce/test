@@ -8,9 +8,12 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  CalendarDays,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuthStore } from "@/app/store/useAuthStore";
 import { useState, useEffect } from "react";
+import type { UserRole } from "@/lib/types/common.types";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,7 +26,7 @@ interface NavItem {
   to?: string;
   icon: React.ReactNode;
   label: string;
-  requiredRoles?: ("admin" | "moderator")[];
+  requiredRoles?: UserRole[];  // ← ahora usa UserRole completo
   children?: SubNavItem[];
   badge?: string;
 }
@@ -39,28 +42,46 @@ const navItems: NavItem[] = [
     icon: <LayoutDashboard className="h-5 w-5" />,
     label: "Dashboard",
   },
-  {
-    icon: <Trophy className="h-5 w-5" />,
-    label: "Deportes",
-    children: [
-      { to: "/admin/sports", label: "Deportes" },
-      { to: "/admin/sports/types", label: "Tipos de Deportes" },
-      { to: "/admin/sports/categories", label: "Categorías" },
-    ],
-  },
-  {
-    icon: <Users className="h-5 w-5" />,
-    label: "Instituciones",
-    children: [
-      { to: "/admin/institutions", label: "Instituciones" },
-      { to: "/admin/institutions/athletes", label: "Atletas" },
-    ],
-  },
+
+  // Todos los roles — el operator llega a sus eventos por aquí
   {
     to: "/admin/companies",
     icon: <Building2 className="h-5 w-5" />,
     label: "Organizaciones",
   },
+
+  // Solo admin/moderador
+  {
+    icon: <Trophy className="h-5 w-5" />,
+    label: "Deportes",
+    requiredRoles: ["admin", "moderator"],
+    children: [
+      { to: "/admin/sports",            label: "Deportes" },
+      { to: "/admin/sports/types",      label: "Tipos de Deportes" },
+      { to: "/admin/sports/categories", label: "Categorías" },
+    ],
+  },
+
+  // Solo admin/moderador
+  {
+    icon: <Users className="h-5 w-5" />,
+    label: "Instituciones",
+    requiredRoles: ["admin", "moderator"],
+    children: [
+      { to: "/admin/institutions",          label: "Instituciones" },
+      { to: "/admin/institutions/athletes", label: "Atletas" },
+    ],
+  },
+
+  // Solo admin
+  {
+    to: "/admin/operators",
+    icon: <ShieldCheck className="h-5 w-5" />,
+    label: "Operadores",
+    requiredRoles: ["admin"],
+  },
+
+  // Solo admin
   {
     to: "/admin/settings",
     icon: <Settings className="h-5 w-5" />,
@@ -78,6 +99,7 @@ export function Sidebar({
   const { hasPermission } = useAuthStore();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<string[]>([
+    "Eventos",
     "Deportes",
     "Instituciones",
   ]);
@@ -86,7 +108,7 @@ export function Sidebar({
     navItems.forEach((item) => {
       if (item.children) {
         const isChildActive = item.children.some(
-          (child) => location.pathname === child.to,
+          (child) => location.pathname.startsWith(child.to),
         );
         if (isChildActive && !expandedItems.includes(item.label)) {
           setExpandedItems((prev) => [...prev, item.label]);
@@ -95,6 +117,8 @@ export function Sidebar({
     });
   }, [location.pathname]);
 
+  // ← lógica de filtrado sin cambios, pero ahora funciona correctamente
+  // porque todos los items restringidos tienen requiredRoles definido
   const filteredNavItems = navItems.filter((item) => {
     if (!item.requiredRoles) return true;
     return hasPermission(item.requiredRoles);
@@ -110,7 +134,9 @@ export function Sidebar({
 
   const hasActiveChild = (item: NavItem) => {
     if (!item.children) return false;
-    return item.children.some((child) => location.pathname === child.to);
+    return item.children.some((child) =>
+      location.pathname.startsWith(child.to),
+    );
   };
 
   return (
@@ -159,7 +185,6 @@ export function Sidebar({
                   <li key={item.label}>
                     {item.children ? (
                       <div>
-                        {/* Ítem con submenú */}
                         <button
                           onClick={() => {
                             if (!isCollapsed) toggleExpanded(item.label);
@@ -205,7 +230,6 @@ export function Sidebar({
                           )}
                         </button>
 
-                        {/* Subítems — ocultos cuando está colapsado */}
                         {!isCollapsed && expandedItems.includes(item.label) && (
                           <ul className="mt-1 ml-9 space-y-1 animate-slide-down">
                             {item.children.map((child) => (
@@ -230,7 +254,6 @@ export function Sidebar({
                         )}
                       </div>
                     ) : (
-                      /* Ítem simple sin submenú */
                       <NavLink
                         to={item.to!}
                         end

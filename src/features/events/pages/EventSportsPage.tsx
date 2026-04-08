@@ -15,6 +15,7 @@ import {
   useRegisterEventCategories,
 } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
+import { useAuthStore } from "@/app/store/useAuthStore";
 
 export function EventSportsPage() {
   const { eventId, externalEventId } = useParams<{ eventId?: string; externalEventId?: string }>();
@@ -23,6 +24,8 @@ export function EventSportsPage() {
   const eventIdNum = eventId ? Number(eventId) : undefined;
   const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
   const isExternalEvent = !!externalEventId;
+  const canAccessSport = useAuthStore((s) => s.canAccessSport);
+  const isOperator = useAuthStore((s) => s.isOperator);
 
   const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
     { eventId: eventIdNum },
@@ -86,6 +89,14 @@ export function EventSportsPage() {
 
   const sports = Object.values(sportGroups);
 
+  const filterEventId = isExternalEvent ? externalEventIdNum : eventIdNum;
+
+  const visibleSports = isOperator()
+    ? sports.filter(({ sport }) =>
+        canAccessSport(sport.sportId, filterEventId)
+      )
+    : sports;
+
   // Rutas dinámicas SISMASTER/LOCAL
   const addSportPath = isExternalEvent
     ? `/admin/sismaster-events/${externalEventId}/add-sport`
@@ -105,8 +116,7 @@ export function EventSportsPage() {
         showBack
         actions={
           <div className="flex items-center gap-3">
-            
-            {isExternalEvent && (
+            {isExternalEvent && !isOperator() && (
               <Button
                 onClick={handleRegisterCategories}
                 disabled={isRegistering}
@@ -121,22 +131,23 @@ export function EventSportsPage() {
                 {isRegistering ? "Registrando..." : "Registrar Categorías"}
               </Button>
             )}
-            {/* ─────────────────────────────────────────────── */}
-            <Button
-              onClick={() => navigate(addSportPath)}
-              variant="gradient"
-              size="lg"
-              icon={<Plus className="h-5 w-5" />}
-            >
-              Agregar Deporte
-            </Button>
+
+            {!isOperator() && (  // ← operadores no pueden agregar deportes
+              <Button
+                onClick={() => navigate(addSportPath)}
+                variant="gradient"
+                size="lg"
+                icon={<Plus className="h-5 w-5" />}
+              >
+                Agregar Deporte
+              </Button>
+            )}
           </div>
         }
-
       />
 
       {/* Grid de Deportes - TU DISEÑO EXACTO */}
-      {sports.length === 0 ? (
+      {visibleSports.length === 0 ? (
         <EmptyState
           icon={Trophy}
           title="No hay deportes asociados"
@@ -152,7 +163,7 @@ export function EventSportsPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sports.map(({ sport, categories }) => (
+          {visibleSports.map(({ sport, categories }) => (
             <SportEventCard
               key={sport.sportId}
               sport={sport}

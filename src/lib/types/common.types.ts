@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "moderator" | "viewer";
+export type UserRole = "admin" | "moderator" | "operator" | "viewer";
 
 export type EventStatus = "programado" | "en_curso" | "finalizado";
 

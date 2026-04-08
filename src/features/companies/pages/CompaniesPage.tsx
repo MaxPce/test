@@ -40,6 +40,7 @@ import { EventCard } from "@/features/events/components/EventCard";
 import type { Company, CreateCompanyData } from "../types";
 import type { Event } from "@/features/events/types";
 import type { EventStatus } from "@/lib/types/common.types";
+import { useAuthStore } from "@/app/store/useAuthStore";
 
 const EMPTY_FORM: CreateCompanyData = {
   name: "",
@@ -64,9 +65,13 @@ export default function CompaniesPage() {
   const updateMutation = useUpdateCompany();
   const deleteMutation = useDeleteCompany();
   const uploadLogoMutation = useUploadCompanyLogo();
+  const isOperator = useAuthStore((s) => s.isOperator);
+  const canAccessEvent = useAuthStore((s) => s.canAccessEvent);
 
   // ── Tab state ──
-  const [activeTab, setActiveTab] = useState<"companies" | "events">("companies");
+  const [activeTab, setActiveTab] = useState<"companies" | "events">(
+    isOperator() ? "events" : "companies"
+  );
 
   // ── Companies UI state ──
   const [modalOpen, setModalOpen] = useState(false);
@@ -79,6 +84,8 @@ export default function CompaniesPage() {
   const [eventsSearch, setEventsSearch] = useState("");
   const [eventsStatus, setEventsStatus] = useState<EventStatus | undefined>(undefined);
   const [eventsViewMode, setEventsViewMode] = useState<"grid" | "list">("grid");
+
+  
 
   // ── Sismaster events (sin filtro de company) ──
   const { data: rawSismasterEvents = [], isLoading: isLoadingEvents } =
@@ -95,9 +102,15 @@ export default function CompaniesPage() {
         !eventsSearch ||
         (event.name ?? "").toLowerCase().includes(eventsSearch.toLowerCase());
       const matchesStatus = !eventsStatus || event.status === eventsStatus;
-      return matchesSearch && matchesStatus;
+
+      // ← NUEVO: filtro de permisos para operator
+      const matchesPermission = isOperator()
+        ? canAccessEvent(event.eventId)
+        : true;
+
+      return matchesSearch && matchesStatus && matchesPermission;
     });
-  }, [allEvents, eventsSearch, eventsStatus]);
+  }, [allEvents, eventsSearch, eventsStatus, isOperator, canAccessEvent]);
 
   // ── Companies handlers ──
   const openCreate = () => {
@@ -187,19 +200,23 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      {/* ── Tab Toggle ── */}
+      {/* ── Tab Toggle — reemplaza el existente ── */}
       <div className="flex bg-slate-100 rounded-2xl p-1 gap-1 w-fit">
-        <button
-          onClick={() => setActiveTab("companies")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            activeTab === "companies"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          <Building2 className="h-4 w-4" />
-          Organizaciones
-        </button>
+        {/* Tab Organizaciones: oculto para operator */}
+        {!isOperator() && (
+          <button
+            onClick={() => setActiveTab("companies")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === "companies"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            Organizaciones
+          </button>
+        )}
+
         <button
           onClick={() => setActiveTab("events")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -209,10 +226,10 @@ export default function CompaniesPage() {
           }`}
         >
           <Calendar className="h-4 w-4" />
-          Todos los Eventos
-          {allEvents.length > 0 && (
+          {isOperator() ? "Mis Eventos" : "Todos los Eventos"}
+          {filteredEvents.length > 0 && (
             <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
-              {allEvents.length}
+              {filteredEvents.length}
             </span>
           )}
         </button>
