@@ -163,30 +163,23 @@ export const ENDPOINTS = {
     },
   },
   SISMASTER: {
-    // Events from sismaster
     EVENTS: {
-      LIST: "/api/sismaster/events",
-      DETAIL: (id: number) => `/api/sismaster/events/${id}`,
+      LIST: "/sismaster/events",
+      DETAIL: (id: number) => `/sismaster/events/${id}`,
     },
-
-    // Sports from sismaster
     SPORTS: {
-      LIST: "/api/sismaster/sports",
-      DETAIL: (id: number) => `/api/sismaster/sports/${id}`,
+      LIST: "/sismaster/sports",
+      DETAIL: (id: number) => `/sismaster/sports/${id}`,
     },
-
-    // Institutions from sismaster
     INSTITUTIONS: {
-      LIST: "/api/sismaster/institutions",
-      DETAIL: (id: number) => `/api/sismaster/institutions/${id}`,
+      LIST: "/sismaster/institutions",
+      DETAIL: (id: number) => `/sismaster/institutions/${id}`,
     },
-
-    // Athletes from sismaster
     ATHLETES: {
-      SEARCH: "/api/sismaster/athletes/search",
-      DETAIL: (id: number) => `/api/sismaster/athletes/${id}`,
-      BY_DOCUMENT: (dni: string) => `/api/sismaster/athletes/document/${dni}`,
-      ACCREDITED: "/api/sismaster/athletes/accredited",
+      SEARCH: "/sismaster/athletes/search",
+      DETAIL: (id: number) => `/sismaster/athletes/${id}`,
+      BY_DOCUMENT: (dni: string) => `/sismaster/athletes/document/${dni}`,
+      ACCREDITED: "/sismaster/athletes/accredited",
     },
   },
 } as const;
