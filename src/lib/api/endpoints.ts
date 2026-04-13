@@ -5,8 +5,14 @@ export const ENDPOINTS = {
     REGISTER: "/auth/register",
     PROFILE: "/auth/profile",
     USERS: {
-      LIST:   "/auth/users",
-      DETAIL: (id: number) => `/auth/users/${id}`,  
+      LIST:    "/auth/users",
+      DETAIL:  (id: number) => `/auth/users/${id}`,
+      CHANGE_PASSWORD: (id: number) => `/auth/users/${id}/password`,
+      DELETED: "/auth/users/deleted",                        
+      RESTORE: (id: number) => `/auth/users/${id}/restore`,  
+    },
+    ADMINS: {
+      CREATE: "/auth/admins",  
     },
   },
 

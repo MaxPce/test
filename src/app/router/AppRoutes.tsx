@@ -5,6 +5,8 @@ import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { AdminLayout } from "@/features/admin/layouts/AdminLayout";
 import { AdminDashboard } from "@/features/admin/pages/AdminDashboard";
+import { UsersPage } from "@/features/admin/pages/UsersPage";
+import { AdminsPage } from "@/features/admin/pages/AdminsPage";
 
 // Operators
 import { OperatorsPage } from "@/features/admin/pages/OperatorsPage";
@@ -26,6 +28,7 @@ import { CategoryInstitutionsPage } from "@/features/events/pages/category/Categ
 import { FeaturedAthletesPage }     from "@/features/events/pages/FeaturedAthletesPage";
 import { AddSportToEventPage }      from "@/features/events/pages/AddSportToEventPage";
 import { SismasterSportDetailPage } from "@/features/events/pages/SismasterSportDetailPage";
+
 
 // Sports (Gestión Global)
 import { SportTypesPage } from "@/features/sports/pages/SportTypesPage";
@@ -164,15 +167,20 @@ export function AppRoutes() {
           <Route path=":companyId/events"   element={<EventsPage />} />
         </Route>
 
-        {/* ==================== OPERADORES ====================
-            ⛔ solo admin puede gestionar operadores
-        ================================================== */}
         <Route
-          path="operators"
+          path="users"
           element={<ProtectedOutlet requiredRoles={["admin"]} />}
         >
-          <Route index element={<OperatorsPage />} />
-          <Route path=":userId/permissions" element={<OperatorPermissionsPage />} />
+          <Route index element={<UsersPage />} />
+          
+          
+        </Route>
+
+        <Route
+          path="operators/:userId/permissions"
+          element={<ProtectedOutlet requiredRoles={["admin"]} />}
+        >
+          <Route index element={<OperatorPermissionsPage />} />
         </Route>
 
         {/* ==================== CONFIGURACIÓN ====================

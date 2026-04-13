@@ -15,7 +15,6 @@ import type { SportViewProps } from "./types";
 import type { FieldEventType } from "@/features/competitions/types/athletics.types";
 import { FIELD_TABLE_KEY, TRACK_TABLE_KEY } from "@/features/competitions/api/athletics.queries";
 
-// Igual que en useSportDetection — encapsulado aquí para no importar el hook completo
 const getFieldEventType = (phase: Phase): FieldEventType => {
   const n = phase.name.toLowerCase();
   if (n.includes("garrocha") || n.includes("pértiga")) return "pole_vault";

@@ -90,33 +90,9 @@ export function CategoryDetailLayout() {
     );
   }
 
-  const getStatusConfig = (status: string) => {
-    const configs = {
-      programado: {
-        variant: "primary" as const,
-        label: "Programado",
-        dot: true,
-      },
-      en_curso: {
-        variant: "success" as const,
-        label: "En Curso",
-        dot: true,
-      },
-      finalizado: {
-        variant: "default" as const,
-        label: "Finalizado",
-        dot: false,
-      },
-      pendiente: {
-        variant: "warning" as const,
-        label: "Pendiente",
-        dot: true,
-      },
-    };
-    return configs[status as keyof typeof configs] || configs.pendiente;
-  };
+  
 
-  const statusConfig = getStatusConfig(eventCategory.status);
+  
 
   const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
   const isTimedSport =
@@ -209,12 +185,7 @@ export function CategoryDetailLayout() {
 
           {/* Información */}
           <div className="flex-1">
-            {/* Badge de estado */}
-            <div className="flex items-center gap-3 mb-2">
-              <Badge variant={statusConfig.variant} dot={statusConfig.dot}>
-                {statusConfig.label}
-              </Badge>
-            </div>
+            
 
             {/* Metadata */}
             <div className="flex flex-wrap items-center gap-4 text-sm">

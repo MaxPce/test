@@ -50,31 +50,7 @@ export function EventSportCategoriesPage() {
   const sportIconUrl = sportCategories[0]?.category?.sport?.iconUrl;
   const sportImage = sportIconUrl ? getImageUrl(sportIconUrl) : null;
 
-  const getStatusConfig = (status: string) => {
-    const configs = {
-      pendiente: {
-        variant: "warning" as const,
-        label: "Pendiente",
-        dot: true,
-      },
-      programado: {
-        variant: "primary" as const,
-        label: "Programado",
-        dot: true,
-      },
-      en_curso: {
-        variant: "success" as const,
-        label: "En Curso",
-        dot: true,
-      },
-      finalizado: {
-        variant: "default" as const,
-        label: "Finalizado",
-        dot: false,
-      },
-    };
-    return configs[status as keyof typeof configs] || configs.pendiente;
-  };
+  
 
   const totalParticipants = sportCategories.reduce(
     (sum, ec) => sum + (ec.registrations?.length || 0),
@@ -160,7 +136,7 @@ export function EventSportCategoriesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {sportCategories.map((eventCategory) => {
-            const statusConfig = getStatusConfig(eventCategory.status);
+            
             const isTeam = eventCategory.category?.type === "equipo";
             const participantsCount = eventCategory.registrations?.length || 0;
 
@@ -175,27 +151,16 @@ export function EventSportCategoriesPage() {
                 }
                 className="group cursor-pointer overflow-hidden"
               >
-                {/* Header limpio */}
+               
                 <div className="p-5 pb-3 border-b border-slate-100">
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="text-lg font-bold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors flex-1">
                       {eventCategory.category?.name || "Sin nombre"}
                     </h3>
-                    <Badge
-                      variant={statusConfig.variant}
-                      dot={statusConfig.dot}
-                      size="sm"
-                    >
-                      {statusConfig.label}
-                    </Badge>
+                   
                   </div>
 
-                  {/* Descripción si existe */}
-                  {eventCategory.category?.description && (
-                    <p className="text-sm text-slate-600 line-clamp-2 mt-2">
-                      {eventCategory.category.description}
-                    </p>
-                  )}
+                  
                 </div>
 
                 {/* Contenido */}
@@ -236,15 +201,7 @@ export function EventSportCategoriesPage() {
                     </div>
                   </div>
 
-                  {/* Hora si existe */}
-                  {eventCategory.startTime && (
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-4 pt-4 border-t border-slate-100">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span className="font-medium">
-                        Hora: {eventCategory.startTime}
-                      </span>
-                    </div>
-                  )}
+                  
                 </div>
 
                 {/* Bottom accent */}

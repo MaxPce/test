@@ -75,9 +75,9 @@ const navItems: NavItem[] = [
 
   // Solo admin
   {
-    to: "/admin/operators",
+    to: "/admin/users",
     icon: <ShieldCheck className="h-5 w-5" />,
-    label: "Operadores",
+    label: "Usuarios",
     requiredRoles: ["admin"],
   },
 
