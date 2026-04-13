@@ -169,7 +169,7 @@ function AthleteRow({
       {/* Cabecera atleta */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-bold text-slate-900">{row.athleteName}</p>
+          <p className="font-bold text-slate-900">{row.athleteName.toUpperCase()}</p>
           <p className="text-xs text-slate-400">{row.institutionName || "—"}</p>
         </div>
 

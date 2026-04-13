@@ -116,9 +116,7 @@ function AllAthletesPanel({ rows }: { rows: AthleticsRow[] }) {
                 >
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-700">
-                        {row.athleteName}
-                      </span>
+                      <span className="font-medium text-slate-700">{row.athleteName.toUpperCase()}</span>
                       {row.isTeam && (
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
                           Equipo
@@ -267,9 +265,7 @@ function AssignToSectionModal({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-slate-900">
-                      {row.athleteName}
-                    </p>
+                    <p className="truncate text-sm font-semibold text-slate-900">{row.athleteName.toUpperCase()}</p>
                     {row.isTeam && (
                       <span className="flex-shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
                         Equipo
@@ -951,9 +947,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                             </td>
                             <td className="px-4 py-2">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-900">
-                                  {row.athleteName}
-                                </span>
+                                <span className="font-semibold text-slate-900">{row.athleteName.toUpperCase()}</span>
                                 {row.isTeam && (
                                   <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
                                     Equipo

@@ -43,6 +43,11 @@ export interface AthleticsRow {
   athleticsResultId: number | null;
   time: string | null;
   sections: SectionEntry[];
+  teamMembers?: Array<{
+    athleteId: number;
+    name: string;
+    rol: string;
+  }>;
 }
 
 export interface AthlSection {

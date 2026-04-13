@@ -446,7 +446,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
                 className="transition-colors hover:bg-slate-50"
               >
                 <td className="px-4 py-2 font-semibold text-slate-900">
-                  {row.athleteName}
+                  {row.athleteName.toUpperCase()}
                 </td>
                 <td className="hidden px-4 py-2 text-slate-500 md:table-cell">
                   {row.institutionName || "—"}

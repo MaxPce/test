@@ -59,7 +59,8 @@ export function RegistrationsList({
     setSeedValue("");
   };
 
-  // ✅ NUEVA FUNCIÓN: Obtener el nombre de la institución de manera robusta
+  
+  
   const getInstitutionName = (registration: Registration): string => {
     // Para atletas individuales
     if (registration.athlete) {
@@ -74,7 +75,7 @@ export function RegistrationsList({
     return "N/A";
   };
 
-  // ✅ NUEVA FUNCIÓN: Obtener el logo de la institución
+  
   const getInstitutionLogo = (registration: Registration): string | null => {
     if (registration.athlete?.institution?.logoUrl) {
       return getImageUrl(registration.athlete.institution.logoUrl);
@@ -153,9 +154,7 @@ export function RegistrationsList({
                           {registration.athlete.name.charAt(0)}
                         </div>
                       )}
-                      <span className="font-medium">
-                        {registration.athlete.name}
-                      </span>
+                      <span className="font-medium">{registration.athlete.name.toUpperCase()}</span>
                     </>
                   ) : registration.team ? (
                     <>
