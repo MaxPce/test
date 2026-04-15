@@ -8,6 +8,12 @@ import { Search, X } from "lucide-react";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
+interface TeamMember {
+  athlete?: {
+    gender?: 'M' | 'F' | string;
+  };
+}
+
 interface Registration {
   registrationId: number;
   athlete?: {
@@ -15,7 +21,16 @@ interface Registration {
     dni?: string;
     institution?: { name: string };
   };
-  team?: { name: string; institution?: { name: string } };
+  team?: {
+    name: string;
+    institution?: { name: string };
+    members?: Array<{          
+      athlete?: {
+        gender?: 'M' | 'F' | string;
+      };
+    }>;
+  };
+
 }
 
 interface NivCatCombo {
@@ -55,7 +70,7 @@ export function AssignSeriesParticipantModal({
   const [selectedNiv, setSelectedNiv]   = useState("");
   const [selectedCat, setSelectedCat]   = useState("");
   const [submitting, setSubmitting]     = useState(false);
-  const [searchQuery, setSearchQuery]   = useState("");   // ← NUEVO
+  const [searchQuery, setSearchQuery]   = useState("");   
 
   const hasSismaster   = Boolean(sismasterEventId && sismasterSportId);
   const isFilterActive = Boolean(selectedNiv && selectedCat);
@@ -66,7 +81,7 @@ export function AssignSeriesParticipantModal({
       setSelectedIds([]);
       setSelectedNiv("");
       setSelectedCat("");
-      setSearchQuery("");   // ← NUEVO
+      setSearchQuery("");   
     }
   }, [isOpen]);
 
@@ -394,6 +409,29 @@ export function AssignSeriesParticipantModal({
                             DNI: {dni}
                           </span>
                         )}
+                        {/* ── Conteo de género (solo para equipos) ──────────────── */}
+                        {reg.team?.members && reg.team.members.length > 0 && (() => {
+                          const males   = reg.team.members.filter(m => m.athlete?.gender === 'M').length;
+                          const females = reg.team.members.filter(m => m.athlete?.gender === 'F').length;
+                          return (
+                            <div className="flex items-center gap-1">
+                              {males > 0 && (
+                                <span className="inline-flex items-center gap-0.5 rounded-full
+                                                bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700
+                                                border border-blue-200">
+                                  ♂ {males}
+                                </span>
+                              )}
+                              {females > 0 && (
+                                <span className="inline-flex items-center gap-0.5 rounded-full
+                                                bg-pink-50 px-2 py-0.5 text-xs font-medium text-pink-600
+                                                border border-pink-200">
+                                  ♀ {females}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </label>

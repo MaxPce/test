@@ -415,7 +415,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
           <tr>
             <th className="px-4 py-2 text-left">Atleta</th>
             <th className="hidden px-4 py-2 text-left md:table-cell">
-              Institución
+              Institucióz
             </th>
             {attemptCols.map((n) => (
               <th key={n} className="w-24 px-2 py-2 text-center">
@@ -439,7 +439,6 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
                 <td className="px-4 py-2 font-semibold text-slate-900">
                   {row.athleteName.toUpperCase()}
                 </td>
-                {/* ↓ CAMBIO: celda institución con logo */}
                 <td className="hidden px-4 py-2 md:table-cell">
                   <div className="flex items-center gap-2">
                     {row.institutionLogo && (
