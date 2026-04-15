@@ -7,6 +7,12 @@ import { Spinner } from "@/components/ui/Spinner";
 import { apiClient } from "@/lib/api/client";
 import { AlertCircle, ArrowRightLeft } from "lucide-react";
 import { useGenerateAthleticsSeries } from "../../api/athletics-phases.mutations";
+import {
+  getAthleticsSeriesType,
+  FIELD_EVENT_CONFIG,
+  FIELD_EVENT_CATEGORY_ID,
+  type FieldEventType,
+} from "../../types/athletics.types";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -30,17 +36,24 @@ interface SeriesGroup {
   athletes: SeriesAthlete[];
 }
 
+const SERIES_TYPE_TO_PHASE_TYPE = {
+  metros:    'combined_pista',
+  distancia: 'combined_distancia',
+  altura:    'combined_altura',
+} as const;
+
 export interface GenerateAthleticsSeriesModalProps {
   open: boolean;
   onClose: () => void;
   eventCategoryId: number;
+  categoryId?: number; // ← category_id de la tabla categories (208-234)
   eventName?: string;
   sismasterEventId?: number;
   sismasterSportId?: number;
   allRegistrations: any[];
 }
 
-// ─── Helpers de labels ───────────────────────────────────────────────────────
+// ─── Helpers de labels ────────────────────────────────────────────────────────
 
 function getNivLabel(idniv: string): string {
   const n = idniv.toLowerCase().trim();
@@ -60,12 +73,24 @@ function buildSeriesName(idniv: string, idcat: string, eventName: string): strin
   return `${getCatLabel(idcat)} ${getNivLabel(idniv)} ${eventName}`;
 }
 
+// ─── Helper: meta de evento de campo para el banner ──────────────────────────
+
+function getFieldEventMeta(categoryId?: number) {
+  if (!categoryId) return null;
+  const entry = Object.entries(FIELD_EVENT_CATEGORY_ID).find(
+    ([, id]) => id === categoryId,
+  );
+  if (!entry) return null;
+  return FIELD_EVENT_CONFIG[entry[0] as FieldEventType];
+}
+
 // ─── Componente ──────────────────────────────────────────────────────────────
 
 export function GenerateAthleticsSeriesModal({
   open,
   onClose,
   eventCategoryId,
+  categoryId,
   eventName = "Atletismo",
   sismasterEventId,
   sismasterSportId,
@@ -74,7 +99,13 @@ export function GenerateAthleticsSeriesModal({
   const mutation = useGenerateAthleticsSeries();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
 
+  // ── Tipo de evento (informativo, para banner y fallback sin Sismaster) ────
+  const seriesType = categoryId ? getAthleticsSeriesType(categoryId) : "metros";
+  const isFieldEvent = seriesType === "altura" || seriesType === "distancia";
+  const fieldEventMeta = getFieldEventMeta(categoryId);
+
   // ── Step 1: Cargar combos niv/cat ─────────────────────────────────────────
+  // Igual que el original — Sismaster aplica tanto para carreras como campo
   const {
     data: combosData,
     isLoading: loadingCombos,
@@ -134,7 +165,7 @@ export function GenerateAthleticsSeriesModal({
   const allQueriesDone =
     combos.length > 0 && comboQueries.every((q) => q.isSuccess);
 
-  // ── Step 3: Construir grupos cuando todo está listo ───────────────────────
+  // ── Step 3: Construir grupos desde Sismaster ──────────────────────────────
   const regMap = useMemo(() => {
     const map = new Map<number, SeriesAthlete>();
     for (const reg of allRegistrations) {
@@ -156,46 +187,69 @@ export function GenerateAthleticsSeriesModal({
   const initialGroups = useMemo((): SeriesGroup[] => {
     if (!allQueriesDone) return [];
 
-    const seenIds = new Set<number>(); // ← guardia global entre grupos
+    const seenIds = new Set<number>();
 
     return combos
-        .map((combo, idx) => {
+      .map((combo, idx) => {
         const ids = comboQueries[idx].data?.registrationIds ?? [];
         const athletes = ids
-            .map((id) => regMap.get(id))
-            .filter((a): a is SeriesAthlete => {
+          .map((id) => regMap.get(id))
+          .filter((a): a is SeriesAthlete => {
             if (!a) return false;
-            if (seenIds.has(a.registrationId)) return false; // ← skip si ya está en otro grupo
+            if (seenIds.has(a.registrationId)) return false;
             seenIds.add(a.registrationId);
             return true;
-            });
+          });
 
         return {
-            key: `${combo.idniv}-${combo.idcat}`,
-            seriesName: buildSeriesName(combo.idniv, combo.idcat, eventName),
-            idniv: combo.idniv,
-            idcat: combo.idcat,
-            athletes,
+          key: `${combo.idniv}-${combo.idcat}`,
+          seriesName: buildSeriesName(combo.idniv, combo.idcat, eventName),
+          idniv: combo.idniv,
+          idcat: combo.idcat,
+          athletes,
         };
-        })
-        .filter((g) => g.athletes.length > 0);
-    }, [allQueriesDone, combos, comboQueries, regMap, eventName]);
+      })
+      .filter((g) => g.athletes.length > 0);
+  }, [allQueriesDone, combos, comboQueries, regMap, eventName]);
+
+  // ── Grupo único de fallback (campo SIN Sismaster) ─────────────────────────
+  const fieldGroup = useMemo((): SeriesGroup[] => {
+    if (!isFieldEvent || hasSismaster || !open) return [];
+    const athletes: SeriesAthlete[] = allRegistrations.map((reg) => ({
+      registrationId: reg.registrationId,
+      name:
+        reg.athlete?.name ??
+        reg.team?.name ??
+        `Registro ${reg.registrationId}`,
+      institution:
+        reg.athlete?.institution?.name ??
+        reg.team?.institution?.name ??
+        null,
+    }));
+    if (athletes.length === 0) return [];
+    return [
+      {
+        key: "field-group",
+        seriesName: eventName,
+        idniv: "",
+        idcat: "",
+        athletes,
+      },
+    ];
+  }, [isFieldEvent, hasSismaster, open, allRegistrations, eventName]);
 
   // ── Estado editable de grupos ─────────────────────────────────────────────
   const [groups, setGroups] = useState<SeriesGroup[]>([]);
   const [selectedRegId, setSelectedRegId] = useState<number | null>(null);
   const [sourceGroupKey, setSourceGroupKey] = useState<string | null>(null);
 
-  // Refs para controlar el ciclo de vida sin provocar re-renders
   const hasInitialized = useRef(false);
-  
   const prevOpenRef = useRef(false);
-  // Ref que apunta siempre al initialGroups más reciente sin ser dep del efecto
   const initialGroupsRef = useRef<SeriesGroup[]>([]);
   initialGroupsRef.current = initialGroups;
 
   useEffect(() => {
-    // Modal pasó de abierto → cerrado: resetear UNA sola vez
+    // Modal cerrado → resetear
     if (!open && prevOpenRef.current) {
       hasInitialized.current = false;
       setGroups([]);
@@ -205,19 +259,27 @@ export function GenerateAthleticsSeriesModal({
 
     prevOpenRef.current = open;
 
-    // Modal abierto y datos listos: inicializar UNA sola vez
-    if (open && allQueriesDone && !hasInitialized.current) {
-      const groups = initialGroupsRef.current;
-      if (groups.length > 0) {
+    if (!open || hasInitialized.current) return;
+
+    // Con Sismaster (carreras Y campo): esperar sus grupos
+    if (hasSismaster && allQueriesDone) {
+      const g = initialGroupsRef.current;
+      if (g.length > 0) {
         hasInitialized.current = true;
-        setGroups(groups);
+        setGroups(g);
       }
+      return;
     }
-    // initialGroups se lee vía ref para no entrar en el array de deps.
-    // useQueries devuelve nueva referencia en cada render, por lo que incluirlo
-    // aquí provocaría un loop infinito aunque el contenido no haya cambiado.
+
+    // Sin Sismaster + campo: grupo único inmediato
+    if (!hasSismaster && isFieldEvent && fieldGroup.length > 0) {
+      hasInitialized.current = true;
+      setGroups(fieldGroup);
+    }
+
+    // Sin Sismaster + carrera: no hay grupos (el render muestra el aviso)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, allQueriesDone]);
+  }, [open, allQueriesDone, isFieldEvent, hasSismaster, fieldGroup]);
 
   // ── Mover atleta ──────────────────────────────────────────────────────────
   const handleSelectAthlete = (groupKey: string, registrationId: number) => {
@@ -262,6 +324,7 @@ export function GenerateAthleticsSeriesModal({
         await mutation.mutateAsync({
         eventCategoryId,
         data: {
+            phaseType: SERIES_TYPE_TO_PHASE_TYPE[seriesType],
             groups: validGroups.map((g) => ({
             name: g.seriesName,
             registrationIds: g.athletes.map((a) => a.registrationId),
@@ -270,7 +333,6 @@ export function GenerateAthleticsSeriesModal({
         });
         onClose();
     } catch (err: any) {
-        // Ver el mensaje exacto de validación del backend
         console.error("400 detail:", err?.response?.data);
     }
     };
@@ -280,6 +342,9 @@ export function GenerateAthleticsSeriesModal({
   const validGroups = groups.filter((g) => g.athletes.length > 0);
   const totalAthletes = validGroups.reduce((acc, g) => acc + g.athletes.length, 0);
 
+  // Para campo sin Sismaster no hay interacción de mover atletas
+  const canMoveAthletes = hasSismaster && groups.length > 1;
+
   return (
     <Modal
       isOpen={open}
@@ -288,19 +353,8 @@ export function GenerateAthleticsSeriesModal({
       size="xl"
     >
       <div className="space-y-4">
-        {/* Info / instrucción */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-          {selectedRegId ? (
-            <p className="animate-pulse font-medium text-blue-600">
-              Ahora haz click en la serie destino para mover al atleta ↓
-            </p>
-          ) : (
-            <p>
-              Los grupos se detectaron desde Sismaster. Haz click en un atleta
-              y luego en otra serie para moverlo.
-            </p>
-          )}
-        </div>
+        
+        
 
         {/* Cargando */}
         {isLoading && (
@@ -310,8 +364,8 @@ export function GenerateAthleticsSeriesModal({
           </div>
         )}
 
-        {/* Sin Sismaster */}
-        {!hasSismaster && !isLoading && (
+        {/* Sin Sismaster + carrera */}
+        {!hasSismaster && !isFieldEvent && !isLoading && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
@@ -321,7 +375,7 @@ export function GenerateAthleticsSeriesModal({
           </div>
         )}
 
-        {/* Error */}
+        {/* Error Sismaster */}
         {combosError && !isLoading && (
           <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -331,10 +385,21 @@ export function GenerateAthleticsSeriesModal({
           </div>
         )}
 
-        {/* Sin combos */}
-        {!isLoading && hasSismaster && !combosError && allQueriesDone && groups.length === 0 && (
+        {/* Sin combos Sismaster */}
+        {hasSismaster &&
+          !isLoading &&
+          !combosError &&
+          allQueriesDone &&
+          groups.length === 0 && (
+            <p className="py-10 text-center text-sm text-slate-500">
+              No se encontraron atletas inscritos con nivel/categoría en Sismaster.
+            </p>
+          )}
+
+        {/* Sin atletas (campo sin Sismaster) */}
+        {!hasSismaster && isFieldEvent && !isLoading && groups.length === 0 && (
           <p className="py-10 text-center text-sm text-slate-500">
-            No se encontraron atletas inscritos con nivel/categoría en Sismaster.
+            No hay atletas registrados en esta categoría.
           </p>
         )}
 
@@ -343,6 +408,7 @@ export function GenerateAthleticsSeriesModal({
           <div className="grid max-h-[55vh] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
             {groups.map((group) => {
               const isTarget =
+                canMoveAthletes &&
                 selectedRegId !== null &&
                 sourceGroupKey !== null &&
                 sourceGroupKey !== group.key;
@@ -386,6 +452,7 @@ export function GenerateAthleticsSeriesModal({
                     ) : (
                       group.athletes.map((athlete) => {
                         const isSelected =
+                          canMoveAthletes &&
                           selectedRegId === athlete.registrationId &&
                           sourceGroupKey === group.key;
 
@@ -395,13 +462,20 @@ export function GenerateAthleticsSeriesModal({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleSelectAthlete(group.key, athlete.registrationId);
+                              if (canMoveAthletes) {
+                                handleSelectAthlete(
+                                  group.key,
+                                  athlete.registrationId,
+                                );
+                              }
                             }}
                             className={[
                               "w-full rounded-lg border p-2.5 text-left transition-all",
-                              isSelected
-                                ? "border-blue-500 bg-blue-50 shadow-sm"
-                                : "border-slate-200 bg-slate-50 hover:bg-slate-100",
+                              !canMoveAthletes
+                                ? "cursor-default border-slate-200 bg-slate-50"
+                                : isSelected
+                                  ? "border-blue-500 bg-blue-50 shadow-sm"
+                                  : "border-slate-200 bg-slate-50 hover:bg-slate-100",
                             ].join(" ")}
                           >
                             <div className="flex items-center justify-between gap-2">
@@ -454,7 +528,9 @@ export function GenerateAthleticsSeriesModal({
             <Button
               type="button"
               onClick={handleGenerate}
-              disabled={validGroups.length === 0 || mutation.isPending || isLoading}
+              disabled={
+                validGroups.length === 0 || mutation.isPending || isLoading
+              }
             >
               {mutation.isPending
                 ? "Generando..."

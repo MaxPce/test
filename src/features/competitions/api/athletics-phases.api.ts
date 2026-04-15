@@ -8,6 +8,8 @@ export interface GenerateAthleticsSeriesGroupDto {
 
 export interface GenerateAthleticsSeriesDto {
   groups: GenerateAthleticsSeriesGroupDto[];
+  phaseType?: 'grupo' | 'combined_pista' | 'combined_distancia' | 'combined_altura'; 
+
 }
 
 export interface GenerateAthleticsSeriesResponse {

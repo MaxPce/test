@@ -514,9 +514,7 @@ export function UsersPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800">Usuarios</h1>
-            <p className="text-sm text-slate-400">
-              Gestiona operadores y administradores del sistema
-            </p>
+            
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Timer, Calendar, Plus, UserPlus, Wand2 } from "lucide-react";
+import { Timer, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
@@ -243,6 +243,7 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
         open={modals.generateSeries}
         onClose={() => closeModal("generateSeries")}
         eventCategoryId={eventCategory.eventCategoryId}
+        categoryId={eventCategory.categoryId}
         eventName={eventCategory.category?.name || eventCategory.name}
         allRegistrations={eventCategory.registrations ?? []}  
         sismasterEventId={eventCategory.externalEventId ?? undefined}   
