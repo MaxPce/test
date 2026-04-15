@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Wind, UserMinus, X } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUrl"; // ← NUEVO
 import type {
   FieldRow,
   AttemptResult,
@@ -26,7 +27,7 @@ interface Props {
 
 const EMPTY_ROWS: FieldRow[] = [];
 
-// ── Race status (igual que en AthleticsResultsTable) ──────────────────────────
+// ── Race status ───────────────────────────────────────────────────────────────
 
 type RaceStatus = "DNF" | "DNS" | "DQ" | null;
 
@@ -67,7 +68,6 @@ interface AttemptCellProps {
     wind: number | null,
     notes: string | null,
   ) => Promise<void>;
-  /** Aplica el status a TODOS los intentos del participante */
   onSetStatusAll: (status: NonNullable<RaceStatus>) => Promise<void>;
 }
 
@@ -95,20 +95,18 @@ function AttemptCell({
     }
   }, [editing, attempt, status]);
 
-  // ── Guardar desde el formulario ──────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true);
     try {
       const dist = isFoul ? null : value ? Number(value) : null;
       const w = wind ? Number(wind) : null;
-      await onSave(dist, !isFoul, w, null); // notes = null → limpia cualquier status previo
+      await onSave(dist, !isFoul, w, null);
       setEditing(false);
     } finally {
       setSaving(false);
     }
   };
 
-  // ── Asignar DNF / DNS / DQ → se aplica a TODOS los intentos del participante
   const handleSetStatus = async (s: RaceStatus) => {
     setStatusOpen(false);
     if (!s) return;
@@ -120,7 +118,6 @@ function AttemptCell({
     }
   };
 
-  // ── Quitar status (vuelve a celda vacía editable) ────────────────────────
   const handleClearStatus = async () => {
     setSaving(true);
     try {
@@ -130,7 +127,6 @@ function AttemptCell({
     }
   };
 
-  // ── Modo edición ─────────────────────────────────────────────────────────
   if (editing) {
     return (
       <div className="flex flex-col gap-1 p-1">
@@ -188,14 +184,11 @@ function AttemptCell({
     );
   }
 
-  // ── Modo display ─────────────────────────────────────────────────────────
-
   const isEmpty = attempt == null;
   const isFoulAttempt = attempt != null && !attempt.isValid && !status;
 
   return (
     <div className="flex items-center justify-center gap-0.5">
-      {/* Celda principal: badge de status o valor de distancia */}
       {status ? (
         <button
           type="button"
@@ -241,7 +234,6 @@ function AttemptCell({
         </button>
       )}
 
-      {/* Botón "···" para asignar DNF / DNS / DQ */}
       <div className="relative">
         <button
           type="button"
@@ -316,7 +308,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
     distanceValue: number | null,
     isValid: boolean,
     wind: number | null,
-    notes: string | null, // ← nuevo parámetro
+    notes: string | null,
   ) => {
     const existing = row.attempts.find(
       (a) => a.attemptNumber === attemptNumber,
@@ -326,7 +318,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
         distanceValue,
         isValid,
         wind,
-        notes, // ← se guarda "DNF" | "DNS" | "DQ" | null
+        notes,
       });
     } else {
       await createAttempt({
@@ -335,14 +327,13 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
         distanceValue,
         isValid,
         wind,
-        notes, // ← idem al crear
+        notes,
       });
     }
     await queryClient.invalidateQueries({ queryKey: FIELD_TABLE_KEY(phaseId) });
     toast.success("Intento guardado");
   };
 
-  /** Aplica un status (DNF/DNS/DQ) a los maxAttempts slots del participante de golpe */
   const handleSetStatusAll = async (
     row: FieldRow,
     status: NonNullable<RaceStatus>,
@@ -448,8 +439,23 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
                 <td className="px-4 py-2 font-semibold text-slate-900">
                   {row.athleteName.toUpperCase()}
                 </td>
-                <td className="hidden px-4 py-2 text-slate-500 md:table-cell">
-                  {row.institutionName || "—"}
+                {/* ↓ CAMBIO: celda institución con logo */}
+                <td className="hidden px-4 py-2 md:table-cell">
+                  <div className="flex items-center gap-2">
+                    {row.institutionLogo && (
+                      <img
+                        src={getImageUrl(row.institutionLogo)}
+                        alt={row.institutionName || ""}
+                        className="h-5 w-5 flex-shrink-0 object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                    <span className="text-slate-500">
+                      {row.institutionName || "—"}
+                    </span>
+                  </div>
                 </td>
                 {attemptCols.map((n) => {
                   const attempt =

@@ -1,7 +1,8 @@
 // src/features/competitions/components/athletics/AthleticsStandingsBlock.tsx
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Wind, Timer, Ruler, TrendingUp } from "lucide-react";
+import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Phase } from "@/features/competitions/types";
 import type {
   AthleticsRow,
@@ -17,20 +18,15 @@ import {
   useAthleticsFieldTable,
 } from "../../api/athletics.queries";
 
-
 // ── Constantes estables ───────────────────────────────────────────────────────
-
 
 const EMPTY_TRACK_ROWS: AthleticsRow[] = [];
 const EMPTY_SECTIONS: AthlSection[] = [];
 const EMPTY_FIELD_ROWS: FieldRow[] = [];
 
-
 // ── Race status ───────────────────────────────────────────────────────────────
 
-
 type RaceStatus = "DNF" | "DNS" | "DQ" | null;
-
 
 const STATUS_CONFIG: Record<
   NonNullable<RaceStatus>,
@@ -41,15 +37,12 @@ const STATUS_CONFIG: Record<
   DQ: { label: "DQ", bg: "bg-amber-100", text: "text-amber-700" },
 };
 
-
 const parseStatus = (notes: string | null | undefined): RaceStatus => {
   if (notes === "DNF" || notes === "DNS" || notes === "DQ") return notes;
   return null;
 };
 
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
 
 const parseTimeMs = (time: string | null): number | null => {
   if (!time) return null;
@@ -66,10 +59,7 @@ const parseTimeMs = (time: string | null): number | null => {
   return ms;
 };
 
-
-const fmtDistance = (v: number | null) =>
-  v != null ? `${v.toFixed(2)}m` : "—";
-
+const fmtDistance = (v: number | null) => (v != null ? `${v.toFixed(2)}m` : "—");
 
 const getFieldEventTypeFromName = (phaseName: string): FieldEventType => {
   const n = phaseName.toLowerCase();
@@ -85,8 +75,11 @@ const getFieldEventTypeFromName = (phaseName: string): FieldEventType => {
 };
 
 
-// ── Badge de posición con colores de medalla ──────────────────────────────────
 
+
+
+
+// ── Badge de posición con colores de medalla ──────────────────────────────────
 
 function PosBadge({ pos }: { pos: number }) {
   const cls =
@@ -97,6 +90,7 @@ function PosBadge({ pos }: { pos: number }) {
         : pos === 3
           ? "bg-orange-400 text-orange-900"
           : "bg-slate-100 text-slate-500";
+
   return (
     <span
       className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${cls}`}
@@ -106,7 +100,6 @@ function PosBadge({ pos }: { pos: number }) {
   );
 }
 
-
 function LoadingSpinner() {
   return (
     <div className="flex h-24 items-center justify-center">
@@ -115,9 +108,43 @@ function LoadingSpinner() {
   );
 }
 
+function InstitutionDisplay({
+  institutionName,
+  institutionLogo,
+  compact = false,
+  muted = false,
+}: {
+  institutionName?: string | null;
+  institutionLogo?: string;
+  compact?: boolean;
+  muted?: boolean;
+}) {
+  const textClass = muted
+    ? "text-slate-400"
+    : compact
+      ? "text-xs text-slate-500"
+      : "text-sm text-slate-500";
+
+  const imgClass = compact ? "h-4 w-4" : "h-5 w-5";
+
+  return (
+    <div className="flex items-center gap-2">
+      {institutionLogo && (
+        <img
+          src={institutionLogo}
+          alt={institutionName || "Institución"}
+          className={`${imgClass} object-contain`}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      )}
+      <span className={textClass}>{institutionName || "—"}</span>
+    </div>
+  );
+}
 
 // ── Sub-fila de miembro de equipo (Posta 4x) ──────────────────────────────────
-
 
 function TeamMemberRow({ name, rol }: { name: string; rol: string }) {
   const rolColor =
@@ -129,11 +156,8 @@ function TeamMemberRow({ name, rol }: { name: string; rol: string }) {
 
   return (
     <tr className="bg-slate-50/60">
-      {/* pos */}
       <td />
-      {/* carril */}
       <td />
-      {/* nombre */}
       <td className="px-4 py-1.5 pl-10">
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">↳</span>
@@ -147,17 +171,13 @@ function TeamMemberRow({ name, rol }: { name: string; rol: string }) {
           </span>
         </div>
       </td>
-      {/* institución */}
       <td className="hidden md:table-cell" />
-      {/* tiempo */}
       <td />
     </tr>
   );
 }
 
-
 // ── Vista: PISTA (con soporte para Postas 4x) ─────────────────────────────────
-
 
 function TrackView({ phaseId }: { phaseId: number }) {
   const { data: rows = EMPTY_TRACK_ROWS, isLoading: rowsLoading } =
@@ -165,7 +185,6 @@ function TrackView({ phaseId }: { phaseId: number }) {
   const { data: sections = EMPTY_SECTIONS, isLoading: sectionsLoading } =
     useAthleticsSections(phaseId);
 
-  // Set de phaseRegistrationId de filas expandidas
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   const toggleExpanded = (id: number) => {
@@ -178,12 +197,13 @@ function TrackView({ phaseId }: { phaseId: number }) {
 
   if (rowsLoading || sectionsLoading) return <LoadingSpinner />;
 
-  if (sections.length === 0)
+  if (sections.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-slate-400 italic">
         Sin series registradas.
       </p>
     );
+  }
 
   return (
     <div className="space-y-3">
@@ -201,7 +221,6 @@ function TrackView({ phaseId }: { phaseId: number }) {
             )!,
           }));
 
-        // Orden: tiempos válidos ascendente → status → sin resultado
         const sorted = [...sectionRows].sort((a, b) => {
           const stA = parseStatus(a.entry.notes);
           const stB = parseStatus(b.entry.notes);
@@ -220,7 +239,6 @@ function TrackView({ phaseId }: { phaseId: number }) {
             key={section.athleticsSectionId}
             className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
           >
-            {/* Header serie */}
             <div className="flex items-center gap-3 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3">
               <span className="font-bold text-slate-900">{section.name}</span>
               <span className="text-xs text-slate-500">
@@ -247,7 +265,7 @@ function TrackView({ phaseId }: { phaseId: number }) {
                   <tr>
                     <th className="w-10 px-3 py-2 text-center">Pos</th>
                     <th className="w-14 px-3 py-2 text-center">Carril</th>
-                    <th className="px-4 py-2 text-center">Equipo / Atleta</th>
+                    <th className="px-4 py-2 text-center">Participante</th>
                     <th className="hidden px-4 py-2 text-center md:table-cell">
                       Institución
                     </th>
@@ -265,13 +283,19 @@ function TrackView({ phaseId }: { phaseId: number }) {
                     const hasMembers =
                       row.isTeam &&
                       Array.isArray(row.teamMembers) &&
-                      (row.teamMembers as Array<{ athleteId: number; name: string; rol: string }>).length > 0;
+                      (
+                        row.teamMembers as Array<{
+                          athleteId: number;
+                          name: string;
+                          rol: string;
+                        }>
+                      ).length > 0;
+
+                    const institutionLogo = getImageUrl(row.institutionLogo);
 
                     return (
-                      <>
-                        {/* ── Fila principal ── */}
+                      <Fragment key={row.phaseRegistrationId}>
                         <tr
-                          key={row.phaseRegistrationId}
                           className={
                             status
                               ? "bg-slate-50 opacity-60"
@@ -292,32 +316,50 @@ function TrackView({ phaseId }: { phaseId: number }) {
                               <span className="text-slate-300 text-xs">—</span>
                             )}
                           </td>
+
                           <td className="px-3 py-2.5 text-center text-slate-500">
                             {row.entry.lane ?? (
                               <span className="text-slate-300">—</span>
                             )}
                           </td>
+
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-2">
-                              {/* Flecha toggle, solo si el equipo tiene miembros */}
                               {hasMembers && (
                                 <span className="select-none text-xs text-slate-400">
                                   {isOpen ? "▼" : "▶"}
                                 </span>
                               )}
+
                               <span className="font-semibold text-slate-900">
                                 {row.athleteName.toUpperCase()}
                               </span>
+
                               {row.isTeam && (
                                 <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-600">
                                   4×
                                 </span>
                               )}
                             </div>
+
+                            <div className="mt-1 md:hidden">
+                              <InstitutionDisplay
+                                institutionName={row.institutionName}
+                                institutionLogo={institutionLogo}
+                                compact
+                                muted={!!status}
+                              />
+                            </div>
                           </td>
-                          <td className="hidden px-4 py-2.5 text-slate-500 md:table-cell">
-                            {row.institutionName || "—"}
+
+                          <td className="hidden px-4 py-2.5 md:table-cell">
+                            <InstitutionDisplay
+                              institutionName={row.institutionName}
+                              institutionLogo={institutionLogo}
+                              muted={!!status}
+                            />
                           </td>
+
                           <td className="px-4 py-2.5 text-right">
                             {status ? (
                               <span
@@ -335,7 +377,6 @@ function TrackView({ phaseId }: { phaseId: number }) {
                           </td>
                         </tr>
 
-                        {/* ── Sub-filas de miembros (colapsables) ── */}
                         {isOpen &&
                           hasMembers &&
                           (
@@ -351,7 +392,7 @@ function TrackView({ phaseId }: { phaseId: number }) {
                               rol={member.rol}
                             />
                           ))}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -364,9 +405,7 @@ function TrackView({ phaseId }: { phaseId: number }) {
   );
 }
 
-
 // ── Celda read-only de intento de distancia ───────────────────────────────────
-
 
 function AttemptCellReadOnly({
   attempt,
@@ -380,7 +419,7 @@ function AttemptCellReadOnly({
   if (!attempt) return <span className="text-slate-200 text-xs">—</span>;
 
   const status = parseStatus(attempt.notes);
-  if (status)
+  if (status) {
     return (
       <span
         className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold ${STATUS_CONFIG[status].bg} ${STATUS_CONFIG[status].text}`}
@@ -388,12 +427,15 @@ function AttemptCellReadOnly({
         {status}
       </span>
     );
+  }
 
-  if (!attempt.isValid)
+  if (!attempt.isValid) {
     return <span className="text-xs font-semibold text-red-500">FOUL</span>;
+  }
 
-  if (attempt.distanceValue === null)
+  if (attempt.distanceValue === null) {
     return <span className="text-slate-200 text-xs">—</span>;
+  }
 
   return (
     <div
@@ -418,9 +460,7 @@ function AttemptCellReadOnly({
   );
 }
 
-
 // ── Vista: DISTANCIA ──────────────────────────────────────────────────────────
-
 
 function DistanceView({
   phaseId,
@@ -461,17 +501,17 @@ function DistanceView({
       if (bB === null) return -1;
       return bB - bA;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
 
   if (isLoading) return <LoadingSpinner />;
 
-  if (sorted.length === 0)
+  if (sorted.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-slate-400 italic">
         Sin atletas.
       </p>
     );
+  }
 
   const attemptCols = Array.from({ length: maxAttempts }, (_, i) => i + 1);
   let posCounter = 0;
@@ -496,12 +536,14 @@ function DistanceView({
             </th>
           </tr>
         </thead>
+
         <tbody className="divide-y divide-slate-100">
           {sorted.map((row) => {
             const best = getBest(row.attempts);
             const rowStatus = getRowStatus(row);
             if (best !== null) posCounter += 1;
             const pos = best !== null ? posCounter : null;
+            const institutionLogo = getImageUrl(row.institutionLogo);
 
             return (
               <tr
@@ -525,12 +567,29 @@ function DistanceView({
                     <span className="text-slate-300 text-xs">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 font-semibold text-slate-900">
-                  {row.athleteName.toUpperCase()}
+
+                <td className="px-4 py-2.5">
+                  <div className="font-semibold text-slate-900">
+                    {row.athleteName.toUpperCase()}
+                  </div>
+                  <div className="mt-1 md:hidden">
+                    <InstitutionDisplay
+                      institutionName={row.institutionName}
+                      institutionLogo={institutionLogo}
+                      compact
+                      muted={!!rowStatus}
+                    />
+                  </div>
                 </td>
-                <td className="hidden px-4 py-2.5 text-slate-500 md:table-cell">
-                  {row.institutionName || "—"}
+
+                <td className="hidden px-4 py-2.5 md:table-cell">
+                  <InstitutionDisplay
+                    institutionName={row.institutionName}
+                    institutionLogo={institutionLogo}
+                    muted={!!rowStatus}
+                  />
                 </td>
+
                 {attemptCols.map((n) => {
                   const attempt =
                     row.attempts.find((a) => a.attemptNumber === n) ?? null;
@@ -538,6 +597,7 @@ function DistanceView({
                     best !== null &&
                     attempt?.distanceValue === best &&
                     attempt?.isValid;
+
                   return (
                     <td key={n} className="px-2 py-2 text-center">
                       <AttemptCellReadOnly
@@ -548,6 +608,7 @@ function DistanceView({
                     </td>
                   );
                 })}
+
                 <td className="px-3 py-2 text-center font-bold text-orange-600">
                   {fmtDistance(best)}
                 </td>
@@ -560,9 +621,7 @@ function DistanceView({
   );
 }
 
-
 // ── Vista: ALTURA ─────────────────────────────────────────────────────────────
-
 
 function HeightView({ phaseId }: { phaseId: number }) {
   const { data: rows = EMPTY_FIELD_ROWS, isLoading } =
@@ -614,12 +673,13 @@ function HeightView({ phaseId }: { phaseId: number }) {
 
   if (isLoading) return <LoadingSpinner />;
 
-  if (sorted.length === 0)
+  if (sorted.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-slate-400 italic">
         Sin atletas.
       </p>
     );
+  }
 
   let posCounter = 0;
 
@@ -643,12 +703,14 @@ function HeightView({ phaseId }: { phaseId: number }) {
             </th>
           </tr>
         </thead>
+
         <tbody className="divide-y divide-slate-100">
           {sorted.map((row) => {
             const best = getBestHeight(row);
             const rowStatus = getRowStatus(row);
             if (best !== null) posCounter += 1;
             const pos = best !== null ? posCounter : null;
+            const institutionLogo = getImageUrl(row.institutionLogo);
 
             return (
               <tr
@@ -672,17 +734,33 @@ function HeightView({ phaseId }: { phaseId: number }) {
                     <span className="text-slate-300 text-xs">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 font-semibold text-slate-900">
-                  {row.athleteName.toUpperCase()}
+
+                <td className="px-4 py-2.5">
+                  <div className="font-semibold text-slate-900">
+                    {row.athleteName.toUpperCase()}
+                  </div>
+                  <div className="mt-1 md:hidden">
+                    <InstitutionDisplay
+                      institutionName={row.institutionName}
+                      institutionLogo={institutionLogo}
+                      compact
+                      muted={!!rowStatus}
+                    />
+                  </div>
                 </td>
-                <td className="hidden px-4 py-2.5 text-slate-500 md:table-cell">
-                  {row.institutionName || "—"}
+
+                <td className="hidden px-4 py-2.5 md:table-cell">
+                  <InstitutionDisplay
+                    institutionName={row.institutionName}
+                    institutionLogo={institutionLogo}
+                    muted={!!rowStatus}
+                  />
                 </td>
+
                 {allHeights.map((h) => {
                   const seq = getSeq(row, h);
                   const passed = seq.includes("O");
-                  const allFail =
-                    seq.length > 0 && !passed && !seq.includes("-");
+                  const allFail = seq.length > 0 && !passed && !seq.includes("-");
                   const skipped =
                     seq.length > 0 && seq.split("").every((c) => c === "-");
                   const isBestH = best !== null && h === best;
@@ -711,6 +789,7 @@ function HeightView({ phaseId }: { phaseId: number }) {
                     </td>
                   );
                 })}
+
                 <td className="px-3 py-2 text-center font-bold text-orange-600">
                   {best !== null ? `${best.toFixed(2)}m` : "—"}
                 </td>
@@ -723,14 +802,11 @@ function HeightView({ phaseId }: { phaseId: number }) {
   );
 }
 
-
 // ── Componente principal ──────────────────────────────────────────────────────
-
 
 interface Props {
   phase: Phase;
 }
-
 
 export function AthleticsStandingsBlock({ phase }: Props) {
   const isTrack = phase.type === "combined_pista";
@@ -750,11 +826,11 @@ export function AthleticsStandingsBlock({ phase }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Header de la prueba */}
       <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-orange-100">
           <Icon className="h-5 w-5 text-orange-600" />
         </div>
+
         <div className="min-w-0">
           <h4 className="truncate font-bold text-slate-900">{phase.name}</h4>
           <span className="text-xs text-slate-500">
@@ -763,7 +839,6 @@ export function AthleticsStandingsBlock({ phase }: Props) {
         </div>
       </div>
 
-      {/* Tabla según tipo */}
       {isTrack && <TrackView phaseId={phase.phaseId} />}
       {isDistance && eventType && (
         <DistanceView phaseId={phase.phaseId} eventType={eventType} />

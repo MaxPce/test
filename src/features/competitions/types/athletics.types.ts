@@ -39,6 +39,7 @@ export interface AthleticsRow {
   registrationId: number;
   athleteName: string;
   institutionName: string;
+  institutionLogo: string | null; 
   isTeam: boolean;
   athleticsResultId: number | null;
   time: string | null;
@@ -102,6 +103,7 @@ export interface FieldRow {
   registrationId: number;
   athleteName: string;
   institutionName: string;
+  institutionLogo: string | null; 
   attempts: AttemptResult[];
   bestDistance: number | null;
   bestHeight: number | null;

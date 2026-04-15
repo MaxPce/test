@@ -37,7 +37,8 @@ export type ModalName =
   | "initPoomsae"
   | "initShooting"
   | "generateCombined"
-  | "generateWeightlifting";
+  | "generateWeightlifting"
+  | "generateSeries";
 
 const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   phase: false,
@@ -53,6 +54,7 @@ const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   initShooting: false,
   generateCombined: false,
   generateWeightlifting: false,
+  generateSeries: false,
 };
 
 // ─── Hook ────────────────────────────────────────────────────────────────────

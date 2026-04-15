@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { getImageUrl } from "@/lib/utils/imageUrl";
+
 import { toast } from "sonner";
 import {
   Plus,
@@ -124,8 +126,18 @@ function AllAthletesPanel({ rows }: { rows: AthleticsRow[] }) {
                       )}
                     </div>
                   </td>
-                  <td className="hidden px-4 py-2 text-slate-400 md:table-cell">
-                    {row.institutionName || "—"}
+                  <td className="hidden px-4 py-2 md:table-cell">
+                    <div className="flex items-center gap-2">
+                      {row.institutionLogo && (
+                        <img
+                          src={getImageUrl(row.institutionLogo)}
+                          alt={row.institutionName || ""}
+                          className="h-5 w-5 object-contain flex-shrink-0"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      )}
+                      <span className="text-sm text-slate-400">{row.institutionName || "—"}</span>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -955,8 +967,18 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                                 )}
                               </div>
                             </td>
-                            <td className="hidden px-4 py-2 text-slate-500 md:table-cell">
-                              {row.institutionName || "—"}
+                            <td className="hidden px-4 py-2 md:table-cell">
+                              <div className="flex items-center gap-2">
+                                {row.institutionLogo && (
+                                  <img
+                                    src={getImageUrl(row.institutionLogo)}
+                                    alt={row.institutionName || ""}
+                                    className="h-5 w-5 object-contain flex-shrink-0"
+                                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                  />
+                                )}
+                                <span className="text-sm text-slate-500">{row.institutionName || "—"}</span>
+                              </div>
                             </td>
                             <td className="px-4 py-2">
                               <TimeCell

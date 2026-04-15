@@ -1,10 +1,12 @@
-import { Timer, Calendar, Plus, UserPlus } from "lucide-react";
+import { useMemo } from "react";
+import { Timer, Calendar, Plus, UserPlus, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/PageHeader";
 import { PhaseForm } from "@/features/competitions/components/PhaseForm";
 import { AssignSeriesParticipantModal } from "@/features/competitions/components/AssignSeriesParticipantModal";
+import { GenerateAthleticsSeriesModal } from "@/features/competitions/components/athletics/GenerateAthleticsSeriesModal";
 import AthleticsResultsTable from "@/features/competitions/components/athletics/AthleticsResultsTable";
 import AthleticsFieldTable from "@/features/competitions/components/athletics/AthleticsFieldTable";
 import HeightAttemptsTable from "@/features/competitions/components/athletics/HeightAttemptsTable";
@@ -13,7 +15,6 @@ import { PhaseDetailPanel } from "../PhaseDetailPanel";
 import type { Phase } from "@/features/competitions/types";
 import type { SportViewProps } from "./types";
 import type { FieldEventType } from "@/features/competitions/types/athletics.types";
-import { FIELD_TABLE_KEY, TRACK_TABLE_KEY } from "@/features/competitions/api/athletics.queries";
 
 const getFieldEventType = (phase: Phase): FieldEventType => {
   const n = phase.name.toLowerCase();
@@ -29,9 +30,17 @@ const getFieldEventType = (phase: Phase): FieldEventType => {
 };
 
 function renderTable(phase: Phase) {
-  if (phase.type === "combined_altura") return <HeightAttemptsTable phaseId={phase.phaseId} />;
-  if (phase.type === "combined_distancia")
-    return <AthleticsFieldTable phaseId={phase.phaseId} eventType={getFieldEventType(phase)} />;
+  if (phase.type === "combined_altura") {
+    return <HeightAttemptsTable phaseId={phase.phaseId} />;
+  }
+  if (phase.type === "combined_distancia") {
+    return (
+      <AthleticsFieldTable
+        phaseId={phase.phaseId}
+        eventType={getFieldEventType(phase)}
+      />
+    );
+  }
   return <AthleticsResultsTable phaseId={phase.phaseId} />;
 }
 
@@ -41,9 +50,69 @@ const PHASE_TYPE_OPTIONS = [
   { value: "combined_altura", label: "Salto alto / Garrocha (altura)" },
 ];
 
+// Ajusta esta función según tu data real
+function getLevelLabelFromRegistration(reg: any): "Noveles" | "Avanzado" | null {
+  // ejemplos posibles:
+  // if (reg.level === "noveles") return "Noveles";
+  // if (reg.level === "avanzado") return "Avanzado";
+  // if (reg.categoryLevel === "advanced") return "Avanzado";
+
+  // TEMPORAL: adaptar a tu estructura real
+  return reg.levelLabel ?? null;
+}
+
+function getGroupData(
+  gender?: "M" | "F" | "MIXTO",
+  levelLabel?: "Noveles" | "Avanzado" | null,
+  eventName?: string,
+) {
+  if (!gender || !levelLabel) return null;
+
+  const baseName = eventName || "Atletismo";
+
+  if (gender === "M" && levelLabel === "Noveles") {
+    return {
+      groupKey: "M-noveles",
+      groupLabel: `Varones Noveles ${baseName}`,
+    };
+  }
+
+  if (gender === "F" && levelLabel === "Noveles") {
+    return {
+      groupKey: "F-noveles",
+      groupLabel: `Damas Noveles ${baseName}`,
+    };
+  }
+
+  if (gender === "M" && levelLabel === "Avanzado") {
+    return {
+      groupKey: "M-avanzado",
+      groupLabel: `Varones Avanzado ${baseName}`,
+    };
+  }
+
+  if (gender === "F" && levelLabel === "Avanzado") {
+    return {
+      groupKey: "F-avanzado",
+      groupLabel: `Damas Avanzado ${baseName}`,
+    };
+  }
+
+  return null;
+}
+
 export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProps) {
-  const { phases, phasesLoading, selectedPhase, setSelectedPhase,
-          modals, openModal, closeModal, handlers, mutations, queryClient } = schedule;
+  const {
+    phases,
+    phasesLoading,
+    selectedPhase,
+    setSelectedPhase,
+    modals,
+    openModal,
+    closeModal,
+    handlers,
+    mutations,
+  } = schedule;
 
   const getCardVisual = (_phase: Phase) => ({
     headerHeight: "h-24" as const,
@@ -54,14 +123,56 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
     badgeLabel: "Serie / Sección",
   });
 
+  const registrationsForModal = useMemo(() => {
+    const regs = eventCategory.registrations || [];
+
+    return regs
+      .map((reg: any) => {
+        const athlete = reg.athlete;
+        const gender = athlete?.gender as "M" | "F" | "MIXTO" | undefined;
+        const levelLabel = getLevelLabelFromRegistration(reg);
+
+        const group = getGroupData(
+          gender,
+          levelLabel,
+          eventCategory.category?.name || eventCategory.name,
+        );
+
+        if (!group) return null;
+
+        return {
+          registrationId: reg.registrationId,
+          athleteId: athlete?.athleteId,
+          athleteName: athlete?.name ?? `Registro ${reg.registrationId}`,
+          institutionName: athlete?.institution?.name ?? null,
+          institutionLogo: athlete?.institution?.logoUrl ?? null,
+          gender,
+          levelLabel,
+          groupKey: group.groupKey,
+          groupLabel: group.groupLabel,
+        };
+      })
+      .filter(Boolean);
+  }, [eventCategory]);
+
   return (
     <div className="space-y-6 animate-in">
       <PageHeader
         title="Atletismo"
         actions={
-          <Button onClick={() => openModal("phase")} variant="gradient" size="lg">
-            Nueva Serie
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => openModal("generateSeries")}
+              variant="outline"
+              size="lg"
+            >
+              Generar Series
+            </Button>
+
+            <Button onClick={() => openModal("phase")} variant="gradient" size="lg">
+              Nueva Serie
+            </Button>
+          </div>
         }
       />
 
@@ -70,9 +181,14 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
           <div className="animate-spin w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full" />
         </div>
       ) : phases.length === 0 ? (
-        <EmptyState icon={Calendar} title="No hay series creadas"
-          description="Crea la primera serie. Ej: '100m Serie A', '4x100m Relevos'"
-          action={{ label: "Crear Primera Serie", onClick: () => openModal("phase") }}
+        <EmptyState
+          icon={Calendar}
+          title="No hay series creadas"
+          description="Crea la primera serie o genera series automáticamente"
+          action={{
+            label: "Crear Primera Serie",
+            onClick: () => openModal("phase"),
+          }}
         />
       ) : (
         <PhaseGrid
@@ -93,7 +209,11 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
           plainIcon={<Timer className="h-5 w-5" />}
           iconColorClass="text-orange-500"
           actions={
-            <Button variant="outline" size="sm" onClick={() => openModal("assignSeries")}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openModal("assignSeries")}
+            >
               Asignar Participante
             </Button>
           }
@@ -102,8 +222,12 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
         </PhaseDetailPanel>
       )}
 
-      <Modal isOpen={modals.phase} onClose={() => closeModal("phase")}
-        title="Crear Nueva Serie" size="md">
+      <Modal
+        isOpen={modals.phase}
+        onClose={() => closeModal("phase")}
+        title="Crear Nueva Serie"
+        size="md"
+      >
         <PhaseForm
           eventCategoryId={eventCategory.eventCategoryId}
           existingPhases={phases.length}
@@ -114,6 +238,16 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
           defaultType="combined_pista"
         />
       </Modal>
+
+      <GenerateAthleticsSeriesModal
+        open={modals.generateSeries}
+        onClose={() => closeModal("generateSeries")}
+        eventCategoryId={eventCategory.eventCategoryId}
+        eventName={eventCategory.category?.name || eventCategory.name}
+        allRegistrations={eventCategory.registrations ?? []}  
+        sismasterEventId={eventCategory.externalEventId ?? undefined}   
+        sismasterSportId={eventCategory.externalSportId ?? undefined}   
+      />
 
       {selectedPhase && (
         <AssignSeriesParticipantModal
