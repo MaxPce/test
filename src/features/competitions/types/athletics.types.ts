@@ -239,3 +239,7 @@ export interface GenerateAthleticsSeriesPayload {
   categoryId: number;
   config: GenerateSeriesConfig;
 }
+
+export interface MoveEntrySectionDto {
+  athleticsSectionId: number;
+}

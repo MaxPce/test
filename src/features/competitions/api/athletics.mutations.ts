@@ -6,6 +6,7 @@ import {
   deleteSection,
   assignSectionEntries,
   upsertSectionEntry,
+  moveEntryToSection,
 } from "./athletics.api";
 import { TRACK_TABLE_KEY, SECTIONS_KEY } from "./athletics.queries";
 import type {
@@ -65,5 +66,34 @@ export const useUpsertSectionEntry = (phaseId: number) => {
     onSuccess: () =>
       queryClient.refetchQueries({ queryKey: TRACK_TABLE_KEY(phaseId) }),
     onError: () => toast.error("Error al guardar"),
+  });
+};
+
+export const useMoveEntryToSection = (phaseId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      entryId,
+      athleticsSectionId,
+    }: {
+      entryId: number;
+      athleticsSectionId: number;
+    }) => moveEntryToSection(entryId, { athleticsSectionId }),
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: TRACK_TABLE_KEY(phaseId) });
+      toast.success("Atleta movido de serie");
+    },
+    onError: (error: any) => {
+      // Refetch para revertir el select visualmente al valor real
+      queryClient.refetchQueries({ queryKey: TRACK_TABLE_KEY(phaseId) });
+      const status = error?.response?.status;
+      toast.error(
+        status === 403
+          ? "Sin permisos para mover atletas"
+          : status === 404
+            ? "Atleta o sección no encontrada"
+            : "Error al mover el atleta",
+      );
+    },
   });
 };

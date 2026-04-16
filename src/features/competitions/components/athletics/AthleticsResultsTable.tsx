@@ -31,6 +31,7 @@ import {
   useDeleteSection,
   useAssignSectionEntries,
   useUpsertSectionEntry,
+  useMoveEntryToSection,
 } from "../../api/athletics.mutations";
 import { updateSection } from "../../api/athletics.api";
 
@@ -469,6 +470,8 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
     name: string;
   } | null>(null);
 
+  const [redistributeMode, setRedistributeMode] = useState(false);
+
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: rowsData = EMPTY_ROWS, isLoading: rowsLoading } =
     useAthleticsTrackTable(phaseId);
@@ -481,6 +484,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
   const deleteSectionMutation = useDeleteSection(phaseId);
   const assignEntriesMutation = useAssignSectionEntries(phaseId);
   const upsertEntryMutation = useUpsertSectionEntry(phaseId);
+  const moveEntryMutation = useMoveEntryToSection(phaseId);
 
   // ── Sync rows ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -696,6 +700,21 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
           <Plus className="h-4 w-4" />
           {createSectionMutation.isPending ? "Creando..." : "Nueva Sección"}
         </button>
+
+        {sections.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setRedistributeMode((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+              redistributeMode
+                ? "border-blue-400 bg-blue-500 text-white hover:bg-blue-600"
+                : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            {redistributeMode ? "Redistribuyendo..." : "Redistribuir"}
+          </button>
+        )}
       </div>
 
       {/* Todos los atletas de la fase — colapsable */}
@@ -958,13 +977,43 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                               />
                             </td>
                             <td className="px-4 py-2">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-900">{row.athleteName.toUpperCase()}</span>
-                                {row.isTeam && (
-                                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
-                                    Equipo
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-slate-900">
+                                    {row.athleteName.toUpperCase()}
                                   </span>
+                                  {row.isTeam && (
+                                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-600">
+                                      Equipo
+                                    </span>
+                                  )}
+                                </div>
+                                {redistributeMode && (
+                                  <select
+                                    value={row.entry.athleticsSectionId}
+                                    disabled={moveEntryMutation.isPending}
+                                    onChange={(e) => {
+                                      const targetId = Number(e.target.value);
+                                      if (targetId === row.entry.athleticsSectionId) return;
+                                      moveEntryMutation.mutate({
+                                        entryId: row.entry.entryId,
+                                        athleticsSectionId: targetId,
+                                      });
+                                    }}
+                                    className={`w-fit rounded border px-1.5 py-0.5 text-xs focus:border-orange-400 focus:outline-none cursor-pointer transition-colors
+                                      ${moveEntryMutation.isPending
+                                        ? "border-orange-200 bg-orange-50 text-orange-400 opacity-60"
+                                        : "border-blue-200 bg-blue-50 text-blue-600 hover:border-blue-300"
+                                      }`}
+                                  >
+                                    {sections.map((s) => (
+                                      <option key={s.athleticsSectionId} value={s.athleticsSectionId}>
+                                        {s.name}
+                                      </option>
+                                    ))}
+                                  </select>
                                 )}
+
                               </div>
                             </td>
                             <td className="hidden px-4 py-2 md:table-cell">

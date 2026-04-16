@@ -7,6 +7,7 @@ import type {
   CreateSectionDto,
   UpdateSectionDto,
   FieldRow,
+  MoveEntrySectionDto,
 } from "../types/athletics.types";
 
 // ── Track table ───────────────────────────────────────────────────────────────
@@ -105,5 +106,16 @@ export const updateAttempt = async (
 
 export const deleteAttempt = async (id: number) => {
   const res = await apiClient.delete(`/competitions/athletics/${id}`);
+  return res.data;
+};
+
+export const moveEntryToSection = async (
+  entryId: number,
+  dto: MoveEntrySectionDto,
+) => {
+  const res = await apiClient.patch(
+    `/competitions/athletics/section-entries/${entryId}/move`,
+    dto,
+  );
   return res.data;
 };
