@@ -471,6 +471,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
   } | null>(null);
 
   const [redistributeMode, setRedistributeMode] = useState(false);
+  const [searchAthletes, setSearchAthletes] = useState("");
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: rowsData = EMPTY_ROWS, isLoading: rowsLoading } =
@@ -679,6 +680,17 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
 
   const unassigned = rows.filter((r) => r.sections.length === 0);
 
+  const searchTerm = searchAthletes.toLowerCase().trim();
+  const filteredSections = searchTerm
+    ? sections.filter((section) =>
+        rows.some(
+          (r) =>
+            r.sections.some((e) => e.athleticsSectionId === section.athleticsSectionId) &&
+            r.athleteName.toLowerCase().includes(searchTerm),
+        ),
+      )
+    : sections;
+
   return (
     <div className="space-y-3">
       {/* Nueva sección */}
@@ -717,6 +729,47 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
         )}
       </div>
 
+      {/* Buscador por series */}
+      {rows.length > 0 && sections.length > 0 && (
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg
+              className="h-4 w-4 text-slate-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={searchAthletes}
+            onChange={(e) => setSearchAthletes(e.target.value)}
+            placeholder="Buscar atleta en las series..."
+            className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20 focus:border-orange-400 transition-all"
+          />
+          {searchAthletes && (
+            <button
+              type="button"
+              onClick={() => setSearchAthletes("")}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {searchAthletes && (
+            <p className="mt-1 text-xs text-slate-400 pl-1">
+              {filteredSections.length === 0
+                ? "Sin resultados"
+                : `${filteredSections.length} serie${filteredSections.length !== 1 ? "s" : ""} con "${searchAthletes}"`}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Todos los atletas de la fase — colapsable */}
       {rows.length > 0 && <AllAthletesPanel rows={rows} />}
 
@@ -727,12 +780,13 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
       )}
 
       {/* Secciones */}
-      {sections.map((section) => {
+      {filteredSections.map((section) => {
         const sectionRows = rows
           .filter((r) =>
             r.sections.some(
               (e) => e.athleticsSectionId === section.athleticsSectionId,
-            ),
+            ) &&
+            (searchTerm ? r.athleteName.toLowerCase().includes(searchTerm) : true),
           )
           .map((r) => ({
             ...r,

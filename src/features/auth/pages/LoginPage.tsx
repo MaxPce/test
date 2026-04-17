@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useLogin } from "../api/auth.mutations";
-import { Shield, Lock, User, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
+import { Lock, User, AlertCircle, ArrowRight } from "lucide-react";
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
@@ -14,7 +14,6 @@ export function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       await login.mutateAsync({ username, password });
       navigate(from, { replace: true });
@@ -24,32 +23,51 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br  relative ">
-      {/* Background decorations */}
-      
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 relative">
 
       <div className="w-full max-w-md relative z-10">
-        {/* Logo y header mejorado */}
-        <div className="text-center mb-8 animate-in">
-          <Link to="/" className="inline-block">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 mb-4 shadow-lg hover:shadow-xl transition-all hover:scale-105">
-              <Shield className="h-9 w-9 text-white" />
+
+        {/* Logos header */}
+        <div className="text-center mb-8">
+
+          {/* Logo FEDUP — institución organizadora */}
+          <div className="flex justify-center mb-4">
+            <div className="bg-white rounded-xl shadow-sm px-5 py-3">
+              <img
+                src="/fedup_brand.png"
+                alt="FEDUP"
+                className="h-12 w-auto object-contain"
+              />
+            </div>
+          </div>
+
+          {/* Separador con texto */}
+          <div className="flex items-center gap-3 px-8 mb-4">
+            <div className="flex-1 h-px bg-slate-300" />
+            <span className="text-xs text-slate-400 font-medium uppercase tracking-widest">
+              powered by
+            </span>
+            <div className="flex-1 h-px bg-slate-300" />
+          </div>
+
+          {/* Logo Haylli's — el sistema */}
+          <Link to="/" className="inline-block group">
+            <div className="bg-white rounded-xl shadow-sm px-5 py-3 group-hover:shadow-md transition-shadow duration-200">
+              <img
+                src="/hayllis.png"
+                alt="Haylli's Software Deportivo"
+                className="h-14 w-auto object-contain mx-auto group-hover:scale-105 transition-transform duration-200"
+              />
             </div>
           </Link>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            FormatoSoft
-          </h1>
-          <p className="text-slate-600 mt-2 font-medium flex items-center justify-center gap-2">
-            <Sparkles className="h-4 w-4 text-blue-600" />
-            Sistema de Gestión Deportiva
-          </p>
+
         </div>
 
         {/* Card de login con glassmorphism */}
         <div className="glass rounded-2xl shadow-strong border border-white/20 p-8 backdrop-blur-xl animate-slide-up">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-slate-900">
-              Bienvenido de nuevo
+              Bienvenido
             </h2>
             <p className="text-sm text-slate-600 mt-1">
               Ingrese sus credenciales para continuar
@@ -57,7 +75,7 @@ export function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Usuario con diseño moderno */}
+            {/* Usuario */}
             <div>
               <label
                 htmlFor="username"
@@ -81,7 +99,7 @@ export function LoginPage() {
               </div>
             </div>
 
-            {/* Contraseña con diseño moderno */}
+            {/* Contraseña */}
             <div>
               <label
                 htmlFor="password"
@@ -124,7 +142,7 @@ export function LoginPage() {
               </button>
             </div>
 
-            {/* Error message mejorado */}
+            {/* Error message */}
             {login.isError && (
               <div className="flex items-start gap-3 p-4 text-sm text-red-800 bg-red-50 border-2 border-red-200 rounded-xl animate-in">
                 <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
@@ -137,7 +155,7 @@ export function LoginPage() {
               </div>
             )}
 
-            {/* Botón submit con gradiente */}
+            {/* Botón submit */}
             <button
               type="submit"
               disabled={login.isPending}
@@ -145,21 +163,14 @@ export function LoginPage() {
             >
               {/* Efecto de brillo */}
               <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              
+
               {login.isPending ? (
                 <span className="flex items-center justify-center gap-2 relative">
-                  <svg
-                    className="animate-spin h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
                     <circle
                       className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
+                      cx="12" cy="12" r="10"
+                      stroke="currentColor" strokeWidth="4"
                     />
                     <path
                       className="opacity-75"
@@ -178,30 +189,9 @@ export function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/50 backdrop-blur-sm text-slate-500 font-medium">
-                ¿Primera vez aquí?
-              </span>
-            </div>
-          </div>
-
-          {/* Demo info */}
-          <div className="text-center">
-            <p className="text-sm text-slate-600">
-              ¿Necesita una cuenta?{" "}
-              <button className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
-                Solicitar acceso
-              </button>
-            </p>
-          </div>
+          
         </div>
 
-        
       </div>
     </div>
   );

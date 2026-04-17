@@ -9,4 +9,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  build: {
+    // Salta el chequeo de tipos — Vite solo transpila, no valida
+  }
 });
