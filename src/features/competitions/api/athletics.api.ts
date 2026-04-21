@@ -119,3 +119,10 @@ export const moveEntryToSection = async (
   );
   return res.data;
 };
+
+export const classifyPhase = async (phaseId: number) => {
+  const res = await apiClient.post(
+    `/competitions/phases/${phaseId}/classify`,
+  );
+  return res.data;
+};

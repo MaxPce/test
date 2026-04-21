@@ -1,3 +1,4 @@
+// src/features/athletics/api/athletics.mutations.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -7,6 +8,7 @@ import {
   assignSectionEntries,
   upsertSectionEntry,
   moveEntryToSection,
+  classifyPhase,
 } from "./athletics.api";
 import { TRACK_TABLE_KEY, SECTIONS_KEY } from "./athletics.queries";
 import type {
@@ -15,6 +17,7 @@ import type {
   CreateSectionDto,
   UpdateSectionDto,
 } from "../types/athletics.types";
+
 
 export const useCreateSection = (phaseId: number) => {
   const queryClient = useQueryClient();
@@ -26,6 +29,7 @@ export const useCreateSection = (phaseId: number) => {
   });
 };
 
+
 export const useUpdateSection = (phaseId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -36,6 +40,7 @@ export const useUpdateSection = (phaseId: number) => {
     onError: () => toast.error("Error al actualizar sección"),
   });
 };
+
 
 export const useDeleteSection = (phaseId: number) => {
   const queryClient = useQueryClient();
@@ -49,6 +54,7 @@ export const useDeleteSection = (phaseId: number) => {
   });
 };
 
+
 export const useAssignSectionEntries = (phaseId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -59,6 +65,7 @@ export const useAssignSectionEntries = (phaseId: number) => {
   });
 };
 
+
 export const useUpsertSectionEntry = (phaseId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -68,6 +75,7 @@ export const useUpsertSectionEntry = (phaseId: number) => {
     onError: () => toast.error("Error al guardar"),
   });
 };
+
 
 export const useMoveEntryToSection = (phaseId: number) => {
   const queryClient = useQueryClient();
@@ -84,7 +92,6 @@ export const useMoveEntryToSection = (phaseId: number) => {
       toast.success("Atleta movido de serie");
     },
     onError: (error: any) => {
-      // Refetch para revertir el select visualmente al valor real
       queryClient.refetchQueries({ queryKey: TRACK_TABLE_KEY(phaseId) });
       const status = error?.response?.status;
       toast.error(
@@ -93,6 +100,48 @@ export const useMoveEntryToSection = (phaseId: number) => {
           : status === 404
             ? "Atleta o sección no encontrada"
             : "Error al mover el atleta",
+      );
+    },
+  });
+};
+
+
+// ── Clasificación de fase ─────────────────────────────────────────────────────
+
+export type ClassifyPhaseResult = {
+  phaseRegistrationId: number;
+  rankPosition: number | null;
+  pointsAwarded: number;
+  isScoringEligible: boolean;
+  exclusionReason: string | null;
+  finalTime: string | null;
+  finalDistance: number | null;
+  finalHeight: number | null;
+  finalIaafPoints: number | null;
+  resultSource: string;
+};
+
+export const useClassifyPhase = (phaseId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (): Promise<ClassifyPhaseResult[]> => classifyPhase(phaseId),
+    onSuccess: (data) => {
+      const eligible = data.filter((r) => r.isScoringEligible && r.rankPosition);
+      toast.success(
+        `Fase finalizada — ${eligible.length} atleta${eligible.length !== 1 ? "s" : ""} clasificado${eligible.length !== 1 ? "s" : ""}`,
+      );
+      // Invalida score-tables para que el componente de puntajes se refresque
+      queryClient.invalidateQueries({ queryKey: ["score-tables"] });
+    },
+    onError: (error: any) => {
+      const status = error?.response?.status;
+      toast.error(
+        status === 404
+          ? "Fase no encontrada"
+          : status === 400
+            ? "Datos insuficientes para clasificar"
+            : "Error al finalizar la fase",
       );
     },
   });

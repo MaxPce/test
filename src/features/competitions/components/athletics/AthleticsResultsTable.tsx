@@ -32,6 +32,7 @@ import {
   useAssignSectionEntries,
   useUpsertSectionEntry,
   useMoveEntryToSection,
+  useClassifyPhase 
 } from "../../api/athletics.mutations";
 import { updateSection } from "../../api/athletics.api";
 
@@ -86,7 +87,7 @@ function AllAthletesPanel({ rows }: { rows: AthleticsRow[] }) {
         <Users className="h-4 w-4 flex-shrink-0 text-slate-400" />
         <span className="flex-1 text-sm text-slate-600">
           <span className="font-semibold">{rows.length}</span> atleta
-          {rows.length !== 1 ? "s" : ""} en esta fase
+          {rows.length !== 1 ? "s" : ""} en esta fas
         </span>
         {open ? (
           <ChevronUp className="h-4 w-4 text-slate-400" />
@@ -486,6 +487,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
   const assignEntriesMutation = useAssignSectionEntries(phaseId);
   const upsertEntryMutation = useUpsertSectionEntry(phaseId);
   const moveEntryMutation = useMoveEntryToSection(phaseId);
+  const classifyMutation = useClassifyPhase(phaseId);
 
   // ── Sync rows ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -693,6 +695,8 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
 
   return (
     <div className="space-y-3">
+
+     
       {/* Nueva sección */}
       <div className="flex items-center gap-2">
         <input
@@ -703,6 +707,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
           placeholder='Ej: "Serie 1", "Serie 2", "Finales"'
           className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
         />
+        
         <button
           type="button"
           onClick={handleAddSection}
@@ -711,6 +716,19 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
         >
           <Plus className="h-4 w-4" />
           {createSectionMutation.isPending ? "Creando..." : "Nueva Sección"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm('¿Finalizar la fase?.')) {
+              classifyMutation.mutate();
+            }
+          }}
+          disabled={classifyMutation.isPending}
+          className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+        >
+          
+          {classifyMutation.isPending ? 'Procesando...' : 'Finalizar Fase'}
         </button>
 
         {sections.length > 1 && (

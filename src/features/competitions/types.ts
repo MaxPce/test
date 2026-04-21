@@ -2,6 +2,13 @@ import type { PhaseFormat, MatchStatus } from "@/lib/types/common.types";
 import type { EventCategory } from "@/features/events/types";
 import type { Athlete, Team } from "@/features/institutions/types";
 
+// ─── Enums (espejo del backend) ─────────────────────────────────────────────────
+
+export type PhaseGender = "damas" | "varones" | "mixto";
+export type PhaseLevel  = "noveles" | "avanzados";
+
+// ─── Phase ──────────────────────────────────────────────────────────────────────
+
 export interface Phase {
   type: string;
   phaseId: number;
@@ -16,7 +23,16 @@ export interface Phase {
   eventCategory?: EventCategory;
   matches?: Match[];
   participations?: Participation[];
+
+  // ── Campos FEDUP / atletismo ──
+  gender?:  PhaseGender | null;
+  level?:   PhaseLevel  | null;
+  isRelay?: boolean;
 }
+
+// ── El resto del archivo permanece igual ──────────────────────────────────────
+// (CreatePhaseData, UpdatePhaseData, Match, Participation, etc.)
+// Solo copia-pega tu archivo actual y agrega los 3 campos de arriba en Phase.
 
 export interface CreatePhaseData {
   eventCategoryId: number;
@@ -58,7 +74,6 @@ export interface Match {
   location?: string;
   createdAt: string;
   updatedAt: string;
-
   phase?: {
     phaseId: number;
     name: string;
@@ -69,14 +84,10 @@ export interface Match {
         categoryId: number;
         name: string;
         type: string;
-        sport?: {
-          sportId: number;
-          name: string;
-        };
+        sport?: { sportId: number; name: string };
       };
     };
   };
-
   participations?: Array<{
     participationId: number;
     phaseId: number;
@@ -91,11 +102,7 @@ export interface Match {
       team?: {
         teamId: number;
         name: string;
-        institution?: {
-          institutionId: number;
-          name: string;
-          code: string;
-        };
+        institution?: { institutionId: number; name: string; code: string };
         members?: Array<{
           tmId: number;
           athleteId: number;
@@ -103,17 +110,12 @@ export interface Match {
           athlete: {
             athleteId: number;
             name: string;
-            institution?: {
-              institutionId: number;
-              name: string;
-              code: string;
-            };
+            institution?: { institutionId: number; name: string; code: string };
           };
         }>;
       };
     };
   }>;
-
   participantAData?: Participation;
   participantBData?: Participation;
   winnerData?: Participation;
@@ -178,13 +180,8 @@ export interface BulkParticipationsData {
   isTeam: boolean;
 }
 
-export interface InitializeBracketData {
-  phaseId: number;
-}
-
-export interface InitializeRoundRobinData {
-  phaseId: number;
-}
+export interface InitializeBracketData     { phaseId: number }
+export interface InitializeRoundRobinData  { phaseId: number }
 
 export interface StandingsRow {
   position: number;
