@@ -92,8 +92,7 @@ export function EventSportCategoriesPage() {
     ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/add`
     : `/admin/events/${eventId}/sports/${sportId}/categories/add`;
 
-  // El eventId que consume ScoreTables (usa el local o externo)
-  const scoreEventId = eventIdNum ?? externalEventIdNum!;
+  
 
   return (
     <div className="space-y-6 animate-in">
@@ -261,8 +260,11 @@ export function EventSportCategoriesPage() {
       )}
 
       {/* ── Vista: Puntajes ── */}
-      {activeView === "scores" && (
-        <ScoreTables eventId={scoreEventId} />
+      {activeView === "scores" && externalEventIdNum && sportId && (
+        <ScoreTables
+          externalEventId={externalEventIdNum}
+          localSportId={Number(sportId)}
+        />
       )}
     </div>
   );

@@ -1,46 +1,35 @@
 // src/hooks/useScoreTables.ts
-
-import { useState, useCallback, useEffect } from 'react';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api/client';
 import type { ScoreSummaryResponse } from '../types/score-tables.types';
 
-interface UseScoreTablesReturn {
-  data: ScoreSummaryResponse | null;
-  loading: boolean;
-  error: string | null;
-  refresh: () => void;
+// ─── API function ─────────────────────────────────────────────────────────────
+
+async function fetchScoreSummary(
+  externalEventId: number | string,
+  localSportId: number | string,       // ← renombrado
+): Promise<ScoreSummaryResponse> {
+  const res = await apiClient.get<ScoreSummaryResponse>(
+    `/score-tables/external/${externalEventId}/local-sport/${localSportId}/summary`,
+  );
+  return res.data;
 }
 
-export function useScoreTables(eventId: number | string): UseScoreTablesReturn {
-  const [data, setData] = useState<ScoreSummaryResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get<ScoreSummaryResponse>(
-        `/score-tables/${eventId}/summary`
-      );
-      setData(response.data);
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        setError(
-          err.response?.data?.message ??
-            'Error al cargar los puntajes. Intenta nuevamente.'
-        );
-      } else {
-        setError('Error inesperado. Intenta nuevamente.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+export const SCORE_TABLES_KEY = (
+  externalEventId: number | string,
+  externalSportId: number | string,
+) => ['score-tables', externalEventId, externalSportId] as const;
 
-  return { data, loading, error, refresh: fetchData };
+export function useScoreTables(
+  externalEventId: number | string,
+  localSportId: number | string,      
+) {
+  return useQuery({
+    queryKey: SCORE_TABLES_KEY(externalEventId, localSportId),
+    queryFn:  () => fetchScoreSummary(externalEventId, localSportId),
+    enabled:  !!externalEventId && !!localSportId,
+  });
 }
