@@ -116,7 +116,7 @@ export function AssignParticipantsModal({
         {/* Info: si está filtrado por fase */}
         {phaseRegistrations && phaseRegistrations.length > 0 && (
           <p className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-            Mostrando solo los{" "}
+           
             <span className="font-semibold">{phaseRegistrations.length}</span>{" "}
             participantes.
           </p>

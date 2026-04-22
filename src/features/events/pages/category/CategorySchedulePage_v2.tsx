@@ -1464,7 +1464,7 @@ export function CategorySchedulePage() {
                         onClick={() => setSelectedPhase(null)}
                         className="text-slate-400 hover:text-slate-600 text-sm"
                       >
-                        × Cerrar
+                        Cerrar
                       </button>
                     </div>
                   </div>

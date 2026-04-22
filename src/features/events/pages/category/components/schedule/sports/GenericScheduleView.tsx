@@ -35,6 +35,7 @@ import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
 import type { Phase } from "@/features/competitions/types";
 import type { GenericViewProps } from "./types";
+import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -255,6 +256,21 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                     Pasar Participante
                   </Button>
                 )}
+
+                {/* Botón asignar — visible cuando el match tiene menos de 2 participantes */}
+                {participants.length < 2 && match.status !== "finalizado"
+                  && !taekwondoType && wushuType !== "taolu" && !isTiroDeportivo && (
+                  <Button
+                    variant="outline" size="sm"
+                    icon={<UserPlus className="h-4 w-4" />}
+                    onClick={() => {
+                      setSelectedMatch(match);
+                      openModal("assign");
+                    }}
+                  >
+                    Asignar
+                  </Button>
+                )}
                 {participants.length === 2 && (
                   <>
                     {(sport.isJudo || sport.isKarate || sport.isWushu || sport.isWrestling || !!taekwondoType) && (
@@ -327,7 +343,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         )}
         {/* Asignar — solo en fases de grupo (no eliminacion/repechaje) */}
         {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
-          && selectedPhase.type === "grupo" && (
+          && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion") && (
           <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => openModal("assign")}>
             Asignar
           </Button>
@@ -350,9 +366,26 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
       <PageHeader
         title="Programación Competencia"
         actions={
-          <Button onClick={() => openModal("phase")} variant="gradient" size="lg" icon={<Plus className="h-5 w-5" />}>
-            Nueva Fase
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* Botón nuevo — solo visible en deportes de llaves */}
+            {sport.isJudo && (
+              <Button
+                onClick={() => openModal("generateKumitePhases")}
+                variant="outline"
+                size="lg"
+              >
+                Generar Fases
+              </Button>
+            )}
+            <Button
+              onClick={() => openModal("phase")}
+              variant="gradient"
+              size="lg"
+              icon={<Plus className="h-5 w-5" />}
+            >
+              Nueva Fase
+            </Button>
+          </div>
         }
       />
 
@@ -561,6 +594,17 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             </>
           )}
         </>
+      )}
+      {modals.generateKumitePhases && sport.isJudo && (
+        <GenerateKumitePhasesModal
+          open={modals.generateKumitePhases}
+          onClose={() => closeModal("generateKumitePhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Categoría"}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
+          allRegistrations={eventCategory.registrations ?? []}
+        />
       )}
     </div>
   );
