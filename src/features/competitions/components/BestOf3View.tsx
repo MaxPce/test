@@ -29,7 +29,7 @@ import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Match, Phase } from "../types";
 
 interface BestOf3ViewProps {
-  matches: Match[];
+  matches: Match[] | undefined | null;
   phase: Phase;
   eventCategory?: any;
 }
@@ -47,7 +47,7 @@ export function BestOf3View({
 
   const updateMatchMutation = useUpdateMatch();
 
-  const sortedMatches = [...matches].sort(
+  const sortedMatches = [...(matches ?? [])].sort(
     (a, b) => (a.matchNumber || 0) - (b.matchNumber || 0),
   );
 

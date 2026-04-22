@@ -114,7 +114,13 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         : <TiroDeportivoResultsTable  phaseId={selectedPhase.phaseId} />;
 
     if (selectedPhase.type === "mejor_de_3")
-      return <BestOf3View phaseId={selectedPhase.phaseId} />;
+      return (
+        <BestOf3View
+          matches={matches}
+          phase={selectedPhase}
+          eventCategory={eventCategory}
+        />
+      );
 
     if (matchesLoading)
       return (
