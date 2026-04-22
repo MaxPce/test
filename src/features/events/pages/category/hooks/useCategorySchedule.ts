@@ -157,8 +157,14 @@ export function useCategorySchedule(eventCategory: EventCategory) {
   };
 
   const handleDeleteMatch = async (matchId: number) => {
-    if (!confirm("¿Estás seguro de eliminar este partido?")) return;
+    if (!confirm("¿Estás seguro de eliminar este match?")) return;
     await deleteMatchMutation.mutateAsync(matchId);
+    // Seguro extra: invalidar con el phaseId específico
+    if (selectedPhase?.phaseId) {
+      await queryClient.invalidateQueries({
+        queryKey: ["matches", selectedPhase.phaseId],
+      });
+    }
   };
 
   const handleAssignParticipant = async (data: any) => {

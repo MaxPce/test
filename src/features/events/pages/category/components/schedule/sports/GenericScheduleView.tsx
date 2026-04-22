@@ -175,8 +175,13 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                   </div>
                 </div>
                 <button
-                  onClick={() => handlers.deleteMatch(match.matchId)}
-                  className="text-slate-400 hover:text-red-500 transition-colors text-xl leading-none ml-2"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlers.deleteMatch(match.matchId);
+                  }}
+                  className="relative z-10 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"
+                  aria-label="Eliminar partido"
                 >
                   ×
                 </button>
@@ -264,6 +269,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                     variant="outline" size="sm"
                     icon={<UserPlus className="h-4 w-4" />}
                     onClick={() => {
+                      closeModal("result");   // ← cierra result si estaba abierto
                       setSelectedMatch(match);
                       openModal("assign");
                     }}
@@ -275,7 +281,12 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                   <>
                     {(sport.isJudo || sport.isKarate || sport.isWushu || sport.isWrestling || !!taekwondoType) && (
                       <Button variant="gradient" size="sm"
-                        onClick={() => { setSelectedMatch(match); setSelectedMatchId(match.matchId); openModal("result"); }}>
+                        onClick={() => {
+                          closeModal("assign");   
+                          setSelectedMatch(match);
+                          setSelectedMatchId(match.matchId);
+                          openModal("result");
+                        }}>
                         {match.participant1Score !== null || match.status === "finalizado" ? "Editar Puntaje" : "Registrar Puntaje"}
                       </Button>
                     )}
@@ -344,7 +355,11 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         {/* Asignar — solo en fases de grupo (no eliminacion/repechaje) */}
         {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
           && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion") && (
-          <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => openModal("assign")}>
+          <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => {
+            closeModal("result");
+            setSelectedMatch(null);
+            openModal("assign");
+          }}>
             Asignar
           </Button>
         )}

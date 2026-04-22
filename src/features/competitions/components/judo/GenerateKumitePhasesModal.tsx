@@ -373,14 +373,7 @@ export function GenerateKumitePhasesModal({
         {/* Grid de grupos */}
         {!isLoading && groups.length > 0 && (
           <>
-            {/* Hint de instrucciones */}
-            {canMoveAthletes && (
-              <p className="text-xs text-slate-500">
-                <ArrowRightLeft className="mr-1 inline h-3 w-3" />
-                Haz clic en un atleta para seleccionarlo y luego en otro grupo
-                para moverlo. Elige el formato de cada fase.
-              </p>
-            )}
+            
 
             <div className="grid max-h-[55vh] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
               {groups.map((group) => {

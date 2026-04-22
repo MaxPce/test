@@ -30,9 +30,10 @@ export function useDeleteMatch() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: matchesApi.delete,
+    mutationFn: (id: number) => matchesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({ queryKey: ["phases"] });
     },
   });
 }
