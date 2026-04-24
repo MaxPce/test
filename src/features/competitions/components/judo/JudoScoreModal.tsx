@@ -6,6 +6,7 @@ import { useUpdateJudoScore } from "../../api/judo.mutations";
 import { useAdvanceWinner, useSetWalkoverGeneric } from "../../api/bracket.mutations";
 import { WalkoverDialog } from "@/features/competitions/components/table-tennis/WalkoverDialog";
 import { toast } from "sonner";
+import { useUpdateStandings } from "../../api/standings.mutations";
 
 interface Props {
   match: JudoMatch;
@@ -22,6 +23,7 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
   const updateMutation = useUpdateJudoScore();
   const advanceWinnerMutation = useAdvanceWinner();
   const setWalkoverMutation = useSetWalkoverGeneric();
+  const updateStandingsMutation = useUpdateStandings(); // ✅
 
   useEffect(() => {
     setScore1(Number(match.participant1Score) || 0);
@@ -40,6 +42,7 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
     }
 
     if (phase?.type === "eliminacion") {
+      // ── Eliminación: guardar + avanzar ganador ──────────────────
       updateMutation.mutate(
         {
           matchId: match.matchId,
@@ -73,6 +76,7 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
         },
       );
     } else {
+      // ── Grupos / Otros: guardar + recalcular standings ──────────
       updateMutation.mutate(
         {
           matchId: match.matchId,
@@ -84,8 +88,16 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
         },
         {
           onSuccess: () => {
-            toast.success("Puntaje actualizado correctamente");
-            onClose();
+            updateStandingsMutation.mutate(phase!.phaseId, {
+              onSuccess: () => {
+                toast.success("Puntaje y tabla de posiciones actualizados");
+                onClose();
+              },
+              onError: () => {
+                toast.warning("Puntaje guardado, pero error al actualizar tabla");
+                onClose();
+              },
+            });
           },
           onError: () => {
             toast.error("Error al actualizar puntaje");
@@ -158,7 +170,8 @@ export const JudoScoreModal = ({ match, phase, isOpen, onClose }: Props) => {
   const isBusy =
     updateMutation.isPending ||
     advanceWinnerMutation.isPending ||
-    setWalkoverMutation.isPending;
+    setWalkoverMutation.isPending ||
+    updateStandingsMutation.isPending; // ✅
 
   return (
     <>

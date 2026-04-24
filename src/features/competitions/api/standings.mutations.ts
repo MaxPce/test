@@ -7,9 +7,12 @@ export function useUpdateStandings() {
     mutationFn: standingsApi.update,
     onSuccess: (_, phaseId) => {
       queryClient.invalidateQueries({ queryKey: ["standings", phaseId] });
+      queryClient.invalidateQueries({ queryKey: ["phases", phaseId] });  
+      queryClient.invalidateQueries({ queryKey: ["phase", phaseId] });   
     },
   });
 }
+
 
 export function useSetManualStandingRanks() {
   const queryClient = useQueryClient();
