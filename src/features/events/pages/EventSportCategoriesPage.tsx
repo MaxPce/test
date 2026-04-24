@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, Trophy, Users, LayoutGrid, BarChart2 } from "lucide-react";
+import { Plus, Trophy, Users, LayoutGrid, BarChart2, Medal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
@@ -11,26 +11,16 @@ import { PageHeader } from "@/components/PageHeader";
 import { useEventCategories, useSismasterEventCategories } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { ScoreTables } from "../../competitions/components/score-tables/ScoreTables";
+import { JudoMedalTable } from "../../competitions/components/judo/JudoMedalTable";
 
-// ─── Tipos de vista ─────────────────────────────────────────────────────────────
+// ─── ID local del deporte Judo en tu tabla `sports` ─────────────────────────
+// Reemplaza este número con el sport_id real de Judo en tu DB
+const JUDO_SPORT_ID = 4; 
 
-type ActiveView = "categories" | "scores";
+// ─── Tipos de vista ──────────────────────────────────────────────────────────
+type ActiveView = "categories" | "scores" | "medals";
 
-const VIEW_TABS: { key: ActiveView; label: string; icon: React.ReactNode }[] = [
-  {
-    key: "categories",
-    label: "Categorías",
-    icon: <LayoutGrid className="h-4 w-4" />,
-  },
-  {
-    key: "scores",
-    label: "Puntajes",
-    icon: <BarChart2 className="h-4 w-4" />,
-  },
-];
-
-// ─── Página principal ────────────────────────────────────────────────────────────
-
+// ─── Página principal ────────────────────────────────────────────────────────
 export function EventSportCategoriesPage() {
   const { eventId, externalEventId, sportId } = useParams<{
     eventId?: string;
@@ -41,9 +31,12 @@ export function EventSportCategoriesPage() {
 
   const [activeView, setActiveView] = useState<ActiveView>("categories");
 
-  const eventIdNum = eventId ? Number(eventId) : undefined;
-  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
-  const isExternalEvent = !!externalEventId;
+  const eventIdNum          = eventId         ? Number(eventId)         : undefined;
+  const externalEventIdNum  = externalEventId ? Number(externalEventId) : undefined;
+  const sportIdNum          = Number(sportId);
+  const isExternalEvent     = !!externalEventId;
+
+  const isJudo = sportIdNum === JUDO_SPORT_ID;
 
   const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
     { eventId: eventIdNum },
@@ -54,7 +47,7 @@ export function EventSportCategoriesPage() {
     useSismasterEventCategories(externalEventIdNum);
 
   const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
-  const isLoading = isExternalEvent ? externalLoading : localLoading;
+  const isLoading       = isExternalEvent ? externalLoading : localLoading;
 
   if (isLoading) {
     return (
@@ -64,21 +57,19 @@ export function EventSportCategoriesPage() {
     );
   }
 
-  // Filtrar categorías del deporte específico
   const sportCategories = eventCategories.filter(
-    (ec) => ec.category?.sport?.sportId === Number(sportId)
+    (ec) => ec.category?.sport?.sportId === sportIdNum
   );
 
-  const sportName = sportCategories[0]?.category?.sport?.name || "Deporte";
+  const sportName    = sportCategories[0]?.category?.sport?.name || "Deporte";
   const sportIconUrl = sportCategories[0]?.category?.sport?.iconUrl;
-  const sportImage = sportIconUrl ? getImageUrl(sportIconUrl) : null;
+  const sportImage   = sportIconUrl ? getImageUrl(sportIconUrl) : null;
 
   const totalParticipants = sportCategories.reduce(
     (sum, ec) => sum + (ec.registrations?.length || 0),
     0
   );
 
-  // Rutas dinámicas
   const backPath = isExternalEvent
     ? `/admin/sismaster-events/${externalEventId}/sports`
     : `/admin/events/${eventId}/sports`;
@@ -92,7 +83,26 @@ export function EventSportCategoriesPage() {
     ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/add`
     : `/admin/events/${eventId}/sports/${sportId}/categories/add`;
 
-  
+  // ── Tabs dinámicos según deporte ────────────────────────────────────────────
+  // El tab de resultados cambia su label/icono/key según el deporte
+  const VIEW_TABS: { key: ActiveView; label: string; icon: React.ReactNode }[] = [
+    {
+      key: "categories",
+      label: "Categorías",
+      icon: <LayoutGrid className="h-4 w-4" />,
+    },
+    isJudo
+      ? {
+          key: "medals",
+          label: "Medallero",
+          icon: <Medal className="h-4 w-4" />,
+        }
+      : {
+          key: "scores",
+          label: "Puntajes",
+          icon: <BarChart2 className="h-4 w-4" />,
+        },
+  ];
 
   return (
     <div className="space-y-6 animate-in">
@@ -106,22 +116,18 @@ export function EventSportCategoriesPage() {
       {/* Header del deporte */}
       <Card className="p-6">
         <div className="flex items-center gap-4">
-          {/* Ícono del deporte */}
           <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-md bg-slate-50 flex items-center justify-center flex-shrink-0">
             {sportImage ? (
               <img
                 src={sportImage}
                 alt={sportName}
                 className="w-full h-full object-contain p-3"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
               />
             ) : (
               <Trophy className="h-10 w-10 text-slate-400" />
             )}
           </div>
-
           <div className="flex-1 min-w-0">
             <h2 className="text-2xl font-bold text-slate-900 mb-1">{sportName}</h2>
             <p className="text-slate-600">
@@ -178,7 +184,7 @@ export function EventSportCategoriesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {sportCategories.map((eventCategory) => {
-                const isTeam = eventCategory.category?.type === "equipo";
+                const isTeam           = eventCategory.category?.type === "equipo";
                 const participantsCount = eventCategory.registrations?.length || 0;
 
                 return (
@@ -187,9 +193,7 @@ export function EventSportCategoriesPage() {
                     hover
                     variant="elevated"
                     padding="none"
-                    onClick={() =>
-                      navigate(getCategoryDetailPath(eventCategory.eventCategoryId))
-                    }
+                    onClick={() => navigate(getCategoryDetailPath(eventCategory.eventCategoryId))}
                     className="group cursor-pointer overflow-hidden"
                   >
                     <div className="p-5 pb-3 border-b border-slate-100">
@@ -199,17 +203,14 @@ export function EventSportCategoriesPage() {
                         </h3>
                       </div>
                     </div>
-
                     <div className="p-5">
                       <div className="space-y-3">
-                        {/* Formato */}
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                            {isTeam ? (
-                              <Users className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <Trophy className="h-4 w-4 text-blue-600" />
-                            )}
+                            {isTeam
+                              ? <Users className="h-4 w-4 text-blue-600" />
+                              : <Trophy className="h-4 w-4 text-blue-600" />
+                            }
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs text-slate-500 font-medium">Formato</p>
@@ -218,8 +219,6 @@ export function EventSportCategoriesPage() {
                             </p>
                           </div>
                         </div>
-
-                        {/* Participantes */}
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
                             <Users className="h-4 w-4 text-emerald-600" />
@@ -234,8 +233,6 @@ export function EventSportCategoriesPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Bottom accent */}
                     <div className="h-1 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Card>
                 );
@@ -243,7 +240,6 @@ export function EventSportCategoriesPage() {
             </div>
           )}
 
-          {/* Botón agregar categoría (siempre visible en la vista de categorías) */}
           {sportCategories.length > 0 && (
             <div className="flex justify-end">
               <Button
@@ -259,11 +255,20 @@ export function EventSportCategoriesPage() {
         </>
       )}
 
-      {/* ── Vista: Puntajes ── */}
+      {/* ── Vista: Puntajes (atletismo y otros deportes con score_table) ── */}
       {activeView === "scores" && externalEventIdNum && sportId && (
         <ScoreTables
           externalEventId={externalEventIdNum}
-          localSportId={Number(sportId)}
+          localSportId={sportIdNum}
+        />
+      )}
+
+      {/* ── Vista: Medallero (judo) ── */}
+      {activeView === "medals" && externalEventIdNum && sportId && (
+        <JudoMedalTable
+          externalEventId={externalEventIdNum}
+          localSportId={sportIdNum}
+          eventName={sportName}
         />
       )}
     </div>
