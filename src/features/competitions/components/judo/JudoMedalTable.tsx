@@ -1,6 +1,7 @@
 // src/components/JudoMedalTable.tsx
-import React, { useEffect, useState, useCallback } from 'react';
-import { apiClient } from '@/lib/api/client'; // ajusta la ruta según tu proyecto
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api/client';
 import type { JudoMedalRow, JudoMedalSummaryResponse } from '../../types/judoMedalTable';
 
 interface JudoMedalTableProps {
@@ -11,10 +12,10 @@ interface JudoMedalTableProps {
 }
 
 const MEDAL_COLS = [
-  { key: 'gold',    label: '1st place', color: 'text-amber-500'  },
-  { key: 'silver',  label: '2nd place', color: 'text-slate-500'  },
-  { key: 'bronze',  label: '3rd place', color: 'text-orange-600' },
-  { key: 'fifth',   label: '5th place', color: 'text-sky-500'    },
+  { key: 'gold', label: '1st place', color: 'text-amber-500' },
+  { key: 'silver', label: '2nd place', color: 'text-slate-500' },
+  { key: 'bronze', label: '3rd place', color: 'text-orange-600' },
+  { key: 'fifth', label: '5th place', color: 'text-sky-500' },
   { key: 'seventh', label: '7th place', color: 'text-violet-500' },
 ] as const;
 
@@ -26,34 +27,22 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
   eventName = 'Medallero General',
   eventLocation = '',
 }) => {
-  const [rows, setRows]     = useState<JudoMedalRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const {
+    data: rows = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<JudoMedalRow[]>({
+    queryKey: ['judo-medal-table', externalEventId, localSportId],
+    queryFn: async () => {
       const { data } = await apiClient.get<JudoMedalSummaryResponse>(
         `/judo-medal-table/external/${externalEventId}/local-sport/${localSportId}/summary`,
       );
-      setRows(Array.isArray(data.general) ? data.general : []);
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })
-          ?.response?.data?.message ??
-        (err instanceof Error ? err.message : 'Error desconocido');
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [externalEventId, localSportId]);
+      return Array.isArray(data.general) ? data.general : [];
+    },
+    enabled: !!externalEventId && !!localSportId,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // ── Loading skeleton ────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="w-full rounded-xl border border-slate-200 overflow-hidden shadow-sm animate-pulse">
@@ -66,16 +55,19 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
     );
   }
 
-  // ── Error state ─────────────────────────────────────────────────────────
   if (error) {
+    const message =
+      (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+      (error instanceof Error ? error.message : 'Error desconocido');
+
     return (
       <div className="flex flex-col items-center gap-3 py-10 text-rose-600">
         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 3h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
         </svg>
-        <p className="text-sm font-medium">Error al cargar el medallero: {error}</p>
+        <p className="text-sm font-medium">Error al cargar el medallero: {message}</p>
         <button
-          onClick={fetchData}
+          onClick={() => refetch()}
           className="text-sm px-4 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors"
         >
           Reintentar
@@ -84,7 +76,6 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
     );
   }
 
-  // ── Empty state ─────────────────────────────────────────────────────────
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-12 text-slate-400">
@@ -96,10 +87,8 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
     );
   }
 
-  // ── Table ───────────────────────────────────────────────────────────────
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
-      {/* Header estilo FEDDUP */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-bold text-slate-800 leading-tight truncate">
@@ -140,12 +129,10 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
               key={row.institutionId}
               className="bg-white hover:bg-slate-50 transition-colors duration-100"
             >
-              {/* Rank */}
               <td className="py-2.5 px-3 text-slate-500 font-medium text-sm">
                 {row.rank}.
               </td>
 
-              {/* Institución */}
               <td className="py-2.5 px-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
@@ -154,7 +141,6 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
                     </span>
                   </div>
                   <div className="min-w-0">
-                    
                     <p className="text-xs text-slate-400 truncate max-w-[240px]">
                       {row.institutionName.toUpperCase()}
                     </p>
@@ -162,7 +148,6 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
                 </div>
               </td>
 
-              {/* Medallas */}
               {MEDAL_COLS.map((col) => {
                 const value = row[col.key as MedalKey];
                 return (
@@ -184,18 +169,6 @@ export const JudoMedalTable: React.FC<JudoMedalTableProps> = ({
     </div>
   );
 };
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function getAcronym(name: string): string {
-  const stopWords = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'en', 'a']);
-  return name
-    .split(/\s+/)
-    .filter((w) => !stopWords.has(w.toLowerCase()))
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-    .slice(0, 5);
-}
 
 function getInitials(name: string): string {
   return name
