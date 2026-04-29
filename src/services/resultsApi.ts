@@ -1,3 +1,4 @@
+// src/services/resultsApi.ts
 import { apiClient } from "@/lib/api/client";
 
 export interface CreateTimeResultDto {
@@ -78,29 +79,9 @@ export interface PoomsaeResult {
 }
 
 export const resultsApi = {
-  createTimeResult: async (
-    data: CreateTimeResultDto,
-  ): Promise<SwimmingResult> => {
+  // ── Tiempo normal ─────────────────────────────────────────────────────────
+  createTimeResult: async (data: CreateTimeResultDto): Promise<SwimmingResult> => {
     const response = await apiClient.post("/results/time", data);
-    return response.data;
-  },
-
-  createDNSResult: (registrationId: number, phaseId: number) =>
-    apiClient.post('/results/dns', { registrationId, phaseId }).then(r => r.data),
-
-  getSwimmingResults: async (
-    eventCategoryId: number,
-  ): Promise<SwimmingResult[]> => {
-    const response = await apiClient.get(
-      `/results/swimming/${eventCategoryId}`,
-    );
-    return response.data;
-  },
-
-  getPoomsaeResults: async (
-    eventCategoryId: number,
-  ): Promise<PoomsaeResult[]> => {
-    const response = await apiClient.get(`/results/poomsae/${eventCategoryId}`);
     return response.data;
   },
 
@@ -108,7 +89,7 @@ export const resultsApi = {
     resultId: number,
     data: Partial<CreateTimeResultDto>,
   ): Promise<SwimmingResult> => {
-    const response = await apiClient.patch(`/results/${resultId}`, data);
+    const response = await apiClient.patch(`/results/time/${resultId}`, data); // ← CORREGIDO
     return response.data;
   },
 
@@ -116,12 +97,37 @@ export const resultsApi = {
     await apiClient.delete(`/results/${resultId}`);
   },
 
-  recalculatePositions: async (eventCategoryId: number): Promise<void> => {
-    await apiClient.post(`/results/swimming/${eventCategoryId}/recalculate`);
-  },
+  // ── Estados especiales ────────────────────────────────────────────────────
+  createDNSResult: (registrationId: number, phaseId: number) =>
+    apiClient.post("/results/dns", { registrationId, phaseId }).then((r) => r.data),
 
-  async getPhaseResults(phaseId: number) {
+  createDNFResult: (registrationId: number, phaseId: number) =>
+    apiClient
+      .post("/results/time", { registrationId, phaseId, timeValue: "DNF", notes: "DNF" })
+      .then((r) => r.data),
+
+  createDQResult: (registrationId: number, phaseId: number) =>
+    apiClient
+      .post("/results/time", { registrationId, phaseId, timeValue: "DQ", notes: "DQ" })
+      .then((r) => r.data),
+
+  // ── Consultas ─────────────────────────────────────────────────────────────
+  getPhaseResults: async (phaseId: number) => {
     const response = await apiClient.get(`/results/phase/${phaseId}`);
     return response.data;
+  },
+
+  getSwimmingResults: async (eventCategoryId: number): Promise<SwimmingResult[]> => {
+    const response = await apiClient.get(`/results/swimming/${eventCategoryId}`);
+    return response.data;
+  },
+
+  getPoomsaeResults: async (eventCategoryId: number): Promise<PoomsaeResult[]> => {
+    const response = await apiClient.get(`/results/poomsae/${eventCategoryId}`);
+    return response.data;
+  },
+
+  recalculatePositions: async (eventCategoryId: number): Promise<void> => {
+    await apiClient.post(`/results/swimming/${eventCategoryId}/recalculate`);
   },
 };

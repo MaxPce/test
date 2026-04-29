@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { usePhases } from "@/features/competitions/api/phases.queries";
-import { usePhaseResults, useDeleteTimeResult, useCreateDNSResult } from "../api/results.queries";
+import { usePhaseResults, useDeleteTimeResult, useCreateDNSResult, useCreateDNFResult, useCreateDQResult, } from "../api/results.queries";
 import {
   usePhaseRegistrations,
   useRemovePhaseRegistration,
@@ -94,7 +94,7 @@ export function SwimmingResultsTable({
     useEffect(() => {
         setSearchQuery("");
       }, [effectivePhaseId]);    
-      
+
   const { data: results = [], isLoading: resultsLoading } =
     usePhaseResults(effectivePhaseId);
 
@@ -103,7 +103,9 @@ export function SwimmingResultsTable({
 
   const removePhaseRegMutation = useRemovePhaseRegistration();
   const deleteResultMutation = useDeleteTimeResult();
-  const createDNSMutation = useCreateDNSResult(); 
+  const createDNSMutation = useCreateDNSResult();
+  const createDNFMutation = useCreateDNFResult(); 
+  const createDQMutation = useCreateDQResult();
 
   const activeRegistrations: Registration[] = forcedPhaseId
     ? phaseRegistrations.map((pr: any) => pr.registration as Registration)
@@ -342,17 +344,13 @@ export function SwimmingResultsTable({
                         >
                           <td className="px-4 py-4">
                             {isDQ ? (
-                              <Badge variant="default" className="bg-red-100 text-red-700 text-xs">
-                                DQ
-                              </Badge>
+                              <Badge variant="default" className="bg-red-100 text-red-700 text-xs">DQ</Badge>
                             ) : result?.notes?.includes("DNS") ? (
-                              <Badge variant="default" className="bg-orange-100 text-orange-700 text-xs">
-                                DNS
-                              </Badge>
+                              <Badge variant="default" className="bg-orange-100 text-orange-700 text-xs">DNS</Badge>
+                            ) : result?.notes?.includes("DNF") ? (                                          
+                              <Badge variant="default" className="bg-yellow-100 text-yellow-700 text-xs">DNF</Badge>
                             ) : result ? (
-                              <Badge variant="default" className="bg-green-100 text-green-700 text-xs">
-                                ✓
-                              </Badge>
+                              <Badge variant="default" className="bg-green-100 text-green-700 text-xs">✓</Badge>
                             ) : (
                               <span className="text-sm text-gray-400">—</span>
                             )}
@@ -401,6 +399,8 @@ export function SwimmingResultsTable({
                           <td className="px-4 py-4 text-center whitespace-nowrap">
                             {result?.notes?.includes("DNS") ? (
                               <span className="text-sm font-mono font-bold text-orange-500">DNS</span>
+                            ) : result?.notes?.includes("DNF") ? (                                          
+                              <span className="text-sm font-mono font-bold text-yellow-600">DNF</span>
                             ) : result ? (
                               <span className={`text-sm font-mono font-bold ${
                                 isDQ ? "text-red-500 line-through" : "text-blue-700"
@@ -416,81 +416,88 @@ export function SwimmingResultsTable({
                             <div className="flex justify-end gap-1">
                               {result ? (
                                 <>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleRegisterTime(registration, result)
-                                    }
-                                    title="Editar tiempo"
-                                  >
+                                  <Button variant="ghost" size="sm"
+                                    onClick={() => handleRegisterTime(registration, result)}
+                                    title="Editar tiempo">
                                     <Edit2 className="h-4 w-4" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleDeleteResult(result.resultId)
-                                    }
+                                  <Button variant="ghost" size="sm"
+                                    onClick={() => handleDeleteResult(result.resultId)}
                                     disabled={deleteResultMutation.isPending}
                                     title="Eliminar resultado"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  >
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50">
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
+
+                                  {/* Estado actual como botón toggle — solo muestra el activo */}
                                   {result.notes?.includes("DNS") ? (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
+                                    <Button variant="ghost" size="sm"
                                       onClick={() => handleDeleteResult(result.resultId)}
                                       disabled={deleteResultMutation.isPending}
-                                      className="text-orange-500 hover:text-gray-600 hover:bg-gray-50"
-                                      title="Quitar DNS"
-                                    >
-                                      ✕ DNS
-                                    </Button>
+                                      className="text-orange-500 hover:bg-gray-50 text-xs px-2"
+                                      title="Quitar DNS">✕ DNS</Button>
+                                  ) : result.notes?.includes("DNF") ? (
+                                    <Button variant="ghost" size="sm"
+                                      onClick={() => handleDeleteResult(result.resultId)}
+                                      disabled={deleteResultMutation.isPending}
+                                      className="text-yellow-600 hover:bg-gray-50 text-xs px-2"
+                                      title="Quitar DNF">✕ DNF</Button>
+                                  ) : result.notes?.includes("DQ") ? (
+                                    <Button variant="ghost" size="sm"
+                                      onClick={() => handleDeleteResult(result.resultId)}
+                                      disabled={deleteResultMutation.isPending}
+                                      className="text-red-600 hover:bg-gray-50 text-xs px-2"
+                                      title="Quitar DQ">✕ DQ</Button>
                                   ) : (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        createDNSMutation.mutate({
-                                          registrationId: registration.registrationId,
-                                          phaseId: effectivePhaseId,
-                                        })
-                                      }
-                                      disabled={createDNSMutation.isPending}
-                                      className="text-gray-500 hover:text-orange-600 hover:bg-orange-50"
-                                      title="Marcar como no presentado"
-                                    >
-                                      DNS
-                                    </Button>
+                                    // Sin estado especial → mostrar los 3 como opciones
+                                    <>
+                                      <Button variant="ghost" size="sm"
+                                        onClick={() => createDNSMutation.mutate({ registrationId: registration.registrationId, phaseId: effectivePhaseId })}
+                                        disabled={createDNSMutation.isPending}
+                                        className="text-gray-400 hover:text-orange-600 hover:bg-orange-50 text-xs px-2"
+                                        title="No se presentó">DNS</Button>
+                                      <Button variant="ghost" size="sm"
+                                        onClick={() => createDNFMutation.mutate({ registrationId: registration.registrationId, phaseId: effectivePhaseId })}
+                                        disabled={createDNFMutation.isPending}
+                                        className="text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 text-xs px-2"
+                                        title="No terminó">DNF</Button>
+                                      <Button variant="ghost" size="sm"
+                                        onClick={() => createDQMutation.mutate({ registrationId: registration.registrationId, phaseId: effectivePhaseId })}
+                                        disabled={createDQMutation.isPending}
+                                        className="text-gray-400 hover:text-red-600 hover:bg-red-50 text-xs px-2"
+                                        title="Descalificado">DQ</Button>
+                                    </>
                                   )}
                                 </>
-                              ) : (
+                            ) : (
                               <>
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => handleRegisterTime(registration)}
-                                >
+                                <Button variant="primary" size="sm" onClick={() => handleRegisterTime(registration)}>
                                   <Timer className="h-4 w-4 mr-1" />
                                   Registrar
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    createDNSMutation.mutate({
-                                      registrationId: registration.registrationId,
-                                      phaseId: effectivePhaseId,
-                                    })
-                                  }
+                                <Button variant="ghost" size="sm"
+                                  onClick={() => createDNSMutation.mutate({ registrationId: registration.registrationId, phaseId: effectivePhaseId })}
                                   disabled={createDNSMutation.isPending}
                                   className="text-gray-500 hover:text-orange-600 hover:bg-orange-50"
                                   title="No se presentó"
                                 >
                                   DNS
+                                </Button>
+                                <Button variant="ghost" size="sm"
+                                  onClick={() => createDNFMutation.mutate({ registrationId: registration.registrationId, phaseId: effectivePhaseId })}
+                                  disabled={createDNFMutation.isPending}
+                                  className="text-gray-500 hover:text-yellow-600 hover:bg-yellow-50"
+                                  title="No terminó la prueba"
+                                >
+                                  DNF
+                                </Button>
+                                <Button variant="ghost" size="sm"
+                                  onClick={() => createDQMutation.mutate({ registrationId: registration.registrationId, phaseId: effectivePhaseId })}
+                                  disabled={createDQMutation.isPending}
+                                  className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                  title="Descalificado"
+                                >
+                                  DQ
                                 </Button>
                               </>
                             )}
