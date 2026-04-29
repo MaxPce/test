@@ -12,10 +12,12 @@ import { useEventCategories, useSismasterEventCategories } from "../api/eventCat
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { ScoreTables } from "../../competitions/components/score-tables/ScoreTables";
 import { JudoMedalTable } from "../../competitions/components/judo/JudoMedalTable";
+import { SwimmingMedalTable } from "../../results/components/SwimmingMedalTable";
 
 // ─── ID local del deporte Judo en tu tabla `sports` ─────────────────────────
 // Reemplaza este número con el sport_id real de Judo en tu DB
 const JUDO_SPORT_ID = 4; 
+const SWIMMING_SPORT_ID = 9;
 
 // ─── Tipos de vista ──────────────────────────────────────────────────────────
 type ActiveView = "categories" | "scores" | "medals";
@@ -37,7 +39,7 @@ export function EventSportCategoriesPage() {
   const isExternalEvent     = !!externalEventId;
 
   const isJudo = sportIdNum === JUDO_SPORT_ID;
-
+  const isSwimming = sportIdNum === SWIMMING_SPORT_ID;
   const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
     { eventId: eventIdNum },
     { enabled: !isExternalEvent && !!eventIdNum }
@@ -91,7 +93,8 @@ export function EventSportCategoriesPage() {
       label: "Categorías",
       icon: <LayoutGrid className="h-4 w-4" />,
     },
-    isJudo
+    // Judo y Natación → "Medallero"; el resto → "Puntajes"
+    isJudo || isSwimming
       ? {
           key: "medals",
           label: "Medallero",
@@ -263,13 +266,20 @@ export function EventSportCategoriesPage() {
         />
       )}
 
-      {/* ── Vista: Medallero (judo) ── */}
+      {/* ── Vista: Medallero (judo / natación) ── */}
       {activeView === "medals" && externalEventIdNum && sportId && (
-        <JudoMedalTable
-          externalEventId={externalEventIdNum}
-          localSportId={sportIdNum}
-          eventName={sportName}
-        />
+        isJudo ? (
+          <JudoMedalTable
+            externalEventId={externalEventIdNum}
+            localSportId={sportIdNum}
+            eventName={sportName}
+          />
+        ) : isSwimming ? (
+          <SwimmingMedalTable
+            externalEventId={externalEventIdNum}
+            localSportId={sportIdNum}
+          />
+        ) : null
       )}
     </div>
   );
