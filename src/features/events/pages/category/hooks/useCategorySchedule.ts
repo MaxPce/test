@@ -28,6 +28,7 @@ export type ModalName =
   | "phase"
   | "match"
   | "assign"
+  | "assignPhase"
   | "result"
   | "generateRoundRobin"
   | "collective"
@@ -45,6 +46,7 @@ const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   phase: false,
   match: false,
   assign: false,
+  assignPhase: false,
   result: false,
   generateRoundRobin: false,
   collective: false,

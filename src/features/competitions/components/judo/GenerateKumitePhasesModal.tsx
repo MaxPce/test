@@ -5,15 +5,15 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiClient } from '@/lib/api/client';
-import { AlertCircle, ArrowRightLeft, Users, Swords, Trophy } from 'lucide-react';
+import { AlertCircle, ArrowRightLeft, Users, Swords, Trophy, CheckSquare, Square } from 'lucide-react';
 import { useGenerateKumitePhases } from '../../api/judo-phases.mutations';
 import type { KumitePhaseFormat } from '../../api/judo-phases.api';
 
 // ─── Tipos internos ──────────────────────────────────────────────────────────
 
 interface NivCatCombo {
-  idniv: string; // "NOVELES" | "AVANZADOS" (viene de Sismaster)
-  idcat: string; // "M" | "F"
+  idniv: string;
+  idcat: string;
   total: number;
 }
 
@@ -24,15 +24,15 @@ interface KumiteAthlete {
 }
 
 interface KumiteGroup {
-  key: string;             // "NOVELES-M"
-  phaseName: string;       // "Varones Nv -60kg"
+  key: string;
+  phaseName: string;
   idniv: string;
   idcat: string;
   format: KumitePhaseFormat;
   athletes: KumiteAthlete[];
 }
 
-// ─── Helpers de labels ────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getNivLabel(idniv: string): string {
   const n = idniv.toLowerCase().trim();
@@ -49,11 +49,10 @@ function getCatLabel(idcat: string): string {
 }
 
 function buildPhaseName(idniv: string, idcat: string, categoryName: string): string {
-  // Resultado: "Varones Az -60kg" | "Damas Nv -72kg"
   return `${getCatLabel(idcat)} ${getNivLabel(idniv)} ${categoryName}`;
 }
 
-// ─── Opciones de formato ──────────────────────────────────────────────────────
+// ─── Opciones de formato ─────────────────────────────────────────────────────
 
 const FORMAT_OPTIONS: {
   value: KumitePhaseFormat;
@@ -81,13 +80,13 @@ const FORMAT_OPTIONS: {
   },
 ];
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+// ─── Props ───────────────────────────────────────────────────────────────────
 
 export interface GenerateKumitePhasesModalProps {
   open: boolean;
   onClose: () => void;
   eventCategoryId: number;
-  categoryName: string;       // Ej: "-60kg" — se usa en el nombre de la fase
+  categoryName: string;
   sismasterEventId?: number;
   sismasterSportId?: number;
   allRegistrations: any[];
@@ -107,18 +106,12 @@ export function GenerateKumitePhasesModal({
   const mutation = useGenerateKumitePhases();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
 
-  // ── Step 1: Cargar combos niv/cat desde Sismaster ─────────────────────────
   const {
     data: combosData,
     isLoading: loadingCombos,
     error: combosError,
   } = useQuery<{ combos: NivCatCombo[] }>({
-    queryKey: [
-      'sismaster-niv-cat-options',
-      sismasterEventId,
-      sismasterSportId,
-      eventCategoryId,
-    ],
+    queryKey: ['sismaster-niv-cat-options', sismasterEventId, sismasterSportId, eventCategoryId],
     queryFn: async () => {
       const { data } = await apiClient.get('/sismaster/athletes/niv-cat-options', {
         params: { sismasterEventId, sismasterSportId, eventCategoryId },
@@ -131,30 +124,13 @@ export function GenerateKumitePhasesModal({
 
   const combos = combosData?.combos ?? [];
 
-  // ── Step 2: Cargar registrationIds por combo en paralelo ──────────────────
   const comboQueries = useQueries({
     queries: combos.map((combo) => ({
-      queryKey: [
-        'sismaster-registrations-niv-cat',
-        sismasterEventId,
-        sismasterSportId,
-        eventCategoryId,
-        combo.idniv,
-        combo.idcat,
-      ],
+      queryKey: ['sismaster-registrations-niv-cat', sismasterEventId, sismasterSportId, eventCategoryId, combo.idniv, combo.idcat],
       queryFn: async (): Promise<{ registrationIds: number[] }> => {
-        const { data } = await apiClient.get(
-          '/sismaster/athletes/registrations-by-niv-cat',
-          {
-            params: {
-              sismasterEventId,
-              sismasterSportId,
-              idniv: combo.idniv,
-              idcat: combo.idcat,
-              eventCategoryId,
-            },
-          },
-        );
+        const { data } = await apiClient.get('/sismaster/athletes/registrations-by-niv-cat', {
+          params: { sismasterEventId, sismasterSportId, idniv: combo.idniv, idcat: combo.idcat, eventCategoryId },
+        });
         return data;
       },
       enabled: hasSismaster && open && combos.length > 0,
@@ -163,34 +139,23 @@ export function GenerateKumitePhasesModal({
   });
 
   const loadingCombosData = comboQueries.some((q) => q.isLoading);
-  const allQueriesDone =
-    combos.length > 0 && comboQueries.every((q) => q.isSuccess);
+  const allQueriesDone = combos.length > 0 && comboQueries.every((q) => q.isSuccess);
 
-  // ── Mapa local registrationId → KumiteAthlete ─────────────────────────────
   const regMap = useMemo(() => {
     const map = new Map<number, KumiteAthlete>();
     for (const reg of allRegistrations) {
       map.set(reg.registrationId, {
         registrationId: reg.registrationId,
-        name:
-          reg.athlete?.name ??
-          reg.team?.name ??
-          `Registro ${reg.registrationId}`,
-        institution:
-          reg.athlete?.institution?.name ??
-          reg.team?.institution?.name ??
-          null,
+        name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
+        institution: reg.athlete?.institution?.name ?? reg.team?.institution?.name ?? null,
       });
     }
     return map;
   }, [allRegistrations]);
 
-  // ── Step 3: Construir grupos iniciales ────────────────────────────────────
   const initialGroups = useMemo((): KumiteGroup[] => {
     if (!allQueriesDone) return [];
-
     const seenIds = new Set<number>();
-
     return combos
       .map((combo, idx) => {
         const ids = comboQueries[idx].data?.registrationIds ?? [];
@@ -202,31 +167,27 @@ export function GenerateKumitePhasesModal({
             seenIds.add(a.registrationId);
             return true;
           });
-
         return {
           key: `${combo.idniv}-${combo.idcat}`,
           phaseName: buildPhaseName(combo.idniv, combo.idcat, categoryName),
           idniv: combo.idniv,
           idcat: combo.idcat,
-          format: 'single_elimination' as KumitePhaseFormat, // default
+          format: 'single_elimination' as KumitePhaseFormat,
           athletes,
         };
       })
       .filter((g) => g.athletes.length > 0)
-      // Orden: Varones primero, luego Damas; Avanzados antes que Noveles
       .sort((a, b) => {
-        const catOrder = (c: string) =>
-          c.toLowerCase().includes('f') || c.toLowerCase().includes('dam') ? 1 : 0;
-        const nivOrder = (n: string) =>
-          n.toLowerCase().includes('novel') ? 1 : 0;
-        if (catOrder(a.idcat) !== catOrder(b.idcat))
-          return catOrder(a.idcat) - catOrder(b.idcat);
+        const catOrder = (c: string) => c.toLowerCase().includes('f') || c.toLowerCase().includes('dam') ? 1 : 0;
+        const nivOrder = (n: string) => n.toLowerCase().includes('novel') ? 1 : 0;
+        if (catOrder(a.idcat) !== catOrder(b.idcat)) return catOrder(a.idcat) - catOrder(b.idcat);
         return nivOrder(a.idniv) - nivOrder(b.idniv);
       });
   }, [allQueriesDone, combos, comboQueries, regMap, categoryName]);
 
-  // ── Estado editable ───────────────────────────────────────────────────────
+  // ── State ────────────────────────────────────────────────────────────────
   const [groups, setGroups] = useState<KumiteGroup[]>([]);
+  const [selectedGroupKeys, setSelectedGroupKeys] = useState<Set<string>>(new Set()); // ← NUEVO
   const [selectedRegId, setSelectedRegId] = useState<number | null>(null);
   const [sourceGroupKey, setSourceGroupKey] = useState<string | null>(null);
 
@@ -239,6 +200,7 @@ export function GenerateKumitePhasesModal({
     if (!open && prevOpenRef.current) {
       hasInitialized.current = false;
       setGroups([]);
+      setSelectedGroupKeys(new Set()); // ← NUEVO reset
       setSelectedRegId(null);
       setSourceGroupKey(null);
     }
@@ -250,18 +212,35 @@ export function GenerateKumitePhasesModal({
       if (g.length > 0) {
         hasInitialized.current = true;
         setGroups(g);
+        setSelectedGroupKeys(new Set(g.map((grp) => grp.key))); // ← NUEVO: todos seleccionados por defecto
       }
     }
   }, [open, allQueriesDone, hasSismaster]);
 
-  // ── Cambiar formato de un grupo ───────────────────────────────────────────
   const setGroupFormat = (key: string, format: KumitePhaseFormat) => {
-    setGroups((prev) =>
-      prev.map((g) => (g.key === key ? { ...g, format } : g)),
-    );
+    setGroups((prev) => prev.map((g) => (g.key === key ? { ...g, format } : g)));
   };
 
-  // ── Mover atleta entre grupos ─────────────────────────────────────────────
+  // ── NUEVO: toggle selección individual y total ────────────────────────────
+  const toggleGroupSelection = (key: string) => {
+    setSelectedGroupKeys((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const allSelected = groups.length > 0 && groups.every((g) => selectedGroupKeys.has(g.key));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedGroupKeys(new Set());
+    } else {
+      setSelectedGroupKeys(new Set(groups.map((g) => g.key)));
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleSelectAthlete = (groupKey: string, registrationId: number) => {
     if (selectedRegId === registrationId && sourceGroupKey === groupKey) {
       setSelectedRegId(null);
@@ -279,9 +258,7 @@ export function GenerateKumitePhasesModal({
       const from = cloned.find((g) => g.key === sourceGroupKey);
       const to = cloned.find((g) => g.key === targetKey);
       if (!from || !to) return prev;
-      const idx = from.athletes.findIndex(
-        (a) => a.registrationId === selectedRegId,
-      );
+      const idx = from.athletes.findIndex((a) => a.registrationId === selectedRegId);
       if (idx === -1) return prev;
       const [athlete] = from.athletes.splice(idx, 1);
       to.athletes.push(athlete);
@@ -291,9 +268,10 @@ export function GenerateKumitePhasesModal({
     setSourceGroupKey(null);
   };
 
-  // ── Confirmar generación ──────────────────────────────────────────────────
   const handleGenerate = async () => {
-    const validGroups = groups.filter((g) => g.athletes.length > 0);
+    const validGroups = groups.filter(
+      (g) => g.athletes.length > 0 && selectedGroupKeys.has(g.key), // ← NUEVO filtro
+    );
     if (!validGroups.length) return;
     try {
       await mutation.mutateAsync({
@@ -310,25 +288,17 @@ export function GenerateKumitePhasesModal({
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   const isLoading = loadingCombos || loadingCombosData;
-  const validGroups = groups.filter((g) => g.athletes.length > 0);
-  const totalAthletes = validGroups.reduce(
-    (acc, g) => acc + g.athletes.length,
-    0,
+  const validGroups = groups.filter(
+    (g) => g.athletes.length > 0 && selectedGroupKeys.has(g.key), // ← NUEVO filtro
   );
+  const totalAthletes = validGroups.reduce((acc, g) => acc + g.athletes.length, 0);
   const canMoveAthletes = groups.length > 1;
 
   return (
-    <Modal
-      isOpen={open}
-      onClose={onClose}
-      title={`Generar Fases — ${categoryName}`}
-      size="xl"
-    >
+    <Modal isOpen={open} onClose={onClose} title={`Generar Fases — ${categoryName}`} size="xl">
       <div className="space-y-4">
 
-        {/* Cargando */}
         {isLoading && (
           <div className="flex items-center justify-center gap-3 py-12 text-slate-500">
             <Spinner size="md" />
@@ -336,47 +306,50 @@ export function GenerateKumitePhasesModal({
           </div>
         )}
 
-        {/* Sin Sismaster configurado */}
         {!hasSismaster && !isLoading && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              Esta categoría no tiene Sismaster configurado. Verifica la
-              integración con Sismaster.
-            </span>
+            <span>Esta categoría no tiene Sismaster configurado. Verifica la integración con Sismaster.</span>
           </div>
         )}
 
-        {/* Error Sismaster */}
         {combosError && !isLoading && (
           <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
-              No se pudieron cargar los grupos. Verifica la conexión con
-              Sismaster.
-            </span>
+            <span>No se pudieron cargar los grupos. Verifica la conexión con Sismaster.</span>
           </div>
         )}
 
-        {/* Sin atletas encontrados */}
-        {hasSismaster &&
-          !isLoading &&
-          !combosError &&
-          allQueriesDone &&
-          groups.length === 0 && (
-            <p className="py-10 text-center text-sm text-slate-500">
-              No se encontraron atletas inscritos con nivel/categoría en
-              Sismaster para esta categoría.
-            </p>
-          )}
+        {hasSismaster && !isLoading && !combosError && allQueriesDone && groups.length === 0 && (
+          <p className="py-10 text-center text-sm text-slate-500">
+            No se encontraron atletas inscritos con nivel/categoría en Sismaster para esta categoría.
+          </p>
+        )}
 
-        {/* Grid de grupos */}
         {!isLoading && groups.length > 0 && (
           <>
-            
+            {/* ── NUEVO: Barra "Seleccionar todas" ── */}
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <span className="text-xs font-medium text-slate-600">
+                {selectedGroupKeys.size} de {groups.length} fase(s) seleccionada(s)
+              </span>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 transition-colors"
+              >
+                {allSelected ? (
+                  <CheckSquare size={14} className="text-blue-600" />
+                ) : (
+                  <Square size={14} className="text-slate-400" />
+                )}
+                {allSelected ? 'Deseleccionar todas' : 'Seleccionar todas'}
+              </button>
+            </div>
 
             <div className="grid max-h-[55vh] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
               {groups.map((group) => {
+                const isGroupSelected = selectedGroupKeys.has(group.key); // ← NUEVO
                 const isTarget =
                   canMoveAthletes &&
                   selectedRegId !== null &&
@@ -391,19 +364,35 @@ export function GenerateKumitePhasesModal({
                       'rounded-xl border-2 p-4 transition-all',
                       isTarget
                         ? 'cursor-pointer border-blue-400 bg-blue-50 hover:shadow-md'
-                        : 'border-slate-200 bg-white',
+                        : isGroupSelected
+                          ? 'border-slate-200 bg-white'
+                          : 'border-slate-200 bg-slate-50 opacity-60', // ← NUEVO: dimming cuando no seleccionado
                     ].join(' ')}
                   >
-                    {/* Cabecera del grupo */}
                     <div className="mb-3">
                       <div className="mb-2 flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="text-sm font-semibold leading-tight text-slate-800">
-                            {group.phaseName}
-                          </h3>
-                          <p className="mt-0.5 text-xs text-slate-500">
-                            {group.athletes.length} atleta(s)
-                          </p>
+                        {/* ── NUEVO: Checkbox + título ── */}
+                        <div className="flex items-start gap-2 min-w-0">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleGroupSelection(group.key); }}
+                            className="mt-0.5 shrink-0 text-slate-400 hover:text-blue-600 transition-colors"
+                            aria-label={isGroupSelected ? `Deseleccionar ${group.phaseName}` : `Seleccionar ${group.phaseName}`}
+                          >
+                            {isGroupSelected ? (
+                              <CheckSquare size={16} className="text-blue-600" />
+                            ) : (
+                              <Square size={16} />
+                            )}
+                          </button>
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold leading-tight text-slate-800">
+                              {group.phaseName}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              {group.athletes.length} atleta(s)
+                            </p>
+                          </div>
                         </div>
                         {isTarget && (
                           <span className="shrink-0 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold text-white">
@@ -412,31 +401,29 @@ export function GenerateKumitePhasesModal({
                         )}
                       </div>
 
-                      {/* Selector de formato */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {FORMAT_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setGroupFormat(group.key, opt.value);
-                            }}
-                            className={[
-                              'flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-all',
-                              group.format === opt.value
-                                ? opt.activeClass
-                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
-                            ].join(' ')}
-                          >
-                            {opt.icon}
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                      {/* ── NUEVO: formato solo si la fase está seleccionada ── */}
+                      {isGroupSelected && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {FORMAT_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setGroupFormat(group.key, opt.value); }}
+                              className={[
+                                'flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-all',
+                                group.format === opt.value
+                                  ? opt.activeClass
+                                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+                              ].join(' ')}
+                            >
+                              {opt.icon}
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Lista de atletas */}
                     <div className="space-y-1.5">
                       {group.athletes.length === 0 ? (
                         <p className="rounded-lg border border-dashed border-slate-200 py-3 text-center text-xs text-slate-400">
@@ -448,19 +435,13 @@ export function GenerateKumitePhasesModal({
                             canMoveAthletes &&
                             selectedRegId === athlete.registrationId &&
                             sourceGroupKey === group.key;
-
                           return (
                             <button
                               key={athlete.registrationId}
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (canMoveAthletes) {
-                                  handleSelectAthlete(
-                                    group.key,
-                                    athlete.registrationId,
-                                  );
-                                }
+                                if (canMoveAthletes) handleSelectAthlete(group.key, athlete.registrationId);
                               }}
                               className={[
                                 'w-full rounded-lg border p-2.5 text-left transition-all',
@@ -473,18 +454,12 @@ export function GenerateKumitePhasesModal({
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium text-slate-800">
-                                    {athlete.name}
-                                  </p>
+                                  <p className="truncate text-sm font-medium text-slate-800">{athlete.name}</p>
                                   {athlete.institution && (
-                                    <p className="truncate text-xs text-slate-500">
-                                      {athlete.institution}
-                                    </p>
+                                    <p className="truncate text-xs text-slate-500">{athlete.institution}</p>
                                   )}
                                 </div>
-                                {isSelected && (
-                                  <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-                                )}
+                                {isSelected && <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-blue-500" />}
                               </div>
                             </button>
                           );
@@ -501,34 +476,33 @@ export function GenerateKumitePhasesModal({
         {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-slate-600">
-            {validGroups.length > 0 && (
+            {groups.length > 0 && (
               <>
-                <p>{validGroups.length} fase(s) a crear</p>
-                <p className="text-slate-500">
-                  {totalAthletes} atleta(s) asignados en total
+                <p>
+                  {validGroups.length > 0
+                    ? `${validGroups.length} de ${groups.length} fase(s) seleccionada(s)`
+                    : 'Ninguna fase seleccionada'}
                 </p>
+                {validGroups.length > 0 && (
+                  <p className="text-slate-500">{totalAthletes} atleta(s) en las fases seleccionadas</p>
+                )}
               </>
             )}
           </div>
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={mutation.isPending}
-            >
+            <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
               Cancelar
             </Button>
             <Button
               type="button"
               onClick={handleGenerate}
-              disabled={
-                validGroups.length === 0 || mutation.isPending || isLoading
-              }
+              disabled={validGroups.length === 0 || mutation.isPending || isLoading}
             >
               {mutation.isPending
                 ? 'Generando...'
-                : `Generar ${validGroups.length} fase(s)`}
+                : validGroups.length > 0
+                  ? `Generar ${validGroups.length} fase(s)`
+                  : 'Selecciona al menos una fase'}
             </Button>
           </div>
         </div>

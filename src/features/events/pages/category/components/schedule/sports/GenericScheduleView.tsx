@@ -36,6 +36,7 @@ import { PhaseDetailPanel } from "../PhaseDetailPanel";
 import type { Phase } from "@/features/competitions/types";
 import type { GenericViewProps } from "./types";
 import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
+import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -274,7 +275,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                       openModal("assign");
                     }}
                   >
-                    Asignar
+                    Asigna
                   </Button>
                 )}
                 {participants.length === 2 && (
@@ -352,13 +353,12 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             Generar Serie
           </Button>
         )}
-        {/* Asignar — solo en fases de grupo (no eliminacion/repechaje) */}
+        {/* Asignar participantes a la fase directamente */}
         {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
           && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion") && (
           <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => {
             closeModal("result");
-            setSelectedMatch(null);
-            openModal("assign");
+            openModal("assignPhase");
           }}>
             Asignar
           </Button>
@@ -468,7 +468,23 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             </Modal>
           )}
 
-          {/* ── FIX #6: match + registrations completos en lugar de phaseId + availableRegistrations ── */}
+          {/* ── Asignar participantes directamente a la fase ── */}
+          {modals.assignPhase && (
+            <AssignPhaseParticipantModal
+              isOpen={modals.assignPhase}
+              onClose={() => closeModal("assignPhase")}
+              phaseId={selectedPhase.phaseId}
+              phaseName={selectedPhase.name}
+              allRegistrations={eventCategory.registrations ?? []}
+              sismasterEventId={eventCategory.externalEventId ?? undefined}
+              sismasterSportId={eventCategory.externalSportId ?? undefined}
+              eventCategoryId={eventCategory.eventCategoryId}
+            />
+          )}
+
+          
+
+          {/* match + registrations completos en lugar de phaseId + availableRegistrations ── */}
           {modals.assign && selectedMatch && (
             <AssignParticipantsModal
               isOpen={modals.assign}

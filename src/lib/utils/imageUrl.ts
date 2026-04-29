@@ -17,7 +17,7 @@ export function getImageUrl(relativePath?: string | null): string | undefined {
   // Si comienza con /uploads, es del backend
   if (relativePath.startsWith("/uploads/")) {
     // Quitar el /api del baseURL si existe
-    const baseUrl = API_BASE_URL.replace("/api", "");
+    const baseUrl = API_BASE_URL.replace(/\/api\/?$/, "");
     return `${baseUrl}${relativePath}`;
   }
 

@@ -1,5 +1,5 @@
 import type { PhaseFormat, MatchStatus } from "@/lib/types/common.types";
-import type { EventCategory } from "@/features/events/types";
+import type { export EventCategory } from "@/features/events/types";
 import type { Athlete, Team } from "@/features/institutions/types";
 
 // ─── Enums (espejo del backend) ─────────────────────────────────────────────────

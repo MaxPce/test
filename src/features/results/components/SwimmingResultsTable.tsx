@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Timer, Edit2, Trash2, Users, X } from "lucide-react";
@@ -77,6 +77,9 @@ export function SwimmingResultsTable({
   const [selectedResult, setSelectedResult] =
     useState<SwimmingResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(""); 
+
+  
 
   const { data: phases = [], isLoading: phasesLoading } =
     usePhases(eventCategoryId);
@@ -88,6 +91,10 @@ export function SwimmingResultsTable({
     phases[0]?.phaseId ||
     0;
 
+    useEffect(() => {
+        setSearchQuery("");
+      }, [effectivePhaseId]);    
+      
   const { data: results = [], isLoading: resultsLoading } =
     usePhaseResults(effectivePhaseId);
 
@@ -101,6 +108,20 @@ export function SwimmingResultsTable({
   const activeRegistrations: Registration[] = forcedPhaseId
     ? phaseRegistrations.map((pr: any) => pr.registration as Registration)
     : registrations;
+
+  const filteredRegistrations = searchQuery.trim()
+    ? activeRegistrations.filter((reg) => {
+        const q = searchQuery.toLowerCase();
+        if (reg.team) {
+          return (
+            reg.team.name.toLowerCase().includes(q) ||
+            reg.team.members?.some((m) => m.athlete.name.toLowerCase().includes(q))
+          );
+        }
+        return reg.athlete?.name.toLowerCase().includes(q);
+      })
+    : activeRegistrations;
+
 
   const getResultForRegistration = (
     registrationId: number,
@@ -216,13 +237,42 @@ export function SwimmingResultsTable({
         <Card>
           {selectedPhase && (
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <h4 className="font-bold text-gray-900 text-lg">
                   {(selectedPhase as any).name}
                 </h4>
-                <Badge variant="primary">
-                  {activeRegistrations.length} participantes
-                </Badge>
+                <div className="flex items-center gap-3">
+                  {/* ← NUEVO: buscador */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Buscar participante..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg
+                                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                bg-white w-52 placeholder:text-gray-400"
+                    />
+                    <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round"
+                        d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                    </svg>
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400
+                                  hover:text-gray-600 transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <Badge variant="primary">
+                    {filteredRegistrations.length}
+                    {searchQuery && ` / ${activeRegistrations.length}`} participantes
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
           )}
@@ -236,14 +286,21 @@ export function SwimmingResultsTable({
             ) : activeRegistrations.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="font-medium text-gray-600">
-                  No hay participantes en esta serie
-                </p>
+                <p className="font-medium text-gray-600">No hay participantes en esta serie</p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Usa el botón{" "}
-                  <strong>"Asignar Participante"</strong> para agregar atletas a
-                  esta serie
+                  Usa el botón <strong>"Asignar Participante"</strong> para agregar atletas a esta serie
                 </p>
+              </div>
+            ) : filteredRegistrations.length === 0 ? (   // ← AÑADIR este bloque
+              <div className="text-center py-12 text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="font-medium text-gray-600">Sin resultados para "{searchQuery}"</p>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-sm text-blue-600 hover:underline mt-2"
+                >
+                  Limpiar búsqueda
+                </button>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -268,7 +325,7 @@ export function SwimmingResultsTable({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {activeRegistrations.map((registration) => {
+                    {filteredRegistrations.map((registration) => {
                       const result = getResultForRegistration(
                         registration.registrationId,
                       );
