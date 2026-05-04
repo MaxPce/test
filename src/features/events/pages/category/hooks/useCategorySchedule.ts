@@ -40,7 +40,9 @@ export type ModalName =
   | "generateCombined"
   | "generateWeightlifting"
   | "generateSeries"
-  | "generateKumitePhases"; 
+  | "generateKumitePhases"
+  | "generateWrestlingPhases"   
+  | "generateWushuPhases";
 
 const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   phase: false,
@@ -59,6 +61,8 @@ const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   generateWeightlifting: false,
   generateSeries: false,
   generateKumitePhases: false,
+  generateWrestlingPhases: false,   
+  generateWushuPhases: false,
 };
 
 // ─── Hook ────────────────────────────────────────────────────────────────────

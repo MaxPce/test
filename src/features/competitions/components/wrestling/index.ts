@@ -5,3 +5,5 @@ export { WrestlingBracket } from "./WrestlingBracket";
 export { WrestlingRanking } from "./WrestlingRanking";
 export { WrestlingEliminationResults } from "./WrestlingEliminationResults";
 export { WrestlingEliminationRanking } from "./WrestlingEliminationRanking";
+export { WrestlingMedalTable } from "./WrestlingMedalTable";
+export { GenerateWrestlingPhasesModal } from "./GenerateWrestlingPhasesModal";

@@ -16,7 +16,6 @@ import { GenerateBestOf3Modal } from "@/features/competitions/components/Generat
 import { InitializePoomsaeGroupModal } from "@/features/competitions/components/InitializePoomsaeGroupModal";
 import { InitializeShootingGroupModal } from "@/features/competitions/components/InitializeShootingGroupModal";
 import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
-import { KyoruguiBracketView } from "@/features/competitions/components/taekwondo/KyoruguiBracketView";
 import { PoomsaeScoreModal } from "@/features/competitions/components/taekwondo/PoomsaeScoreModal";
 import { PoomsaeScoreTable } from "@/features/competitions/components/taekwondo/PoomsaeScoreTable";
 import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwondo/KyoruguiRoundsModal";
@@ -30,15 +29,17 @@ import { WrestlingScoreModal } from "@/features/competitions/components/wrestlin
 import { TiroDeportivoScheduleTable } from "@/features/competitions/components/shooting/TiroDeportivoScheduleTable";
 import { TiroDeportivoResultsTable } from "@/features/competitions/components/shooting/TiroDeportivoResultsTable";
 import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
+import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
+import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
 import type { Phase } from "@/features/competitions/types";
 import type { GenericViewProps } from "./types";
-import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
-import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 const PHASE_COLORS: Record<string, string> = {
   grupo:       "from-blue-600 to-blue-700",
@@ -64,7 +65,9 @@ const getStatusConfig = (status: string) => {
   return configs[status as keyof typeof configs] || configs.programado;
 };
 
+
 // ─── Componente ───────────────────────────────────────────────────────────────
+
 
 export function GenericScheduleView({ eventCategory, schedule, sport }: GenericViewProps) {
   const {
@@ -263,14 +266,13 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                   </Button>
                 )}
 
-                {/* Botón asignar — visible cuando el match tiene menos de 2 participantes */}
                 {participants.length < 2 && match.status !== "finalizado"
                   && !taekwondoType && wushuType !== "taolu" && !isTiroDeportivo && (
                   <Button
                     variant="outline" size="sm"
                     icon={<UserPlus className="h-4 w-4" />}
                     onClick={() => {
-                      closeModal("result");   // ← cierra result si estaba abierto
+                      closeModal("result");
                       setSelectedMatch(match);
                       openModal("assign");
                     }}
@@ -278,12 +280,13 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                     Asigna
                   </Button>
                 )}
+
                 {participants.length === 2 && (
                   <>
                     {(sport.isJudo || sport.isKarate || sport.isWushu || sport.isWrestling || !!taekwondoType) && (
                       <Button variant="gradient" size="sm"
                         onClick={() => {
-                          closeModal("assign");   
+                          closeModal("assign");
                           setSelectedMatch(match);
                           setSelectedMatchId(match.matchId);
                           openModal("result");
@@ -353,7 +356,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             Generar Serie
           </Button>
         )}
-        {/* Asignar participantes a la fase directamente */}
         {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
           && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion") && (
           <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => {
@@ -363,7 +365,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             Asignar
           </Button>
         )}
-        {/* Nuevo Partido — grupo, eliminacion y repechaje */}
         {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
           && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion" || selectedPhase.type === "repechaje") && (
           <Button variant="outline" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => openModal("match")}>
@@ -382,13 +383,21 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         title="Programación Competencia"
         actions={
           <div className="flex flex-wrap gap-2">
-            {/* Botón nuevo — solo visible en deportes de llaves */}
+            {/* Judo */}
             {sport.isJudo && (
-              <Button
-                onClick={() => openModal("generateKumitePhases")}
-                variant="outline"
-                size="lg"
-              >
+              <Button onClick={() => openModal("generateKumitePhases")} variant="outline" size="lg">
+                Generar Fases
+              </Button>
+            )}
+            {/* Wrestling — reutiliza GenerateKumitePhasesModal con endpoint propio */}
+            {sport.isWrestling && (
+              <Button onClick={() => openModal("generateWrestlingPhases")} variant="outline" size="lg">
+                Generar Fases
+              </Button>
+            )}
+            {/* Wushu Sanda — reutiliza GenerateKumitePhasesModal con endpoint propio */}
+            {sport.isWushu && wushuType === "sanda" && (
+              <Button onClick={() => openModal("generateWushuPhases")} variant="outline" size="lg">
                 Generar Fases
               </Button>
             )}
@@ -455,7 +464,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
       {/* ── Modales que dependen de selectedPhase ── */}
       {selectedPhase && (
         <>
-          {/* ── FIX #7: phase + existingMatches en lugar de phaseId + registrations ── */}
           {modals.match && (
             <Modal isOpen={modals.match} onClose={() => closeModal("match")} title="Crear Nuevo Partido" size="md">
               <MatchForm
@@ -468,7 +476,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             </Modal>
           )}
 
-          {/* ── Asignar participantes directamente a la fase ── */}
           {modals.assignPhase && (
             <AssignPhaseParticipantModal
               isOpen={modals.assignPhase}
@@ -482,9 +489,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          
-
-          {/* match + registrations completos en lugar de phaseId + availableRegistrations ── */}
           {modals.assign && selectedMatch && (
             <AssignParticipantsModal
               isOpen={modals.assign}
@@ -496,7 +500,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          {/* ── FIX #1: phase + registrations completos + sismaster ── */}
           {modals.generateRoundRobin && !isTableTennis && (
             <GenerateRoundRobinModal
               isOpen={modals.generateRoundRobin}
@@ -520,7 +523,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          {/* ── FIX #3: phase + availableRegistrations + sismaster ── */}
           {modals.generateBracket && (
             <GenerateBracketModal
               isOpen={modals.generateBracket}
@@ -533,7 +535,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          {/* ── FIX #2: phase + registrations completos + sismaster ── */}
           {modals.generateBestOf3 && (
             <GenerateBestOf3Modal
               isOpen={modals.generateBestOf3}
@@ -548,7 +549,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          {/* ── FIX #4: phase + availableRegistrations + sismaster ── */}
           {modals.initPoomsae && (
             <InitializePoomsaeGroupModal
               isOpen={modals.initPoomsae}
@@ -561,7 +561,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          {/* ── FIX #5: ya corregido, se mantiene ── */}
           {modals.initShooting && (
             <InitializeShootingGroupModal
               isOpen={modals.initShooting}
@@ -626,10 +625,40 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           )}
         </>
       )}
+
+      {/* ── Modales de generación de fases (fuera de selectedPhase) ── */}
+
+      {/* Judo */}
       {modals.generateKumitePhases && sport.isJudo && (
         <GenerateKumitePhasesModal
           open={modals.generateKumitePhases}
           onClose={() => closeModal("generateKumitePhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Categoría"}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
+          allRegistrations={eventCategory.registrations ?? []}
+        />
+      )}
+
+      {/* Wrestling  */}
+      {modals.generateWrestlingPhases && sport.isWrestling && (
+        <GenerateKumitePhasesModal
+          open={modals.generateWrestlingPhases}
+          onClose={() => closeModal("generateWrestlingPhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Categoría"}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
+          allRegistrations={eventCategory.registrations ?? []}
+        />
+      )}
+
+      {/* Wushu Sanda  */}
+      {modals.generateWushuPhases && sport.isWushu && wushuType === "sanda" && (
+        <GenerateKumitePhasesModal
+          open={modals.generateWushuPhases}
+          onClose={() => closeModal("generateWushuPhases")}
           eventCategoryId={eventCategory.eventCategoryId}
           categoryName={eventCategory.category?.name ?? "Categoría"}
           sismasterEventId={eventCategory.externalEventId ?? undefined}

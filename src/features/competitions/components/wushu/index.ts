@@ -9,3 +9,4 @@ export { WushuTaoluMatchDetailsModal }  from './WushuTaoluMatchDetailsModal';
 export { WushuTaoluScoreInput }         from './WushuTaoluScoreInput';
 export { WushuTaoluScoreModal }         from './WushuTaoluScoreModal';
 export { WushuTaoluScoreTable }         from './WushuTaoluScoreTable';
+export { GenerateWushuPhasesModal } from './GenerateWushuPhasesModal';
