@@ -13,11 +13,12 @@ import { getImageUrl } from "@/lib/utils/imageUrl";
 import { ScoreTables } from "../../competitions/components/score-tables/ScoreTables";
 import { JudoMedalTable } from "../../competitions/components/judo/JudoMedalTable";
 import { SwimmingMedalTable } from "../../results/components/SwimmingMedalTable";
+import { WrestlingMedalTable } from "../../competitions/components/wrestling/WrestlingMedalTable";
 
 // ─── ID local del deporte Judo en tu tabla `sports` ─────────────────────────
-// Reemplaza este número con el sport_id real de Judo en tu DB
 const JUDO_SPORT_ID = 4; 
 const SWIMMING_SPORT_ID = 9;
+const WRESTLING_SPORT_ID = 6;
 
 // ─── Tipos de vista ──────────────────────────────────────────────────────────
 type ActiveView = "categories" | "scores" | "medals";
@@ -40,6 +41,7 @@ export function EventSportCategoriesPage() {
 
   const isJudo = sportIdNum === JUDO_SPORT_ID;
   const isSwimming = sportIdNum === SWIMMING_SPORT_ID;
+  const isWrestling = sportIdNum === WRESTLING_SPORT_ID;
   const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
     { eventId: eventIdNum },
     { enabled: !isExternalEvent && !!eventIdNum }
@@ -87,17 +89,17 @@ export function EventSportCategoriesPage() {
 
   // ── Tabs dinámicos según deporte ────────────────────────────────────────────
   // El tab de resultados cambia su label/icono/key según el deporte
+  // ── Tabs dinámicos según deporte ────────────────────────────────────────────
   const VIEW_TABS: { key: ActiveView; label: string; icon: React.ReactNode }[] = [
     {
       key: "categories",
       label: "Categorías",
       icon: <LayoutGrid className="h-4 w-4" />,
     },
-    // Judo y Natación → "Medallero"; el resto → "Puntajes"
-    isJudo || isSwimming
+    isJudo || isSwimming || isWrestling
       ? {
           key: "medals",
-          label: "Medallero",
+          label: isWrestling ? "Puntajes" : "Medallero",
           icon: <Medal className="h-4 w-4" />,
         }
       : {
@@ -266,7 +268,7 @@ export function EventSportCategoriesPage() {
         />
       )}
 
-      {/* ── Vista: Medallero (judo / natación) ── */}
+      {/* ── Vista: Medallero / Puntajes (judo / natación / lucha) ── */}
       {activeView === "medals" && externalEventIdNum && sportId && (
         isJudo ? (
           <JudoMedalTable
@@ -276,6 +278,11 @@ export function EventSportCategoriesPage() {
           />
         ) : isSwimming ? (
           <SwimmingMedalTable
+            externalEventId={externalEventIdNum}
+            localSportId={sportIdNum}
+          />
+        ) : isWrestling ? (
+          <WrestlingMedalTable
             externalEventId={externalEventIdNum}
             localSportId={sportIdNum}
           />
