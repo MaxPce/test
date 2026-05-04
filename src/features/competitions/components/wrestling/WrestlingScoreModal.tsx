@@ -17,14 +17,30 @@ interface Props {
   onClose: () => void;
 }
 
+// ─── Tipos de victoria disponibles ─────────────────────────────────────────
 const VICTORY_TYPES: { value: WrestlingVictoryType; label: string }[] = [
-  { value: null, label: "Sin especificar" },
-  { value: "VFA", label: "VFA — Victoria por Caída" },
-  { value: "VSU", label: "VSU — Por Superioridad" },
+  { value: null,   label: "Sin especificar" },
+  { value: "VFA",  label: "VFA  — Victoria por Caída" },
+  { value: "VSU",  label: "VSU  — Por Superioridad" },
   { value: "VSU1", label: "VSU1 — Superioridad variante" },
-  { value: "VPO", label: "VPO — Por Puntos" },
-  { value: "VCA", label: "VCA — Por Descalificación" },
+  { value: "VPO",  label: "VPO  — Por Puntos" },
+  { value: "VCA",  label: "VCA  — Por Descalificación" },
+  { value: "VIN",  label: "VIN  — Por Invalidación" },
+  { value: "FFT",  label: "FFT  — Forfait (no presentación)" },
+  { value: "INJ",  label: "INJ  — Por Lesión" },
+  { value: "DSQ",  label: "DSQ  — Descalificación" },
 ];
+
+// ─── Tipos que NO requieren puntaje TP ─────────────────────────────────────
+// En estos casos el ganador se define manualmente sin marcador técnico.
+const NO_SCORE_VICTORY_TYPES: WrestlingVictoryType[] = ["FFT", "INJ", "DSQ"];
+
+// Mensajes informativos por tipo especial
+const NO_SCORE_MESSAGES: Partial<Record<string, string>> = {
+  FFT: "Forfait: el atleta no se presentó al combate. No se registran puntos TP.",
+  INJ: "Lesión: el combate se detiene por lesión del atleta. No se registran puntos TP.",
+  DSQ: "Descalificación: el atleta pierde por infracción grave. No se registran puntos TP.",
+};
 
 export const WrestlingScoreModal = ({
   match,
@@ -38,11 +54,16 @@ export const WrestlingScoreModal = ({
   const [vfaWinner, setVfaWinner] = useState<1 | 2 | null>(null);
   const [manualWinner, setManualWinner] = useState<1 | 2 | null>(null);
 
-  const updateMutation = useUpdateMatch();
+  const updateMutation        = useUpdateMatch();
   const advanceWinnerMutation = useAdvanceWinner();
   const updateStandingsMutation = useUpdateStandings();
 
   const isElimination = phase?.type === "eliminacion";
+
+  // ─── Derivados del tipo de victoria seleccionado ──────────────────────────
+  const isVFA        = victoryType === "VFA";
+  // ← LÓGICA ESPECIAL: se activa cuando el tipo es FFT, INJ o DSQ
+  const isNoScoreType = NO_SCORE_VICTORY_TYPES.includes(victoryType as WrestlingVictoryType);
 
   useEffect(() => {
     setTp1(Number(match.participant1Score) || 0);
@@ -80,10 +101,14 @@ export const WrestlingScoreModal = ({
   }
 
   const isTie = tp1 === tp2;
-  const isVFA = victoryType === "VFA";
 
+  // ─── Determinación del ganador ────────────────────────────────────────────
   const winnerIndex: 1 | 2 | null = (() => {
+    // VFA: ganador siempre manual (por caída)
     if (isVFA) return vfaWinner;
+    // ← LÓGICA ESPECIAL: FFT/INJ/DSQ → ganador siempre manual, sin importar TP
+    if (isNoScoreType) return manualWinner;
+    // Normal: quien tenga más TP gana; si empatan, manual en eliminación
     if (!isTie) return tp1 > tp2 ? 1 : 2;
     return manualWinner;
   })();
@@ -95,12 +120,18 @@ export const WrestlingScoreModal = ({
         ? (participant2?.registrationId ?? null)
         : null;
 
+  // ─── Validación para habilitar el botón Guardar ───────────────────────────
   const canSave = (): boolean => {
+    // VFA siempre necesita seleccionar quién cayó
     if (isVFA && vfaWinner === null) return false;
-    if (isElimination && isTie && !isVFA && manualWinner === null) return false;
+    // ← LÓGICA ESPECIAL: FFT/INJ/DSQ requieren seleccionar ganador manualmente
+    if (isNoScoreType && manualWinner === null) return false;
+    // Empate en eliminación sin VFA/NoScore → debe elegir ganador
+    if (isElimination && isTie && !isVFA && !isNoScoreType && manualWinner === null) return false;
     return true;
   };
 
+  // ─── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     if (isElimination && winnerRegistrationId === null) {
       toast.error("Debes seleccionar un ganador para avanzar en el bracket.");
@@ -108,8 +139,9 @@ export const WrestlingScoreModal = ({
     }
 
     const matchData = {
-      participant1Score: tp1,
-      participant2Score: tp2,
+      // ← LÓGICA ESPECIAL: si es FFT/INJ/DSQ los TP se envían en 0
+      participant1Score: isNoScoreType ? 0 : tp1,
+      participant2Score: isNoScoreType ? 0 : tp2,
       winnerRegistrationId,
       status: "finalizado",
       victoryType: victoryType ?? null,
@@ -127,15 +159,11 @@ export const WrestlingScoreModal = ({
               },
               {
                 onSuccess: () => {
-                  toast.success(
-                    "Resultado guardado y ganador avanzado al bracket.",
-                  );
+                  toast.success("Resultado guardado y ganador avanzado al bracket.");
                   onClose();
                 },
                 onError: () => {
-                  toast.error(
-                    "Resultado guardado pero error al avanzar al ganador.",
-                  );
+                  toast.error("Resultado guardado pero error al avanzar al ganador.");
                 },
               },
             );
@@ -186,6 +214,7 @@ export const WrestlingScoreModal = ({
         className="bg-white rounded-xl w-full max-w-lg mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* ── Header ── */}
         <div className="bg-gradient-to-r from-orange-700 to-red-600 text-white px-6 py-4 rounded-t-xl">
           <h2 className="text-xl font-bold">
             {match.participant1Score !== null &&
@@ -199,52 +228,96 @@ export const WrestlingScoreModal = ({
         </div>
 
         <div className="p-6 space-y-5">
+          {/* ── Inputs de TP ── */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="border-2 border-orange-400 rounded-lg p-4 bg-orange-50">
-              <p className="text-xs font-semibold text-orange-700 uppercase mb-1">
+            {/* Luchador 1 */}
+            <div
+              className={`border-2 rounded-lg p-4 transition-colors ${
+                isNoScoreType
+                  ? "border-gray-200 bg-gray-50"
+                  : "border-orange-400 bg-orange-50"
+              }`}
+            >
+              <p
+                className={`text-xs font-semibold uppercase mb-1 ${
+                  isNoScoreType ? "text-gray-400" : "text-orange-700"
+                }`}
+              >
                 Luchador 1
               </p>
               <p className="font-medium text-sm text-gray-800 mb-3 truncate">
                 {getName(participant1)}
               </p>
-              <label className="text-xs text-gray-500 mb-1 block">
+              <label
+                className={`text-xs mb-1 block ${
+                  isNoScoreType ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
                 TP (Puntos Técnicos)
               </label>
+              {/* ← LÓGICA ESPECIAL: input deshabilitado para FFT/INJ/DSQ */}
               <input
                 type="number"
                 min="0"
-                value={tp1}
+                value={isNoScoreType ? 0 : tp1}
                 onChange={(e) => {
                   setTp1(Math.max(0, Number(e.target.value)));
                   setManualWinner(null);
                 }}
-                className="w-full px-3 py-2 border border-orange-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-center text-2xl font-bold"
+                disabled={isNoScoreType}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none text-center text-2xl font-bold transition-colors ${
+                  isNoScoreType
+                    ? "border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed"
+                    : "border-orange-300 focus:ring-2 focus:ring-orange-500"
+                }`}
               />
             </div>
 
-            <div className="border-2 border-red-400 rounded-lg p-4 bg-red-50">
-              <p className="text-xs font-semibold text-red-700 uppercase mb-1">
+            {/* Luchador 2 */}
+            <div
+              className={`border-2 rounded-lg p-4 transition-colors ${
+                isNoScoreType
+                  ? "border-gray-200 bg-gray-50"
+                  : "border-red-400 bg-red-50"
+              }`}
+            >
+              <p
+                className={`text-xs font-semibold uppercase mb-1 ${
+                  isNoScoreType ? "text-gray-400" : "text-red-700"
+                }`}
+              >
                 Luchador 2
               </p>
               <p className="font-medium text-sm text-gray-800 mb-3 truncate">
                 {getName(participant2)}
               </p>
-              <label className="text-xs text-gray-500 mb-1 block">
+              <label
+                className={`text-xs mb-1 block ${
+                  isNoScoreType ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
                 TP (Puntos Técnicos)
               </label>
+              {/* ← LÓGICA ESPECIAL: input deshabilitado para FFT/INJ/DSQ */}
               <input
                 type="number"
                 min="0"
-                value={tp2}
+                value={isNoScoreType ? 0 : tp2}
                 onChange={(e) => {
                   setTp2(Math.max(0, Number(e.target.value)));
                   setManualWinner(null);
                 }}
-                className="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-center text-2xl font-bold"
+                disabled={isNoScoreType}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none text-center text-2xl font-bold transition-colors ${
+                  isNoScoreType
+                    ? "border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed"
+                    : "border-red-300 focus:ring-2 focus:ring-red-500"
+                }`}
               />
             </div>
           </div>
 
+          {/* ── Selector de tipo de victoria ── */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Tipo de Victoria
@@ -267,8 +340,12 @@ export const WrestlingScoreModal = ({
             </select>
           </div>
 
+          {/* ── Selector de ganador para VFA (por caída) ── */}
           {isVFA && (
             <div className="bg-orange-50 border border-orange-300 rounded-lg p-4">
+              <p className="text-xs font-semibold text-orange-800 mb-2 uppercase">
+                ¿Quién ganó por caída?
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -296,7 +373,53 @@ export const WrestlingScoreModal = ({
             </div>
           )}
 
-          {!isVFA && isTie && (
+          {/* ── LÓGICA ESPECIAL: selector de ganador + warning para FFT/INJ/DSQ ── */}
+          {isNoScoreType && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 space-y-3">
+              {/* Mensaje informativo */}
+              <div className="flex items-start gap-2 text-sm text-amber-800">
+                <span>{NO_SCORE_MESSAGES[victoryType as string]}</span>
+              </div>
+
+              {/* Selector de ganador manual obligatorio */}
+              <div>
+                <p className="text-xs font-semibold text-amber-900 mb-2 uppercase">
+                  Seleccionar ganador
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setManualWinner(manualWinner === 1 ? null : 1)
+                    }
+                    className={`py-2 px-3 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                      manualWinner === 1
+                        ? "bg-orange-600 text-white border-orange-600"
+                        : "bg-white text-gray-700 border-orange-300 hover:border-orange-500"
+                    }`}
+                  >
+                    {getName(participant1)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setManualWinner(manualWinner === 2 ? null : 2)
+                    }
+                    className={`py-2 px-3 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                      manualWinner === 2
+                        ? "bg-red-600 text-white border-red-600"
+                        : "bg-white text-gray-700 border-red-300 hover:border-red-500"
+                    }`}
+                  >
+                    {getName(participant2)}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Selector de ganador en empate normal ── */}
+          {!isVFA && !isNoScoreType && isTie && (
             <div
               className={`border rounded-lg p-4 ${
                 isElimination
@@ -304,10 +427,17 @@ export const WrestlingScoreModal = ({
                   : "bg-amber-50 border-amber-300"
               }`}
             >
+              <p className="text-xs font-semibold text-gray-700 mb-2 uppercase">
+                {isElimination
+                  ? "Empate — seleccionar ganador (obligatorio)"
+                  : "Empate — seleccionar ganador (opcional)"}
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setManualWinner(manualWinner === 1 ? null : 1)}
+                  onClick={() =>
+                    setManualWinner(manualWinner === 1 ? null : 1)
+                  }
                   className={`py-2 px-3 rounded-lg text-sm font-semibold border-2 transition-colors ${
                     manualWinner === 1
                       ? "bg-orange-600 text-white border-orange-600"
@@ -318,7 +448,9 @@ export const WrestlingScoreModal = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setManualWinner(manualWinner === 2 ? null : 2)}
+                  onClick={() =>
+                    setManualWinner(manualWinner === 2 ? null : 2)
+                  }
                   className={`py-2 px-3 rounded-lg text-sm font-semibold border-2 transition-colors ${
                     manualWinner === 2
                       ? "bg-red-600 text-white border-red-600"
@@ -331,6 +463,7 @@ export const WrestlingScoreModal = ({
             </div>
           )}
 
+          {/* ── Preview de CP (Clasificación de Puntos) ── */}
           {winnerIndex !== null && (
             <div className="flex justify-around text-center bg-gray-50 rounded-lg py-3">
               <div>
@@ -338,7 +471,9 @@ export const WrestlingScoreModal = ({
                   CP — {getName(participant1)}
                 </p>
                 <p
-                  className={`text-2xl font-bold ${winnerIndex === 1 ? "text-orange-600" : "text-gray-300"}`}
+                  className={`text-2xl font-bold ${
+                    winnerIndex === 1 ? "text-orange-600" : "text-gray-300"
+                  }`}
                 >
                   {winnerIndex === 1 ? 5 : 0}
                 </p>
@@ -349,7 +484,9 @@ export const WrestlingScoreModal = ({
                   CP — {getName(participant2)}
                 </p>
                 <p
-                  className={`text-2xl font-bold ${winnerIndex === 2 ? "text-red-600" : "text-gray-300"}`}
+                  className={`text-2xl font-bold ${
+                    winnerIndex === 2 ? "text-red-600" : "text-gray-300"
+                  }`}
                 >
                   {winnerIndex === 2 ? 5 : 0}
                 </p>
@@ -358,6 +495,7 @@ export const WrestlingScoreModal = ({
           )}
         </div>
 
+        {/* ── Footer ── */}
         <div className="flex gap-2 px-6 pb-6">
           <button
             onClick={onClose}

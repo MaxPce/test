@@ -24,11 +24,15 @@ interface Props {
 }
 
 const VICTORY_TYPE_LABELS: Record<string, string> = {
-  VFA: "Victoria por Caída (VFA)",
-  VSU: "Por Superioridad (VSU)",
-  VSU1: "Por Superioridad var. (VSU1)",
-  VPO: "Por Puntos (VPO)",
-  VCA: "Por Descalificación (VCA)",
+  VFA:  'Victoria por Caída (VFA)',
+  VSU:  'Por Superioridad (VSU)',
+  VSU1: 'Por Superioridad var. (VSU1)',
+  VPO:  'Por Puntos (VPO)',
+  VCA:  'Por Descalificación (VCA)',
+  VIN:  'Por Invalidación (VIN)',
+  FFT:  'Forfait – No presentación (FFT)',
+  INJ:  'Por Lesión (INJ)',
+  DSQ:  'Descalificación (DSQ)',
 };
 
 export const WrestlingMatchDetailsModal = ({

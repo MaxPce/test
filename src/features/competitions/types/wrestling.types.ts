@@ -24,9 +24,6 @@ export interface WrestlingMatch {
 }
 
 export type WrestlingVictoryType =
-  | "VFA"
-  | "VSU"
-  | "VSU1"
-  | "VPO"
-  | "VCA"
+  | 'VFA' | 'VSU' | 'VSU1' | 'VPO' | 'VCA'
+  | 'VIN' | 'FFT' | 'INJ' | 'DSQ'
   | null;
