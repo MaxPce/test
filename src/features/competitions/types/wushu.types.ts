@@ -1,7 +1,7 @@
 // ──────────────────────────────────────────────────────────────
 //  WUSHU — TYPES
-//  Sanda  (combate 1v1)   → usa score numérico simple
-//  Taolu  (formas)        → usa accuracy + presentation (igual que Poomsae)
+//  Nota: TypeORM + MySQL devuelve DECIMAL como string en JSON,
+//        por eso los campos numéricos aceptan también string.
 // ──────────────────────────────────────────────────────────────
 
 // ── Sanda (combate 1v1) ──────────────────────────────────────
@@ -43,13 +43,22 @@ export interface WushuSandaMatch {
   }>;
 }
 
-// ── Taolu (formas — clon de Poomsae) ─────────────────────────
+// ── Taolu (formas — jueces B/A) ───────────────────────────────
 
+// DTO que se envía al PATCH /participations/:id/score (modo grupos)
 export interface WushuTaoluScore {
-  accuracy: number | string;
-  presentation: number | string;
+  b1?: number | null;
+  b2?: number | null;
+  b3?: number | null;
+  a1?: number | null;
+  a2?: number | null;
+  juezPrincipalMinus?: number | null;
+  juezPrincipalPlus?:  number | null;
 }
 
+// Participante en la tabla de grupos
+// Los campos decimales aceptan string porque MySQL/TypeORM
+// serializa DECIMAL como string en la respuesta JSON.
 export interface WushuTaoluParticipant {
   participationId: number;
   participantName: string;
@@ -58,10 +67,19 @@ export interface WushuTaoluParticipant {
   institution: string;
   institutionLogo: string | null;
   gender: string;
-  accuracy: number | null;
-  presentation: number | null;
-  total: number | null;
-  rank: number | null;
+  // campos legacy
+  accuracy:     number | string | null;
+  presentation: number | string | null;
+  total:        number | string | null;
+  rank:         number | null;
+  // campos jueces B/A
+  b1:                 number | string | null;
+  b2:                 number | string | null;
+  b3:                 number | string | null;
+  a1:                 number | string | null;
+  a2:                 number | string | null;
+  juezPrincipalMinus: number | string | null;
+  juezPrincipalPlus:  number | string | null;
 }
 
 // Respuesta del backend al actualizar score en modo bracket
@@ -69,22 +87,22 @@ export interface WushuTaoluBracketScoreResponse {
   score: {
     scoreId: number;
     participationId: number;
-    accuracy: number;
-    presentation: number;
-    total: number;
+    accuracy:     number | string;
+    presentation: number | string;
+    total:        number | string;
     rank?: number | null;
   };
   matchFinalized: boolean;
   winner?: {
     participationId: number;
     registrationId: number;
-    total: number;
+    total: number | string;
   };
   advancedToNextRound: boolean;
   message: string;
 }
 
-// Un participante dentro del match en modo bracket (para el GET de scores)
+// Participante dentro del match en modo bracket
 export interface WushuTaoloBracketParticipant {
   participationId: number;
   registrationId: number;
@@ -94,9 +112,9 @@ export interface WushuTaoloBracketParticipant {
   participantPhoto: string | null;
   institution: string;
   institutionLogo: string | null;
-  accuracy: number | null;
-  presentation: number | null;
-  total: number | null;
+  accuracy:     number | string | null;
+  presentation: number | string | null;
+  total:        number | string | null;
   isWinner: boolean;
 }
 
@@ -108,4 +126,10 @@ export interface WushuTaoluBracketMatchScores {
   status: string;
   participants: WushuTaoloBracketParticipant[];
   winner: WushuTaoloBracketParticipant | null;
+}
+
+// Tipo para el modo BRACKET (accuracy + presentation, sin jueces B/A)
+export interface WushuTaoluBracketScore {
+  accuracy: number;
+  presentation: number;
 }

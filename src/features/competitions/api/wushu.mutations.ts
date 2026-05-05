@@ -9,9 +9,13 @@ import {
   generateWushuTaoluPhases,
 } from './wushu.api';
 
-import type { WushuSandaScore, WushuTaoluScore } from '../types/wushu.types';
+import type {
+  WushuSandaScore,
+  WushuTaoluScore,
+  WushuTaoluBracketScore,
+} from '../types/wushu.types';
 
-// ==================== WUSHU - SANDA (ACTUAL) ====================
+// ==================== WUSHU - SANDA ====================
 
 export const useUpdateWushuScore = () => {
   const queryClient = useQueryClient();
@@ -31,9 +35,9 @@ export const useUpdateWushuScore = () => {
   });
 };
 
-// ==================== WUSHU - TAOLU (NUEVO) ====================
+// ==================== WUSHU - TAOLU ====================
 
-// ----- MODO GRUPOS -----
+// ----- MODO GRUPOS (jueces B/A) -----
 
 export const useUpdateWushuTaoluScore = () => {
   const queryClient = useQueryClient();
@@ -47,10 +51,9 @@ export const useUpdateWushuTaoluScore = () => {
       data: WushuTaoluScore;
     }) => updateWushuTaoluScore(participationId, data),
     onSuccess: (_, variables) => {
-      // Si tu tabla depende del phaseId, invalida con phaseId en queryKey desde el componente.
       queryClient.invalidateQueries({ queryKey: ['wushu-taolu-scores'] });
       queryClient.invalidateQueries({ queryKey: ['wushu-taolu-score', variables.participationId] });
-      toast.success('Puntaje guardado correctamente');
+      // toast omitido — el componente ya muestra el toast
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Error al guardar puntaje');
@@ -58,7 +61,7 @@ export const useUpdateWushuTaoluScore = () => {
   });
 };
 
-// Helper opcional (si tu modal guarda ambos competidores)
+// Helper para guardar 2 participaciones a la vez (bracket)
 export const useUpdateWushuTaoluMatchScores = () => {
   const queryClient = useQueryClient();
 
@@ -83,7 +86,7 @@ export const useUpdateWushuTaoluMatchScores = () => {
   });
 };
 
-// ----- MODO BRACKET -----
+// ----- MODO BRACKET (accuracy + presentation) -----
 
 export const useUpdateWushuTaoluBracketScore = () => {
   const queryClient = useQueryClient();
@@ -94,7 +97,7 @@ export const useUpdateWushuTaoluBracketScore = () => {
       data,
     }: {
       participationId: number;
-      data: WushuTaoluScore;
+      data: WushuTaoluBracketScore;
     }) => updateWushuTaoluBracketScore(participationId, data),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['bracket-structure'] });
@@ -119,6 +122,7 @@ export const useUpdateWushuTaoluBracketScore = () => {
 
 export const useGenerateWushuTaoluPhases = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (data: {
       eventCategoryId: number;

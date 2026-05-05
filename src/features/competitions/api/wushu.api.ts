@@ -2,7 +2,7 @@ import { apiClient } from '@/lib/api/client';
 import type {
   WushuSandaScore,
   WushuSandaMatch,
-  // === TAOLU (crear estos types en ../types/wushu.types) ===
+  WushuTaoluBracketScore,
   WushuTaoluScore,
   WushuTaoluParticipant,
   WushuTaoluBracketScoreResponse,
@@ -41,17 +41,21 @@ export const updateWushuTaoluScore = async (
   participationId: number,
   data: WushuTaoluScore,
 ) => {
-  const payload = {
-    accuracy: Number(data.accuracy),
-    presentation: Number(data.presentation),
-  };
-
   const response = await apiClient.patch(
     `/competitions/wushu/taolu/participations/${participationId}/score`,
-    payload,
+    {
+      b1: data.b1 ?? null,
+      b2: data.b2 ?? null,
+      b3: data.b3 ?? null,
+      a1: data.a1 ?? null,
+      a2: data.a2 ?? null,
+      juezPrincipalMinus: data.juezPrincipalMinus ?? 0,
+      juezPrincipalPlus:  data.juezPrincipalPlus  ?? 0,
+    },
   );
   return response.data;
 };
+
 
 export const getWushuTaoluScoreTable = async (phaseId: number) => {
   const response = await apiClient.get<WushuTaoluParticipant[]>(
@@ -71,7 +75,7 @@ export const getWushuTaoluScore = async (participationId: number) => {
 
 export const updateWushuTaoluBracketScore = async (
   participationId: number,
-  data: WushuTaoluScore,
+  data: WushuTaoluBracketScore,
 ) => {
   const payload = {
     accuracy: Number(data.accuracy),
