@@ -6,6 +6,7 @@ import {
   updateWushuTaoluScore,
   updateWushuTaoluBracketScore,
   updateWushuTaoluMatchScores,
+  generateWushuTaoluPhases,
 } from './wushu.api';
 
 import type { WushuSandaScore, WushuTaoluScore } from '../types/wushu.types';
@@ -112,6 +113,28 @@ export const useUpdateWushuTaoluBracketScore = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Error al actualizar puntaje');
+    },
+  });
+};
+
+export const useGenerateWushuTaoluPhases = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      eventCategoryId: number;
+      groups: { name: string; registrationIds: number[] }[];
+    }) => {
+      console.log('[Taolu mutation] mutationFn called with:', data);
+      return generateWushuTaoluPhases(data);
+    },
+    onSuccess: (res, variables) => {
+      console.log('[Taolu mutation] onSuccess:', res);
+      queryClient.invalidateQueries({ queryKey: ['phases', variables.eventCategoryId] });
+      toast.success('Fases Taolu generadas correctamente');
+    },
+    onError: (error: any) => {
+      console.error('[Taolu mutation] onError:', error?.response?.data ?? error);
+      toast.error(error.response?.data?.message || 'Error al generar fases Taolu');
     },
   });
 };

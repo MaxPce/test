@@ -184,7 +184,18 @@ export function useSportDetection(eventCategory: EventCategory): SportDetection 
     if (!sportName.includes("wushu")) return null;
 
     if (resultType === "score") return "taolu";
-    if (resultType === "combat") return "sanda";
+    if (resultType === "combat") {
+      // Detectar Taolu por nombre aunque tenga result_type = 'combat'
+      const taoluKeywords = [
+        "changquan", "chang quan", "nanquan", "nan quan",
+        "daoshu", "jianshu", "jiashu", "nandao", "qiangshu",
+        "gunshu", "nangun", "taijiquan", "taijijian", "tai qi",
+        "tai qui", "duilian", "jiti", "tradicional",
+        "taolu", "forma",
+      ];
+      if (taoluKeywords.some((kw) => categoryName.includes(kw))) return "taolu";
+      return "sanda";
+    }
 
     if (categoryName.includes("taolu") || categoryName.includes("forma"))
       return "taolu";

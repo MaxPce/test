@@ -31,6 +31,7 @@ import { TiroDeportivoResultsTable } from "@/features/competitions/components/sh
 import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
 import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
 import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
+import { GenerateWushuTaoluPhasesModal } from "@/features/competitions/components/wushu/GenerateWushuTaoluPhasesModal";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
@@ -401,6 +402,11 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 Generar Fases
               </Button>
             )}
+            {sport.isWushu && wushuType === "taolu" && (
+              <Button onClick={() => openModal("generateWushuTaoluPhases")} variant="outline" size="lg">
+                Generar Fases
+              </Button>
+            )}
             <Button
               onClick={() => openModal("phase")}
               variant="gradient"
@@ -654,13 +660,26 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         />
       )}
 
-      {/* Wushu Sanda  */}
+      {/* Wushu */}
       {modals.generateWushuPhases && sport.isWushu && wushuType === "sanda" && (
         <GenerateKumitePhasesModal
           open={modals.generateWushuPhases}
           onClose={() => closeModal("generateWushuPhases")}
           eventCategoryId={eventCategory.eventCategoryId}
           categoryName={eventCategory.category?.name ?? "Categoría"}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
+          allRegistrations={eventCategory.registrations ?? []}
+        />
+      )}
+
+
+      {modals.generateWushuTaoluPhases && sport.isWushu && wushuType === "taolu" && (
+        <GenerateWushuTaoluPhasesModal
+          open={modals.generateWushuTaoluPhases}
+          onClose={() => closeModal("generateWushuTaoluPhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Taolu"}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}

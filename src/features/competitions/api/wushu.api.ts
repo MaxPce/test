@@ -112,3 +112,17 @@ export const updateWushuTaoluMatchScores = async (
 
   return Promise.all(promises);
 };
+
+
+export const generateWushuTaoluPhases = async (data: {
+  eventCategoryId: number;
+  groups: { name: string; registrationIds: number[] }[];
+}) => {
+  console.log('[Taolu API] POST generate-phases →', data);
+  const response = await apiClient.post(
+    `/competitions/wushu/taolu/generate-phases`,
+    data,
+  );
+  console.log('[Taolu API] response:', response.data);
+  return response.data;
+};
