@@ -320,9 +320,28 @@ export function CategoryStandingsPage() {
   const isKarate = sportName.includes("karate");
   const isWushu = sportName.includes("wushu");
   const isWrestling = sportName.includes("lucha") || sportName.includes("wrestling");
+  const TAOLU_KEYWORDS = [
+    "taolu",
+    "formas",
+    "forma",
+    "chang quan",
+    "changquan",
+    "nan quan",
+    "nanquan",
+    "tai chi",
+    "taichi",
+    "tai ji",
+    "taiji",
+    "jian shu",
+    "dao shu",
+    "gun shu",
+    "qiang shu",
+  ];
+
   const isWushuTaolu =
     sportName.includes("wushu") &&
-    (categoryName.includes("taolu") || categoryName.includes("formas") || categoryName.includes("forma"));
+    TAOLU_KEYWORDS.some((kw) => categoryName.includes(kw));
+
   const isWushuSanda = isWushu && !isWushuTaolu;
   const isTiroDeportivo =
     sportName.includes("tiro deportivo") ||
