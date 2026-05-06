@@ -32,6 +32,7 @@ import { GenerateTableTennisPhasesModal } from "@/features/events/components/Gen
 import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
 import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
 import { GenerateWushuTaoluPhasesModal } from "@/features/competitions/components/wushu/GenerateWushuTaoluPhasesModal";
+import { AssignTaoluParticipantsModal } from "@/features/competitions/components/wushu/AssignTaoluParticipantsModal";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
@@ -341,6 +342,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             Inicializar Fase Tiro
           </Button>
         )}
+
+        {wushuType === "taolu" && (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<UserPlus className="h-4 w-4" />}
+            onClick={() => openModal("assignTaolu")}  // ← modal dedicado
+          >
+            Asignar Participantes
+          </Button>
+        )}
+
         {selectedPhase.type === "eliminacion" && matches.length === 0 && (
           <Button variant="outline" size="sm" onClick={() => openModal("generateBracket")}>
             Generar Bracket
@@ -492,6 +505,23 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
               sismasterEventId={eventCategory.externalEventId ?? undefined}
               sismasterSportId={eventCategory.externalSportId ?? undefined}
               eventCategoryId={eventCategory.eventCategoryId}
+            />
+          )}
+
+          {modals.assignTaolu && wushuType === "taolu" && (
+            <AssignTaoluParticipantsModal
+              isOpen={modals.assignTaolu}
+              onClose={() => closeModal("assignTaolu")}
+              phaseId={selectedPhase.phaseId}
+              phaseName={selectedPhase.name}
+              eventCategoryId={eventCategory.eventCategoryId}
+              allRegistrations={eventCategory.registrations ?? []}
+              assignedRegistrationIds={
+                matches
+                  .flatMap((m) => m.participations ?? [])
+                  .map((p) => p.registrationId)
+                  .filter((id): id is number => id != null)
+              }
             />
           )}
 
