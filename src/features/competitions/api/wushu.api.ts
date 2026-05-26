@@ -43,15 +43,7 @@ export const updateWushuTaoluScore = async (
 ) => {
   const response = await apiClient.patch(
     `/competitions/wushu/taolu/participations/${participationId}/score`,
-    {
-      b1: data.b1 ?? null,
-      b2: data.b2 ?? null,
-      b3: data.b3 ?? null,
-      a1: data.a1 ?? null,
-      a2: data.a2 ?? null,
-      juezPrincipalMinus: data.juezPrincipalMinus ?? 0,
-      juezPrincipalPlus:  data.juezPrincipalPlus  ?? 0,
-    },
+    { total: Number(data.total) },
   );
   return response.data;
 };

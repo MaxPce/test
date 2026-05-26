@@ -7,7 +7,6 @@ export function useCreateParticipation() {
   return useMutation({
     mutationFn: participationsApi.create,
     onSuccess: () => {
-      // Invalida todos los queries de matches (cualquier fase)
       queryClient.invalidateQueries({ queryKey: ["matches"] });
     },
   });
@@ -23,10 +22,11 @@ export function useDeleteParticipation() {
     }: {
       matchId: number;
       registrationId: number;
+      phaseId: number;         
     }) => participationsApi.delete(matchId, registrationId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["matches", variables.matchId],
+        queryKey: ["matches", variables.phaseId],  
       });
     },
   });

@@ -40,7 +40,9 @@ import type { Phase } from "@/features/competitions/types";
 import type { GenericViewProps } from "./types";
 
 
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 
 const PHASE_COLORS: Record<string, string> = {
@@ -50,12 +52,14 @@ const PHASE_COLORS: Record<string, string> = {
   mejor_de_3:  "from-emerald-600 to-emerald-700",
 };
 
+
 const PHASE_TYPE_LABELS: Record<string, string> = {
   grupo:       "Grupos",
   eliminacion: "Eliminación",
   repechaje:   "Repechaje",
   mejor_de_3:  "Mejor de 3",
 };
+
 
 const getStatusConfig = (status: string) => {
   const configs = {
@@ -68,7 +72,9 @@ const getStatusConfig = (status: string) => {
 };
 
 
+
 // ─── Componente ───────────────────────────────────────────────────────────────
+
 
 
 export function GenericScheduleView({ eventCategory, schedule, sport }: GenericViewProps) {
@@ -81,11 +87,14 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
     handlers, mutations, availableRegistrations,
   } = schedule;
 
+
   const { getTaekwondoType, getWushuType, isTiroDeportivo, isTableTennis } = sport;
   const taekwondoType = getTaekwondoType(selectedPhase);
   const wushuType     = getWushuType();
 
+
   // ── Card visual por fase ──────────────────────────────────────────────────
+
 
   const getCardVisual = (phase: Phase) => {
     const matchesCount  = phase.matches?.length ?? 0;
@@ -104,21 +113,27 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
     };
   };
 
+
   // ── Contenido del panel de detalle ────────────────────────────────────────
+
 
   const renderPhaseContent = () => {
     if (!selectedPhase) return null;
 
+
     if (taekwondoType === "poomsae" && selectedPhase.type === "grupo")
       return <PoomsaeScoreTable phaseId={selectedPhase.phaseId} />;
 
+
     if (wushuType === "taolu" && selectedPhase.type !== "eliminacion" && selectedPhase.type !== "mejor_de_3")
       return <WushuTaoluScoreTable phaseId={selectedPhase.phaseId} />;
+
 
     if (isTiroDeportivo)
       return selectedPhase.type === "grupo"
         ? <TiroDeportivoScheduleTable phaseId={selectedPhase.phaseId} />
         : <TiroDeportivoResultsTable  phaseId={selectedPhase.phaseId} />;
+
 
     if (selectedPhase.type === "mejor_de_3")
       return (
@@ -129,12 +144,14 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         />
       );
 
+
     if (matchesLoading)
       return (
         <div className="flex justify-center items-center py-16">
           <div className="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full" />
         </div>
       );
+
 
     if (matches.length === 0)
       return (
@@ -143,11 +160,30 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         </div>
       );
 
+
     return (
       <div className="space-y-4 p-4">
         {matches.map((match) => {
           const participants = match.participations || [];
           const statusConfig = getStatusConfig(match.status);
+
+          // Guard compartida: mismas condiciones que el botón "Asigna"
+          const canReassign =
+            participants.length > 0 &&
+            match.status !== "finalizado" &&
+            wushuType !== "taolu" &&
+            !isTiroDeportivo;
+
+
+            console.log("🔍 canReassign debug", {
+              matchId: match.matchId,
+              participantsLength: participants.length,
+              status: match.status,
+              taekwondoType,
+              wushuType,
+              isTiroDeportivo,
+              canReassign,
+            });
 
           return (
             <Card key={match.matchId} variant="elevated" padding="md" hover className="group">
@@ -193,6 +229,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 </button>
               </div>
 
+
               {/* Participantes */}
               {participants.length > 0 ? (
                 <div className="space-y-2 mb-4">
@@ -202,6 +239,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                     const institution = reg?.athlete?.institution ?? reg?.team?.institution;
                     const logoUrl     = institution?.logoUrl;
                     const isWinner    = match.winnerRegistrationId === participation.registrationId;
+
 
                     return (
                       <div
@@ -252,6 +290,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 </div>
               )}
 
+
               {/* Acciones */}
               <div className="flex flex-wrap gap-2">
                 {participants.length === 1 && match.status !== "finalizado" && (
@@ -269,7 +308,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 )}
 
                 {participants.length < 2 && match.status !== "finalizado"
-                  && !taekwondoType && wushuType !== "taolu" && !isTiroDeportivo && (
+                   && wushuType !== "taolu" && !isTiroDeportivo && (
                   <Button
                     variant="outline" size="sm"
                     icon={<UserPlus className="h-4 w-4" />}
@@ -318,6 +357,30 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                     )}
                   </>
                 )}
+
+                {/* ── NUEVO: Reasignar participantes ── */}
+                {canReassign && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={<UserPlus className="h-4 w-4" />}
+                    disabled={mutations.deleteParticipation.isPending}
+                    onClick={() => {
+                      const names = participants
+                        .map((p) => p.registration?.athlete?.name ?? p.registration?.team?.name ?? "Participante")
+                        .join(" y ");
+                      if (window.confirm(`¿Quitar a ${names} de este partido para reasignarlos?`)) {
+                        participants.forEach((p) => {
+                          if (p.registrationId) {
+                            handlers.removeParticipant(match.matchId, p.registrationId);
+                          }
+                        });
+                      }
+                    }}
+                  >
+                    Reasignar
+                  </Button>
+                )}
               </div>
             </Card>
           );
@@ -326,7 +389,9 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
     );
   };
 
+
   // ── Botones del header del panel ──────────────────────────────────────────
+
 
   const renderPanelActions = () => {
     if (!selectedPhase) return null;
@@ -348,7 +413,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             variant="outline"
             size="sm"
             icon={<UserPlus className="h-4 w-4" />}
-            onClick={() => openModal("assignTaolu")}  // ← modal dedicado
+            onClick={() => openModal("assignTaolu")}
           >
             Asignar Participantes
           </Button>
@@ -389,7 +454,9 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
     );
   };
 
+
   // ── Render ────────────────────────────────────────────────────────────────
+
 
   return (
     <div className="space-y-6 animate-in">
@@ -397,19 +464,16 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         title="Programación Competencia"
         actions={
           <div className="flex flex-wrap gap-2">
-            {/* Judo */}
             {sport.isJudo && (
               <Button onClick={() => openModal("generateKumitePhases")} variant="outline" size="lg">
                 Generar Fases
               </Button>
             )}
-            {/* Wrestling — reutiliza GenerateKumitePhasesModal con endpoint propio */}
             {sport.isWrestling && (
               <Button onClick={() => openModal("generateWrestlingPhases")} variant="outline" size="lg">
                 Generar Fases
               </Button>
             )}
-            {/* Wushu Sanda — reutiliza GenerateKumitePhasesModal con endpoint propio */}
             {sport.isWushu && wushuType === "sanda" && (
               <Button onClick={() => openModal("generateWushuPhases")} variant="outline" size="lg">
                 Generar Fases
@@ -664,7 +728,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
 
       {/* ── Modales de generación de fases (fuera de selectedPhase) ── */}
 
-      {/* Judo */}
       {modals.generateKumitePhases && sport.isJudo && (
         <GenerateKumitePhasesModal
           open={modals.generateKumitePhases}
@@ -677,7 +740,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         />
       )}
 
-      {/* Wrestling  */}
       {modals.generateWrestlingPhases && sport.isWrestling && (
         <GenerateKumitePhasesModal
           open={modals.generateWrestlingPhases}
@@ -690,7 +752,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         />
       )}
 
-      {/* Wushu */}
       {modals.generateWushuPhases && sport.isWushu && wushuType === "sanda" && (
         <GenerateKumitePhasesModal
           open={modals.generateWushuPhases}
@@ -702,7 +763,6 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           allRegistrations={eventCategory.registrations ?? []}
         />
       )}
-
 
       {modals.generateWushuTaoluPhases && sport.isWushu && wushuType === "taolu" && (
         <GenerateWushuTaoluPhasesModal

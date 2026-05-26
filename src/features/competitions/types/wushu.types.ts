@@ -47,14 +47,9 @@ export interface WushuSandaMatch {
 
 // DTO que se envía al PATCH /participations/:id/score (modo grupos)
 export interface WushuTaoluScore {
-  b1?: number | null;
-  b2?: number | null;
-  b3?: number | null;
-  a1?: number | null;
-  a2?: number | null;
-  juezPrincipalMinus?: number | null;
-  juezPrincipalPlus?:  number | null;
+  total: number;
 }
+
 
 // Participante en la tabla de grupos
 // Los campos decimales aceptan string porque MySQL/TypeORM
@@ -67,20 +62,10 @@ export interface WushuTaoluParticipant {
   institution: string;
   institutionLogo: string | null;
   gender: string;
-  // campos legacy
-  accuracy:     number | string | null;
-  presentation: number | string | null;
-  total:        number | string | null;
-  rank:         number | null;
-  // campos jueces B/A
-  b1:                 number | string | null;
-  b2:                 number | string | null;
-  b3:                 number | string | null;
-  a1:                 number | string | null;
-  a2:                 number | string | null;
-  juezPrincipalMinus: number | string | null;
-  juezPrincipalPlus:  number | string | null;
+  total: number | string | null;
+  rank: number | null;
 }
+
 
 // Respuesta del backend al actualizar score en modo bracket
 export interface WushuTaoluBracketScoreResponse {

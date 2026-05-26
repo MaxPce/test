@@ -4,7 +4,10 @@ import { usePhases } from "@/features/competitions/api/phases.queries";
 import { useMatches, useMatch } from "@/features/competitions/api/matches.queries";
 import { useCreatePhase, useDeletePhase } from "@/features/competitions/api/phases.mutations";
 import { useCreateMatch, useUpdateMatch, useDeleteMatch } from "@/features/competitions/api/matches.mutations";
-import { useCreateParticipation } from "@/features/competitions/api/participations.mutations";
+import {
+  useCreateParticipation,
+  useDeleteParticipation,  
+} from "@/features/competitions/api/participations.mutations";
 import { useAdvanceWinner, useGenerateBracket } from "@/features/competitions/api/bracket.mutations";
 import { useInitializeRoundRobin } from "@/features/competitions/api/round-robin.mutations";
 import { useUpdateStandings } from "@/features/competitions/api/standings.mutations";
@@ -106,6 +109,7 @@ export function useCategorySchedule(eventCategory: EventCategory) {
   const updateMatchMutation = useUpdateMatch();
   const deleteMatchMutation = useDeleteMatch();
   const createParticipationMutation = useCreateParticipation();
+  const deleteParticipationMutation = useDeleteParticipation();
   const advanceWinnerMutation = useAdvanceWinner();
   const generateBracketMutation = useGenerateBracket();
   const initializeRoundRobinMutation = useInitializeRoundRobin();
@@ -179,6 +183,18 @@ export function useCategorySchedule(eventCategory: EventCategory) {
 
   const handleAssignParticipant = async (data: any) => {
     await createParticipationMutation.mutateAsync(data);
+  };
+
+  const handleRemoveParticipant = async (
+    matchId: number,
+    registrationId: number,
+  ) => {
+    if (!selectedPhase) return;
+    await deleteParticipationMutation.mutateAsync({
+      matchId,
+      registrationId,
+      phaseId: selectedPhase.phaseId,
+    });
   };
 
   const handleRegisterResult = async (matchId: number, winnerId: number) => {
@@ -305,6 +321,7 @@ export function useCategorySchedule(eventCategory: EventCategory) {
     // Handlers
     handlers: {
       createPhase: handleCreatePhase,
+      removeParticipant: handleRemoveParticipant,
       deletePhase: handleDeletePhase,
       createMatch: handleCreateMatch,
       deleteMatch: handleDeleteMatch,
@@ -323,6 +340,7 @@ export function useCategorySchedule(eventCategory: EventCategory) {
     // Mutations (para los flags isPending en las vistas)
     mutations: {
       createPhase: createPhaseMutation,
+      deleteParticipation: deleteParticipationMutation,
       deletePhase: deletePhaseMutation,
       createMatch: createMatchMutation,
       updateMatch: updateMatchMutation,
