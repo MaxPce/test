@@ -1,7 +1,7 @@
 import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Eye, Edit2, Trash2, Calendar } from "lucide-react";
+import { Eye, Edit2, Trash2, Calendar, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Phase } from "../types";
 
@@ -72,6 +72,23 @@ export function PhaseCard({ phase, onEdit, onDelete }: PhaseCardProps) {
               {phase.participations?.length || 0} participantes
             </span>
           </div>
+
+          {(phase.subPhases ?? []).length > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50
+                            border border-slate-200 rounded-lg px-2.5 py-1.5">
+              <Users className="h-3.5 w-3.5 text-slate-400" />
+              <span>
+                {phase.subPhases!.length} grupos ·{" "}
+                {phase.subPhases!.every(g =>
+                  (g.groupStandings ?? []).some(s => s.qualified)
+                ) ? (
+                  <span className="text-emerald-600 font-medium">Cerrados ✓</span>
+                ) : (
+                  <span className="text-amber-600 font-medium">En curso</span>
+                )}
+              </span>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button

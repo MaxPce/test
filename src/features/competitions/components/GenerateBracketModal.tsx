@@ -1,17 +1,21 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { useGenerateBracket } from "../api/bracket.mutations";
 import type { Phase } from "../types";
 import { apiClient } from "@/lib/api/client";
 
+
 // ── Tipos ──────────────────────────────────────────────────────────────────
+
 
 export interface AvailableRegistration {
   registrationId: number;
   displayName: string;
 }
+
 
 interface NivCatCombo {
   idniv: string;
@@ -19,9 +23,11 @@ interface NivCatCombo {
   total: number;
 }
 
+
 interface NivCatOptions {
   combos: NivCatCombo[];
 }
+
 
 interface NivCatResult {
   registrationIds: number[];
@@ -33,7 +39,9 @@ interface NivCatResult {
   }[];
 }
 
+
 // ── Props ──────────────────────────────────────────────────────────────────
+
 
 interface GenerateBracketModalProps {
   isOpen: boolean;
@@ -43,11 +51,16 @@ interface GenerateBracketModalProps {
   sismasterEventId?: number;
   sismasterSportId?: number;
   eventCategoryId?: number;
+  // ← NUEVO: IDs clasificados desde fase de grupos (seeding pre-cargado)
+  preSelectedRegistrationIds?: number[];
 }
+
 
 type BracketType = "with-participants" | "empty";
 
+
 // ── Componente ─────────────────────────────────────────────────────────────
+
 
 export function GenerateBracketModal({
   isOpen,
@@ -57,6 +70,7 @@ export function GenerateBracketModal({
   sismasterEventId,
   sismasterSportId,
   eventCategoryId,
+  preSelectedRegistrationIds, // ← NUEVO
 }: GenerateBracketModalProps) {
   const [bracketType, setBracketType] = useState<BracketType>("with-participants");
   const [bracketSize, setBracketSize] = useState<number>(8);
@@ -68,21 +82,43 @@ export function GenerateBracketModal({
   const [selectedCat, setSelectedCat] = useState<string>("");
   const [search, setSearch]           = useState<string>("");
 
+
   const generateBracket = useGenerateBracket();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
-
   const isFilterActive = Boolean(selectedNiv && selectedCat);
+
+  // ← NUEVO: ¿Se abrió desde el flujo de cierre de grupos?
+  const comesFromGroupStage =
+    preSelectedRegistrationIds !== undefined &&
+    preSelectedRegistrationIds.length > 0;
+
 
   // ── Resetear al abrir ────────────────────────────────────────────────────
   useEffect(() => {
     if (isOpen) {
-      setSelectedIds(new Set(availableRegistrations.map((r) => r.registrationId)));
       setSelectedNiv("");
       setSelectedCat("");
       setSearch("");
       setBracketType("with-participants");
+
+      // ← NUEVO: si viene con IDs de grupos, pre-cargarlos en orden de seeding
+      //         si no, seleccionar todos como antes
+      if (comesFromGroupStage) {
+        const validIds = new Set(
+          availableRegistrations.map((r) => r.registrationId),
+        );
+        const filtered = preSelectedRegistrationIds!.filter((id) =>
+          validIds.has(id),
+        );
+        setSelectedIds(new Set(filtered));
+      } else {
+        setSelectedIds(
+          new Set(availableRegistrations.map((r) => r.registrationId)),
+        );
+      }
     }
-  }, [isOpen, availableRegistrations]);
+  }, [isOpen, availableRegistrations, preSelectedRegistrationIds, comesFromGroupStage]);
+
 
   // ── Query 1: combos idniv/idcat disponibles ──────────────────────────────
   const { data: nivCatOptions } = useQuery<NivCatOptions>({
@@ -96,6 +132,7 @@ export function GenerateBracketModal({
     enabled: hasSismaster && isOpen,
     staleTime: 1000 * 60 * 5,
   });
+
 
   // ── Query 2: cruce sismaster → registration_ids locales ──────────────────
   const { data: nivCatResult, isFetching: loadingFilter } = useQuery<NivCatResult>({
@@ -128,6 +165,7 @@ export function GenerateBracketModal({
       Boolean(selectedCat),
   });
 
+
   // ── Auto-seleccionar IDs cuando llega resultado del filtro ───────────────
   useEffect(() => {
     if (!isFilterActive || loadingFilter) return;
@@ -138,12 +176,14 @@ export function GenerateBracketModal({
     }
   }, [nivCatResult, isFilterActive, loadingFilter, availableRegistrations]);
 
+
   // ── Helpers ──────────────────────────────────────────────────────────────
   const clearFilter = () => {
     setSelectedNiv("");
     setSelectedCat("");
     setSelectedIds(new Set(availableRegistrations.map((r) => r.registrationId)));
   };
+
 
   const toggleParticipant = (id: number) => {
     setSelectedIds((prev) => {
@@ -156,17 +196,17 @@ export function GenerateBracketModal({
     setSelectedIds(new Set(availableRegistrations.map((r) => r.registrationId)));
   const deselectAll = () => setSelectedIds(new Set());
 
+
   // ── Lógica de generación ─────────────────────────────────────────────────
   const handleGenerate = () => {
-    // En ambos casos siempre se envían los registrationIds seleccionados
-    // para que AssignParticipantsModal pueda filtrar el pool correctamente.
     const poolIds = Array.from(selectedIds);
+
 
     if (bracketType === "empty") {
       generateBracket.mutate(
         {
           phaseId: phase.phaseId,
-          bracketSize: poolIds.length,   // ← calculado desde los seleccionados
+          bracketSize: poolIds.length,
           includeThirdPlace,
           registrationIds: poolIds.length > 0 ? poolIds : undefined,
         },
@@ -174,6 +214,7 @@ export function GenerateBracketModal({
       );
       return;
     }
+
 
     generateBracket.mutate(
       {
@@ -185,6 +226,7 @@ export function GenerateBracketModal({
     );
   };
 
+
   // ── Cálculos de preview ──────────────────────────────────────────────────
   const numParticipants = selectedIds.size;
   const canGenerate = selectedIds.size >= 2;
@@ -195,7 +237,9 @@ export function GenerateBracketModal({
   const totalRounds = Math.log2(nextPowerOf2);
   const byeCount    = nextPowerOf2 - numParticipants;
 
+
   // ────────────────────────────────────────────────────────────────────────
+
 
   return (
     <Modal
@@ -205,6 +249,22 @@ export function GenerateBracketModal({
       size="md"
     >
       <div className="space-y-6">
+
+        {/* ← NUEVO: Banner cuando viene del cierre de grupos */}
+        {comesFromGroupStage && (
+          <div className="flex items-start gap-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <Trophy className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-emerald-800">
+              <p className="font-semibold">
+                {preSelectedRegistrationIds!.length} clasificados de los grupos
+              </p>
+              <p className="text-xs text-emerald-600 mt-0.5">
+                Los participantes ya están seleccionados en orden de seeding.
+                Puedes ajustar la selección si lo necesitas.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── Toggle tipo de bracket ───────────────────────────────────── */}
         <div className="space-y-3">
@@ -220,9 +280,9 @@ export function GenerateBracketModal({
               />
               <div>
                 <p className="font-medium text-gray-900">Con participantes</p>
-                
               </div>
             </label>
+
 
             <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
               <input
@@ -234,13 +294,11 @@ export function GenerateBracketModal({
               />
               <div>
                 <p className="font-medium text-gray-900">Bracket vacío</p>
-                
               </div>
             </label>
           </div>
         </div>
 
-        
 
         {/* ── Sección de participantes (ambos modos) ───────────────────── */}
         <div className="space-y-3">
@@ -270,6 +328,7 @@ export function GenerateBracketModal({
             </div>
           </div>
 
+
           {/* Filtros Sismaster — solo si se pasaron las props */}
           {hasSismaster && (
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg space-y-2">
@@ -287,6 +346,7 @@ export function GenerateBracketModal({
                   </button>
                 )}
               </div>
+
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -309,6 +369,7 @@ export function GenerateBracketModal({
                   </select>
                 </div>
 
+
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Categoría</label>
                   <select
@@ -329,6 +390,7 @@ export function GenerateBracketModal({
                 </div>
               </div>
 
+
               {loadingFilter && (
                 <p className="text-xs text-blue-500 animate-pulse">Aplicando filtro...</p>
               )}
@@ -343,6 +405,7 @@ export function GenerateBracketModal({
             </div>
           )}
 
+
           {/* Buscador */}
           <input
             type="text"
@@ -352,18 +415,20 @@ export function GenerateBracketModal({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
+
           {/* Contador */}
           <p className="text-sm text-gray-500">
             <span className="font-semibold text-blue-600">{selectedIds.size}</span>
             {" "}/{" "}{availableRegistrations.length} seleccionados
           </p>
 
+
           {/* Lista de participantes */}
           <div className="border rounded-lg divide-y max-h-52 overflow-y-auto">
             {availableRegistrations
               .filter((reg) => {
                 const q = search.toLowerCase().trim();
-                return !q || reg.displayName.toLowerCase().includes(q);  // ← solo filtra lo visible
+                return !q || reg.displayName.toLowerCase().includes(q);
               })
               .map((reg) => {
                 const isFiltered =
@@ -371,6 +436,11 @@ export function GenerateBracketModal({
                   !loadingFilter &&
                   nivCatResult !== undefined &&
                   !nivCatResult.registrationIds.includes(reg.registrationId);
+
+                // ← NUEVO: marcar visualmente el orden de seeding (si viene de grupos)
+                const seedIndex = comesFromGroupStage
+                  ? preSelectedRegistrationIds!.indexOf(reg.registrationId)
+                  : -1;
 
                 return (
                   <label
@@ -385,16 +455,28 @@ export function GenerateBracketModal({
                       onChange={() => toggleParticipant(reg.registrationId)}
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-800">{reg.displayName}</span>
+                    <span className="text-sm text-gray-800 flex-1">
+                      {reg.displayName}
+                    </span>
+                    {/* Badge de seeding cuando viene de grupos */}
+                    {seedIndex !== -1 && (
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50
+                                       border border-emerald-200 rounded-full px-1.5 py-0.5
+                                       tabular-nums">
+                        #{seedIndex + 1}
+                      </span>
+                    )}
                   </label>
                 );
               })}
           </div>
 
+
           {bracketType === "with-participants" && selectedIds.size < 2 && (
             <p className="text-xs text-red-500">Selecciona al menos 2 participantes.</p>
           )}
         </div>
+
 
         {/* ── Tercer lugar ─────────────────────────────────────────────── */}
         <div>
@@ -408,6 +490,7 @@ export function GenerateBracketModal({
             <p className="font-medium text-gray-900">Incluir partido de tercer lugar</p>
           </label>
         </div>
+
 
         {/* ── Preview dinámico ──────────────────────────────────────────── */}
         {canGenerate && numParticipants >= 2 && (
@@ -429,6 +512,7 @@ export function GenerateBracketModal({
           </div>
         )}
 
+
         {/* ── Acciones ─────────────────────────────────────────────────── */}
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button variant="ghost" onClick={onClose}>
@@ -447,10 +531,12 @@ export function GenerateBracketModal({
   );
 }
 
+
 // ── Helper ────────────────────────────────────────────────────────────────
 function getRoundNames(totalRounds: number) {
   const rounds = [];
   let matchesInRound = Math.pow(2, totalRounds - 1);
+
 
   const names: Record<number, string> = {
     1: "Final",
@@ -460,6 +546,7 @@ function getRoundNames(totalRounds: number) {
     16: "Dieciseisavos de Final",
   };
 
+
   for (let i = 0; i < totalRounds; i++) {
     rounds.push({
       name: names[matchesInRound] || `Ronda de ${matchesInRound * 2}`,
@@ -467,6 +554,7 @@ function getRoundNames(totalRounds: number) {
     });
     matchesInRound /= 2;
   }
+
 
   return rounds;
 }

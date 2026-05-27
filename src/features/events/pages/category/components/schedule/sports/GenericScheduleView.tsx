@@ -36,6 +36,7 @@ import { AssignTaoluParticipantsModal } from "@/features/competitions/components
 import { SetupGroupStageModal }   from "@/features/competitions/components/SetupGroupStageModal";
 import { GroupStandingsTable }    from "@/features/competitions/components/GroupStandingsTable";
 import { useCloseGroups }         from "@/features/competitions/api/group-stage.mutations";
+import { GroupMatchesPanel }      from "@/features/competitions/components/GroupMatchesPanel";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
@@ -167,7 +168,20 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {selectedPhase.subPhases.map((group) => (
-              <GroupStandingsTable key={group.phaseId} group={group} />
+              <div key={group.phaseId} className="flex flex-col gap-0">
+                <GroupStandingsTable group={group} />
+                <GroupMatchesPanel
+                  group={group}
+                  allRegistrations={eventCategory.registrations ?? []}
+                  onGenerateMatches={(g) =>
+                    handlers.generateRoundRobin({
+                      phaseId: g.phaseId,
+                      registrationIds: (g.groupStandings ?? []).map((gs) => gs.registrationId),
+                    })
+                  }
+                  isGenerating={mutations.initializeRoundRobin.isPending}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -487,21 +501,31 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             Generar Serie
           </Button>
         )}
-        {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
-          && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion") && (
-          <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => {
-            closeModal("result");
-            openModal("assignPhase");
-          }}>
-            Asignar
-          </Button>
-        )}
-        {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
-          && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion" || selectedPhase.type === "repechaje") && (
-          <Button variant="outline" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => openModal("match")}>
-            Nuevo Partido
-          </Button>
-        )}
+        {(() => {
+          const hasSubPhases =
+            selectedPhase.type === "eliminacion" &&
+            !!selectedPhase.subPhases?.length;
+
+          return (
+            <>
+              {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo && !hasSubPhases
+                && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion") && (
+                <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => {
+                  closeModal("result");
+                  openModal("assignPhase");
+                }}>
+                  Asignar
+                </Button>
+              )}
+              {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo && !hasSubPhases
+                && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion" || selectedPhase.type === "repechaje") && (
+                <Button variant="outline" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => openModal("match")}>
+                  Nuevo Partido
+                </Button>
+              )}
+            </>
+          );
+        })()}
       </div>
     );
   };
@@ -724,14 +748,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
               eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
-          {modals.setupGroupStage && (
-            <SetupGroupStageModal
-              isOpen={modals.setupGroupStage}
-              onClose={() => closeModal("setupGroupStage")}
-              phase={selectedPhase}
-              availableRegistrations={availableRegistrations}
-            />
-          )}
+          
 
           {/* ── Score modals ── */}
           {modals.result && selectedMatch && (

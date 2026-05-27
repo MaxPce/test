@@ -52,4 +52,10 @@ export const groupStageApi = {
     );
     return data;
   },
+    getPhaseWithSubPhases: async (phaseId: number): Promise<Phase> => {
+        const { data } = await apiClient.get(
+        `/competitions/phases/${phaseId}?includeSubPhases=true`,
+        );
+        return data;
+    },
 };

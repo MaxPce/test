@@ -1,5 +1,5 @@
 import type { Phase } from "../types";
-import type { GroupStanding } from "../types/index";
+import type { GroupStanding } from "../types/index"; 
 
 interface Props {
   group: Phase;
