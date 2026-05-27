@@ -1,4 +1,4 @@
-import { Trophy, Plus, UserPlus, Calendar, Clock, MapPin, Award } from "lucide-react";
+import { Trophy, Plus, UserPlus, Calendar, Clock, MapPin, Award, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -33,6 +33,9 @@ import { GenerateKumitePhasesModal } from "@/features/competitions/components/ju
 import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
 import { GenerateWushuTaoluPhasesModal } from "@/features/competitions/components/wushu/GenerateWushuTaoluPhasesModal";
 import { AssignTaoluParticipantsModal } from "@/features/competitions/components/wushu/AssignTaoluParticipantsModal";
+import { SetupGroupStageModal }   from "@/features/competitions/components/SetupGroupStageModal";
+import { GroupStandingsTable }    from "@/features/competitions/components/GroupStandingsTable";
+import { useCloseGroups }         from "@/features/competitions/api/group-stage.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
@@ -91,6 +94,8 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
   const { getTaekwondoType, getWushuType, isTiroDeportivo, isTableTennis } = sport;
   const taekwondoType = getTaekwondoType(selectedPhase);
   const wushuType     = getWushuType();
+  const closeGroups = useCloseGroups();
+
 
 
   // ── Card visual por fase ──────────────────────────────────────────────────
@@ -133,6 +138,41 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
       return selectedPhase.type === "grupo"
         ? <TiroDeportivoScheduleTable phaseId={selectedPhase.phaseId} />
         : <TiroDeportivoResultsTable  phaseId={selectedPhase.phaseId} />;
+    
+    if (
+      selectedPhase.type === "eliminacion" &&
+      selectedPhase.subPhases &&
+      selectedPhase.subPhases.length > 0
+    ) {
+      const allClosed = selectedPhase.subPhases.every(
+        (g) => g.subPhases === undefined || true, // ajusta si tienes campo status en subPhase
+      );
+      return (
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-base font-semibold text-slate-700">Fase de Grupos</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              isLoading={closeGroups.isPending}
+              onClick={() => {
+                if (confirm("¿Cerrar todos los grupos y clasificar a los mejores al bracket?")) {
+                  closeGroups.mutate(selectedPhase.phaseId);
+                }
+              }}
+            >
+              Cerrar grupos y clasificar
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {selectedPhase.subPhases.map((group) => (
+              <GroupStandingsTable key={group.phaseId} group={group} />
+            ))}
+          </div>
+        </div>
+      );
+    }
 
 
     if (selectedPhase.type === "mejor_de_3")
@@ -419,6 +459,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           </Button>
         )}
 
+        {selectedPhase.type === "eliminacion" &&
+          (!selectedPhase.subPhases || selectedPhase.subPhases.length === 0) && (
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<Users className="h-4 w-4" />}
+            onClick={() => openModal("setupGroupStage")}
+          >
+            Fase de Grupos
+          </Button>
+        )}
+
         {selectedPhase.type === "eliminacion" && matches.length === 0 && (
           <Button variant="outline" size="sm" onClick={() => openModal("generateBracket")}>
             Generar Bracket
@@ -670,6 +722,14 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
               sismasterEventId={eventCategory.externalEventId ?? undefined}
               sismasterSportId={eventCategory.externalSportId ?? undefined}
               eventCategoryId={eventCategory.eventCategoryId}
+            />
+          )}
+          {modals.setupGroupStage && (
+            <SetupGroupStageModal
+              isOpen={modals.setupGroupStage}
+              onClose={() => closeModal("setupGroupStage")}
+              phase={selectedPhase}
+              availableRegistrations={availableRegistrations}
             />
           )}
 

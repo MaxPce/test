@@ -1,17 +1,65 @@
+// ─── GroupStanding  ─────────────────────────────────────────────────────
+
+export interface GroupStanding {
+  groupStandingId: number;
+  phaseId: number;
+  registrationId: number;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDifference: number;
+  points: number;
+  qualified: boolean;
+  finalRank: number | null;
+  registration?: {
+    registrationId: number;
+    athlete?: {
+      athleteId: number;
+      name: string;
+      institution?: {
+        institutionId: number;
+        name: string;
+        logoUrl?: string;
+      };
+    };
+    team?: {
+      teamId: number;
+      name: string;
+      institution?: {
+        institutionId: number;
+        name: string;
+        logoUrl?: string;
+      };
+    };
+  };
+}
+
+// ─── Phase ──────────────────────────────────────────────────────────────────────
+
 export interface Phase {
   phaseId: number;
   eventCategoryId: number;
   name: string;
-  type: "grupo" | "eliminacion" | "repechaje";
+  type: string;
   displayOrder?: number;
+  // ── Campos de fase de grupos ─────────────────────────────────────
+  parentPhaseId?: number | null;
+  groupLabel?: string | null;
+  qualifiersCount?: number | null;
+  subPhases?: Phase[];
+  groupStandings?: GroupStanding[];
+  // ────────────────────────────────────────────────────────────────
   eventCategory?: {
     eventCategoryId: number;
     categoryId: number;
     category?: {
       categoryId: number;
       name: string;
-      type: string; // "individual" | "dobles" | "equipo"
-      gender?: string; // "M" | "F" | "MIXTO"
+      type: string;
+      gender?: string;
       sport?: {
         sportId: number;
         name: string;
@@ -22,13 +70,17 @@ export interface Phase {
   standings?: Standing[];
 }
 
+// ─── Match ───────────────────────────────────────────────────────────────────────
+
 export interface Match {
   matchId: number;
   phaseId: number;
   matchNumber?: number;
-  round?: string; // 'final', 'semifinal', 'cuartos', etc.
+  round?: string;
   status: "programado" | "en_curso" | "finalizado" | "cancelado";
   winnerRegistrationId?: number;
+  participant1Score?: number | null;
+  participant2Score?: number | null;
   scheduledTime?: string;
   platformNumber?: number;
   createdAt: string;
@@ -38,6 +90,8 @@ export interface Match {
   participations?: Participation[];
   victoryType?: string | null;
 }
+
+// ─── Participation ───────────────────────────────────────────────────────────────
 
 export interface Participation {
   participationId: number;
@@ -56,6 +110,7 @@ export interface Participation {
         institutionId: number;
         name: string;
         code: string;
+        logoUrl?: string;
       };
     };
     team?: {
@@ -65,6 +120,7 @@ export interface Participation {
         institutionId: number;
         name: string;
         code: string;
+        logoUrl?: string;
       };
       members?: Array<{
         tmId: number;
@@ -85,6 +141,8 @@ export interface Participation {
   };
 }
 
+// ─── Standing ────────────────────────────────────────────────────────────────────
+
 export interface Standing {
   standingId: number;
   phaseId: number;
@@ -98,15 +156,21 @@ export interface Standing {
   scoreAgainst: number;
   scoreDiff: number;
   rankPosition?: number;
+  manualRankPosition?: number | null;
   phase?: Phase;
   registration?: any;
 }
 
+// ─── DTOs ─────────────────────────────────────────────────────────────────────────
+
 export interface CreatePhaseData {
   eventCategoryId: number;
   name: string;
-  type: "grupo" | "eliminacion" | "repechaje";
+  type: string;
   displayOrder?: number;
+  parentPhaseId?: number | null;
+  groupLabel?: string | null;
+  qualifiersCount?: number | null;
 }
 
 export interface CreateMatchData {

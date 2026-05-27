@@ -1,11 +1,50 @@
 import type { PhaseFormat, MatchStatus } from "@/lib/types/common.types";
-import type { export EventCategory } from "@/features/events/types";
+import type { EventCategory } from "@/features/events/types";
 import type { Athlete, Team } from "@/features/institutions/types";
 
 // ─── Enums (espejo del backend) ─────────────────────────────────────────────────
 
 export type PhaseGender = "damas" | "varones" | "mixto";
 export type PhaseLevel  = "noveles" | "avanzados";
+
+// ─── GroupStanding ─────────────────────────────────────────────────────
+
+export interface GroupStanding {
+  groupStandingId: number;
+  phaseId: number;
+  registrationId: number;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDifference: number;
+  points: number;
+  qualified: boolean;
+  finalRank: number | null;
+  registration?: {
+    registrationId: number;
+    athlete?: {
+      athleteId: number;
+      name: string;
+      institution?: {
+        institutionId: number;
+        name: string;
+        logoUrl?: string;
+      };
+    };
+    team?: {
+      teamId: number;
+      name: string;
+      institution?: {
+        institutionId: number;
+        name: string;
+        logoUrl?: string;
+      };
+    };
+  };
+}
 
 // ─── Phase ──────────────────────────────────────────────────────────────────────
 
@@ -23,16 +62,17 @@ export interface Phase {
   eventCategory?: EventCategory;
   matches?: Match[];
   participations?: Participation[];
-
-  // ── Campos FEDUP / atletismo ──
   gender?:  PhaseGender | null;
   level?:   PhaseLevel  | null;
   isRelay?: boolean;
+  parentPhaseId?: number | null;
+  groupLabel?: string | null;
+  qualifiersCount?: number | null;
+  subPhases?: Phase[];
+  groupStandings?: GroupStanding[]; 
 }
 
-// ── El resto del archivo permanece igual ──────────────────────────────────────
-// (CreatePhaseData, UpdatePhaseData, Match, Participation, etc.)
-// Solo copia-pega tu archivo actual y agrega los 3 campos de arriba en Phase.
+// ─── CreatePhaseData ─────────────────────────────────────────────────────────────
 
 export interface CreatePhaseData {
   eventCategoryId: number;
@@ -42,6 +82,9 @@ export interface CreatePhaseData {
   status?: "pendiente" | "en_curso" | "finalizado";
   startDate?: string;
   endDate?: string;
+  parentPhaseId?: number | null;
+  groupLabel?: string | null;
+  qualifiersCount?: number | null;
 }
 
 export interface UpdatePhaseData {
@@ -51,6 +94,8 @@ export interface UpdatePhaseData {
   startDate?: string;
   endDate?: string;
 }
+
+// ─── Match ───────────────────────────────────────────────────────────────────────
 
 export interface Match {
   matchId: number;
@@ -143,6 +188,8 @@ export interface UpdateMatchData {
   location?: string;
 }
 
+// ─── Participation ───────────────────────────────────────────────────────────────
+
 export interface Participation {
   participationId: number;
   phaseId: number;
@@ -180,8 +227,8 @@ export interface BulkParticipationsData {
   isTeam: boolean;
 }
 
-export interface InitializeBracketData     { phaseId: number }
-export interface InitializeRoundRobinData  { phaseId: number }
+export interface InitializeBracketData    { phaseId: number }
+export interface InitializeRoundRobinData { phaseId: number }
 
 export interface StandingsRow {
   position: number;
