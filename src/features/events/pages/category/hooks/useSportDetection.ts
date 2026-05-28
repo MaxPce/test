@@ -27,6 +27,7 @@ export interface SportDetection {
   isClimbing: boolean;
   isChess: boolean;
   isCombined: boolean;
+  isTennis: boolean;
 
   // Getters con lógica derivada
   getTaekwondoType: (selectedPhase?: Phase | null) => TaekwondoType | null;
@@ -100,6 +101,13 @@ export function useSportDetection(eventCategory: EventCategory): SportDetection 
 
   const isAtletismo = useMemo(
     () => sportName.includes("atletismo"),
+    [sportName],
+  );
+
+  const isTennis = useMemo(
+    () =>
+      sportName.includes("tenis") ||
+      sportName.includes("tennis"),
     [sportName],
   );
 
@@ -231,6 +239,7 @@ export function useSportDetection(eventCategory: EventCategory): SportDetection 
     isClimbing,
     isChess,
     isCombined,
+    isTennis,
     getTaekwondoType,
     getWushuType,
     getCombinedType,

@@ -29,6 +29,7 @@ import { WrestlingScoreModal } from "@/features/competitions/components/wrestlin
 import { TiroDeportivoScheduleTable } from "@/features/competitions/components/shooting/TiroDeportivoScheduleTable";
 import { TiroDeportivoResultsTable } from "@/features/competitions/components/shooting/TiroDeportivoResultsTable";
 import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
+import { GenerateTennisPhasesModal } from "@/features/events/components/GenerateTennisPhasesModal";
 import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
 import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
 import { GenerateWushuTaoluPhasesModal } from "@/features/competitions/components/wushu/GenerateWushuTaoluPhasesModal";
@@ -900,6 +901,13 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 Generar Fases
               </Button>
             )}
+
+            {sport.isTennis && (
+              <Button onClick={() => openModal("generateTennisPhases")} variant="outline" size="lg">
+                Generar Fases
+              </Button>
+            )}
+
             <Button
               onClick={() => openModal("phase")}
               variant="gradient"
@@ -1197,6 +1205,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}
+        />
+      )}
+
+      {modals.generateTennisPhases && sport.isTennis && (
+        <GenerateTennisPhasesModal
+          isOpen={modals.generateTennisPhases}
+          onClose={() => closeModal("generateTennisPhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Categoría"}
+          allRegistrations={eventCategory.registrations ?? []}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
         />
       )}
     </div>
