@@ -173,6 +173,17 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 <GroupMatchesPanel
                   group={group}
                   allRegistrations={eventCategory.registrations ?? []}
+                  eventCategory={eventCategory}
+                  sport={{
+                    isJudo: sport.isJudo,
+                    isKarate: sport.isKarate,
+                    isWushu: sport.isWushu,
+                    isWrestling: sport.isWrestling,
+                    isCollectiveSport: sport.isCollectiveSport,
+                    isTableTennis,
+                    taekwondoType,
+                    wushuType,
+                  }}
                   onGenerateMatches={(g) =>
                     handlers.generateRoundRobin({
                       phaseId: g.phaseId,
@@ -748,7 +759,14 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
               eventCategoryId={eventCategory.eventCategoryId}
             />
           )}
-          
+          {modals.setupGroupStage && (
+            <SetupGroupStageModal
+              isOpen={modals.setupGroupStage}
+              onClose={() => closeModal("setupGroupStage")}
+              phase={selectedPhase}
+              availableRegistrations={availableRegistrations}
+            />
+          )}
 
           {/* ── Score modals ── */}
           {modals.result && selectedMatch && (

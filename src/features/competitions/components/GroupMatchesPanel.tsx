@@ -5,25 +5,47 @@ import {
   ChevronDown, ChevronUp, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { MatchForm } from "@/features/competitions/components/MatchForm";
 import { AssignParticipantsModal } from "@/features/competitions/components/AssignParticipantsModal";
 import { ResultModal } from "@/features/competitions/components/ResultModal";
+import { JudoScoreModal } from "@/features/competitions/components/judo/JudoScoreModal";
+import { KarateScoreModal } from "@/features/competitions/components/karate/KarateScoreModal";
+import { WushuScoreModal } from "@/features/competitions/components/wushu/WushuScoreModal";
+import { WrestlingScoreModal } from "@/features/competitions/components/wrestling/WrestlingScoreModal";
+import { CollectiveScoreModal } from "@/features/competitions/components/collective/CollectiveScoreModal";
+import { PoomsaeScoreModal } from "@/features/competitions/components/taekwondo/PoomsaeScoreModal";
+import { KyoruguiRoundsModal } from "@/features/competitions/components/taekwondo/KyoruguiRoundsModal";
+import { TableTennisMatchWrapper } from "@/features/competitions/components/table-tennis/TableTennisMatchWrapper";
 import { apiClient } from "@/lib/api/client";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { Phase, Match } from "@/features/competitions/types";
 import type { Registration } from "@/features/events/types";
+import type { EventCategory } from "@/features/events/types";
+
+
+interface SportInfo {
+  isJudo: boolean;
+  isKarate: boolean;
+  isWushu: boolean;
+  isWrestling: boolean;
+  isCollectiveSport: boolean;
+  isTableTennis: boolean;
+  taekwondoType: "poomsae" | "kyorugui" | null;
+  wushuType: "sanda" | "taolu" | null;
+}
 
 interface Props {
   group: Phase;
   allRegistrations: Registration[];
-  /** Generación de partidos (round robin del grupo) */
+  eventCategory: EventCategory;
+  sport: SportInfo;
   onGenerateMatches?: (group: Phase) => void;
   isGenerating?: boolean;
 }
+
 
 const getStatusConfig = (status: string) => {
   const configs: Record<string, { variant: "primary" | "success" | "default" | "warning"; label: string; dot: boolean }> = {
@@ -35,20 +57,28 @@ const getStatusConfig = (status: string) => {
   return configs[status] ?? configs.programado;
 };
 
+
 export function GroupMatchesPanel({
   group,
   allRegistrations,
+  eventCategory,
+  sport,
   onGenerateMatches,
   isGenerating = false,
 }: Props) {
   const queryClient = useQueryClient();
-  const [expanded, setExpanded]       = useState(false);
+  const [expanded, setExpanded]           = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [showMatchForm,  setShowMatchForm]  = useState(false);
-  const [showAssign,     setShowAssign]     = useState(false);
-  const [showResult,     setShowResult]     = useState(false);
+  const [showMatchForm, setShowMatchForm] = useState(false);
+  const [showAssign,    setShowAssign]    = useState(false);
+  const [showResult,    setShowResult]    = useState(false);
 
-  // ── Fetch partidos del grupo ──────────────────────────────────────────────
+  const {
+    isJudo, isKarate, isWushu, isWrestling,
+    isCollectiveSport, isTableTennis,
+    taekwondoType, wushuType,
+  } = sport;
+
   const { data: matches = [], isLoading } = useQuery<Match[]>({
     queryKey: ["matches", "group", group.phaseId],
     queryFn: async () => {
@@ -57,20 +87,18 @@ export function GroupMatchesPanel({
       });
       return data;
     },
-    enabled: expanded, // solo carga cuando el panel está abierto
+    enabled: expanded,
   });
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["matches", "group", group.phaseId] });
 
-  // ── Crear partido manual ──────────────────────────────────────────────────
   const handleCreateMatch = async (dto: any) => {
     await apiClient.post("/competitions/matches", { ...dto, phaseId: group.phaseId });
     invalidate();
     setShowMatchForm(false);
   };
 
-  // ── Asignar participante ──────────────────────────────────────────────────
   const handleAssign = async (matchId: number, registrationId: number, corner: string) => {
     await apiClient.post("/competitions/participations", { matchId, registrationId, corner });
     invalidate();
@@ -78,23 +106,18 @@ export function GroupMatchesPanel({
     setSelectedMatch(null);
   };
 
-  // ── Registrar resultado ───────────────────────────────────────────────────
-  const handleResult = async (matchId: number, winnerId: number) => {
-    await apiClient.patch(`/competitions/matches/${matchId}`, {
-        winnerRegistrationId: winnerId,
-        status: "finalizado",
+  const handleResult = async (dto: any) => {
+    await apiClient.patch(`/competitions/matches/${selectedMatch!.matchId}`, {
+      winnerRegistrationId: dto.winnerRegistrationId,
+      status: "finalizado",
     });
-
     await apiClient.post(`/competitions/phases/${group.phaseId}/standings/update`);
-
     invalidate();
     queryClient.invalidateQueries({ queryKey: ["phases"] });
     setShowResult(false);
     setSelectedMatch(null);
-    };
+  };
 
-
-  // ── Eliminar partido ──────────────────────────────────────────────────────
   const handleDelete = async (matchId: number) => {
     if (!confirm("¿Eliminar este partido?")) return;
     await apiClient.delete(`/competitions/matches/${matchId}`);
@@ -103,15 +126,22 @@ export function GroupMatchesPanel({
 
   const finishedCount = matches.filter((m) => m.status === "finalizado").length;
 
+  const openResult = (match: Match) => {
+    setSelectedMatch(match);
+    setShowResult(true);
+  };
+
+  const closeResult = () => {
+    setShowResult(false);
+    setSelectedMatch(null);
+  };
+
   return (
     <div className="border border-slate-200 rounded-xl overflow-hidden mt-2">
-
-      {/* ── Header colapsable ── */}
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3
-                   bg-white hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <Trophy className="h-4 w-4 text-slate-400" />
@@ -130,11 +160,8 @@ export function GroupMatchesPanel({
         }
       </button>
 
-      {/* ── Contenido ── */}
       {expanded && (
         <div className="border-t border-slate-200">
-
-          {/* Toolbar */}
           <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
             <span className="text-xs text-slate-500">
               {matches.length === 0
@@ -163,21 +190,18 @@ export function GroupMatchesPanel({
             </div>
           </div>
 
-          {/* Loading */}
           {isLoading && (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
             </div>
           )}
 
-          {/* Empty */}
           {!isLoading && matches.length === 0 && (
             <div className="px-4 py-6">
               <EmptyState title="No hay partidos en este grupo" />
             </div>
           )}
 
-          {/* Lista de partidos */}
           {!isLoading && matches.length > 0 && (
             <div className="divide-y divide-slate-100">
               {matches.map((match) => {
@@ -186,8 +210,6 @@ export function GroupMatchesPanel({
 
                 return (
                   <div key={match.matchId} className="px-4 py-3 hover:bg-slate-50 transition-colors">
-
-                    {/* Encabezado del partido */}
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         {match.matchNumber && (
@@ -198,11 +220,7 @@ export function GroupMatchesPanel({
                         {match.round && (
                           <Badge variant="default" size="sm">{match.round}</Badge>
                         )}
-                        <Badge
-                          variant={statusConfig.variant}
-                          dot={statusConfig.dot}
-                          size="sm"
-                        >
+                        <Badge variant={statusConfig.variant} dot={statusConfig.dot} size="sm">
                           {statusConfig.label}
                         </Badge>
                         {match.scheduledTime && (
@@ -221,15 +239,13 @@ export function GroupMatchesPanel({
                       <button
                         type="button"
                         onClick={() => handleDelete(match.matchId)}
-                        className="h-7 w-7 flex items-center justify-center rounded-lg
-                                   text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                        className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
                         aria-label="Eliminar partido"
                       >
                         ×
                       </button>
                     </div>
 
-                    {/* Participantes */}
                     {participants.length > 0 ? (
                       <div className="space-y-1.5 mb-2">
                         {participants.map((p) => {
@@ -272,11 +288,7 @@ export function GroupMatchesPanel({
                                 )}
                               </div>
                               <Badge
-                                variant={
-                                  p.corner === "A" || p.corner === "blue"
-                                    ? "primary"
-                                    : "default"
-                                }
+                                variant={p.corner === "A" || p.corner === "blue" ? "primary" : "default"}
                                 size="sm"
                               >
                                 {p.corner === "blue"  ? "Azul"
@@ -295,7 +307,6 @@ export function GroupMatchesPanel({
                       </div>
                     )}
 
-                    {/* Acciones del partido */}
                     <div className="flex flex-wrap gap-1.5">
                       {participants.length < 2 && match.status !== "finalizado" && (
                         <Button
@@ -334,30 +345,48 @@ export function GroupMatchesPanel({
                         </Button>
                       )}
 
-                      {participants.length === 2 && match.status !== "finalizado" && (
-                        <Button
-                          variant="gradient"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMatch(match);
-                            setShowResult(true);
-                          }}
-                        >
-                          Registrar Resultado
-                        </Button>
-                      )}
-
-                      {participants.length === 2 && match.status === "finalizado" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMatch(match);
-                            setShowResult(true);
-                          }}
-                        >
-                          Editar Resultado
-                        </Button>
+                      {participants.length === 2 && (
+                        <>
+                          {(isJudo || isKarate || isWushu || isWrestling || !!taekwondoType) && (
+                            <Button
+                              variant="gradient"
+                              size="sm"
+                              onClick={() => openResult(match)}
+                            >
+                              {match.participant1Score !== null || match.status === "finalizado"
+                                ? "Editar Puntaje"
+                                : "Registrar Puntaje"}
+                            </Button>
+                          )}
+                          {isCollectiveSport && (
+                            <Button
+                              variant="gradient"
+                              size="sm"
+                              onClick={() => openResult(match)}
+                            >
+                              {match.status === "finalizado" ? "Editar Resultado" : "Registrar Resultado"}
+                            </Button>
+                          )}
+                          {isTableTennis && (
+                            <Button
+                              variant="gradient"
+                              size="sm"
+                              onClick={() => openResult(match)}
+                            >
+                              {match.status === "finalizado" ? "Ver/Editar Match" : "Gestionar Match"}
+                            </Button>
+                          )}
+                          {!isJudo && !isKarate && !isWushu && !isWrestling
+                            && !isCollectiveSport && !taekwondoType && !isTableTennis && (
+                            <Button
+                              variant={match.status === "finalizado" ? "outline" : "gradient"}
+                              size="sm"
+                              onClick={() => openResult(match)}
+                            >
+                              {match.status === "finalizado" ? "Editar Resultado" : "Registrar Resultado"}
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -368,7 +397,6 @@ export function GroupMatchesPanel({
         </div>
       )}
 
-      {/* ── Modales ── */}
       {showMatchForm && (
         <Modal
           isOpen={showMatchForm}
@@ -398,14 +426,87 @@ export function GroupMatchesPanel({
       )}
 
       {showResult && selectedMatch && (
-        <ResultModal
-            isOpen={showResult}
-            onClose={() => { setShowResult(false); setSelectedMatch(null); }}
-            match={selectedMatch}
-            onSubmit={handleResult}
-            isLoading={false}
-        />
-        )}
+        <>
+          {isJudo && (
+            <JudoScoreModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch as any}
+              phase={group}
+            />
+          )}
+          {isKarate && (
+            <KarateScoreModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch as any}
+              phase={group}
+            />
+          )}
+          {isWushu && wushuType === "sanda" && (
+            <WushuScoreModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch as any}
+              phase={group}
+            />
+          )}
+          {isWrestling && (
+            <WrestlingScoreModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch as any}
+              phase={group}
+            />
+          )}
+          {isCollectiveSport && (
+            <CollectiveScoreModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch as any}
+              phase={group}
+            />
+          )}
+          {taekwondoType === "poomsae" && (
+            <PoomsaeScoreModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch}
+              phase={group}
+            />
+          )}
+          {taekwondoType === "kyorugui" && (
+            <KyoruguiRoundsModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch}
+            />
+          )}
+          {isTableTennis && (
+            <Modal
+              isOpen
+              onClose={closeResult}
+              title="Gestionar Match - Tenis de Mesa"
+              size="full"
+            >
+              <TableTennisMatchWrapper
+                match={selectedMatch}
+                eventCategory={eventCategory}
+              />
+            </Modal>
+          )}
+          {!isJudo && !isKarate && !isWushu && !isWrestling
+            && !isCollectiveSport && !taekwondoType && !isTableTennis && (
+            <ResultModal
+              isOpen
+              onClose={closeResult}
+              match={selectedMatch}
+              onSubmit={handleResult}
+              isLoading={false}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
