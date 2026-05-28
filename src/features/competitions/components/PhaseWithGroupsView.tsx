@@ -2,8 +2,10 @@ import { useState } from "react";
 import { GitBranch, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { GroupStageView } from "./GroupStageView";
+import { BracketView } from "./BracketView";
 import { SetupGroupStageModal } from "./SetupGroupStageModal";
 import { GenerateBracketModal } from "./GenerateBracketModal";
+import { useBracketStructure } from "../api/bracket.queries";
 import type { Phase, AvailableRegistration } from "../types";
 
 interface Props {
@@ -12,11 +14,19 @@ interface Props {
 }
 
 export function PhaseWithGroupsView({ phase, availableRegistrations }: Props) {
-  const [showSetupGroups, setShowSetupGroups]   = useState(false);
-  const [showBracket,     setShowBracket]       = useState(false);
-  const [seededIds,       setSeededIds]         = useState<number[]>([]);
+  const [showSetupGroups, setShowSetupGroups] = useState(false);
+  const [showBracket,     setShowBracket]     = useState(false);
+  const [seededIds,       setSeededIds]       = useState<number[]>([]);
 
   const hasSubPhases = (phase.subPhases ?? []).length > 0;
+
+  const { data: bracketData } = useBracketStructure(phase.phaseId);
+
+  const bracketMatches = [
+    ...(bracketData?.mainBracket ?? []),
+    ...(bracketData?.thirdPlaceMatch ? [bracketData.thirdPlaceMatch] : []),
+  ];
+  const hasBracket = bracketMatches.length > 0;
 
   const handleQualifiedReady = (qualifiedIds: number[]) => {
     setSeededIds(qualifiedIds);
@@ -45,7 +55,7 @@ export function PhaseWithGroupsView({ phase, availableRegistrations }: Props) {
         )}
       </div>
 
-      {/* ── Fase de grupos (si existe) ── */}
+      {/* ── Fase de grupos ── */}
       {hasSubPhases && (
         <GroupStageView
           parentPhase={phase}
@@ -53,12 +63,13 @@ export function PhaseWithGroupsView({ phase, availableRegistrations }: Props) {
         />
       )}
 
-      {/* ── Bracket de eliminación (si ya hay clasificados del grupo
-              o si la fase no tiene grupos) ── */}
-      {phase.matches && phase.matches.length > 0 && (
+      {/* ── Bracket de eliminación ── */}
+      {hasBracket && (
         <div className="mt-4">
-          {/* Aquí va tu BracketView o componente equivalente */}
-          {/* <BracketView phase={phase} /> */}
+          <BracketView
+            matches={bracketMatches}
+            phase={phase}
+          />
         </div>
       )}
 
@@ -75,7 +86,6 @@ export function PhaseWithGroupsView({ phase, availableRegistrations }: Props) {
           isOpen={showBracket}
           onClose={() => setShowBracket(false)}
           phase={phase}
-          // Le pasas los clasificados ya ordenados como seeding
           preSelectedRegistrationIds={seededIds}
           availableRegistrations={availableRegistrations}
         />

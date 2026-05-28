@@ -4,7 +4,7 @@ import { bracketApi } from "./bracket.api";
 export function useBracketStructure(phaseId: number, enabled: boolean = true) {
   return useQuery({
     queryKey: ["bracket", phaseId, "structure"],
-    queryFn: () => bracketApi.getStructure(phaseId),
+    queryFn: () => bracketApi.getBracketStructure(phaseId), 
     enabled: enabled && phaseId > 0,
   });
 }
@@ -12,7 +12,7 @@ export function useBracketStructure(phaseId: number, enabled: boolean = true) {
 export function useBracketComplete(phaseId: number) {
   return useQuery({
     queryKey: ["bracket", phaseId, "complete"],
-    queryFn: () => bracketApi.isComplete(phaseId),
+    queryFn: () => bracketApi.isBracketComplete(phaseId), 
     enabled: phaseId > 0,
   });
 }

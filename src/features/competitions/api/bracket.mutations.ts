@@ -6,9 +6,12 @@ export function useGenerateBracket() {
 
   return useMutation({
     mutationFn: bracketApi.generateCompleteBracket,
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["matches"] });
       queryClient.invalidateQueries({ queryKey: ["phases"] });
+      queryClient.invalidateQueries({
+        queryKey: ["bracket", variables.phaseId, "structure"],
+      });
     },
   });
 }
@@ -25,7 +28,6 @@ export function useAdvanceWinner() {
   });
 }
 
-// ← nuevo: walkover genérico para todos los deportes
 export interface SetWalkoverGenericPayload {
   matchId: number;
   winnerRegistrationId: number;
