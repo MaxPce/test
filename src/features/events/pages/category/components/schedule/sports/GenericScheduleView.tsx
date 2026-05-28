@@ -140,61 +140,390 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
         ? <TiroDeportivoScheduleTable phaseId={selectedPhase.phaseId} />
         : <TiroDeportivoResultsTable  phaseId={selectedPhase.phaseId} />;
     
+    // DESPUÉS — muestra grupos Y el bracket de eliminación debajo
     if (
       selectedPhase.type === "eliminacion" &&
       selectedPhase.subPhases &&
       selectedPhase.subPhases.length > 0
     ) {
-      const allClosed = selectedPhase.subPhases.every(
-        (g) => g.subPhases === undefined || true, // ajusta si tienes campo status en subPhase
+      // Matches de la fase padre (bracket de eliminación)
+      const eliminationMatches = matches.filter(
+        (m) => m.phaseId === selectedPhase.phaseId
       );
+
       return (
-        <div className="p-4 space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-semibold text-slate-700">Fase de Grupos</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              isLoading={closeGroups.isPending}
-              onClick={() => {
-                if (confirm("¿Cerrar todos los grupos y clasificar a los mejores al bracket?")) {
-                  closeGroups.mutate(selectedPhase.phaseId);
-                }
-              }}
-            >
-              Cerrar grupos y clasificar
-            </Button>
+        <div className="p-4 space-y-6">
+          {/* ── Sección grupos ── */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-slate-700">Fase de Grupos</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                isLoading={closeGroups.isPending}
+                onClick={() => {
+                  if (confirm("¿Cerrar todos los grupos y clasificar a los mejores al bracket?")) {
+                    closeGroups.mutate(selectedPhase.phaseId);
+                  }
+                }}
+              >
+                Cerrar grupos y clasificar
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {selectedPhase.subPhases.map((group) => (
+                <div key={group.phaseId} className="flex flex-col gap-0">
+                  <GroupStandingsTable group={group} />
+                  <GroupMatchesPanel
+                    group={group}
+                    allRegistrations={eventCategory.registrations ?? []}
+                    eventCategory={eventCategory}
+                    sport={{
+                      isJudo: sport.isJudo,
+                      isKarate: sport.isKarate,
+                      isWushu: sport.isWushu,
+                      isWrestling: sport.isWrestling,
+                      isCollectiveSport: sport.isCollectiveSport,
+                      isTableTennis,
+                      taekwondoType,
+                      wushuType,
+                    }}
+                    onGenerateMatches={(g) =>
+                      handlers.generateRoundRobin({
+                        phaseId: g.phaseId,
+                        registrationIds: (g.groupStandings ?? []).map(
+                          (gs) => gs.registrationId
+                        ),
+                      })
+                    }
+                    isGenerating={mutations.initializeRoundRobin.isPending}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {selectedPhase.subPhases.map((group) => (
-              <div key={group.phaseId} className="flex flex-col gap-0">
-                <GroupStandingsTable group={group} />
-                <GroupMatchesPanel
-                  group={group}
-                  allRegistrations={eventCategory.registrations ?? []}
-                  eventCategory={eventCategory}
-                  sport={{
-                    isJudo: sport.isJudo,
-                    isKarate: sport.isKarate,
-                    isWushu: sport.isWushu,
-                    isWrestling: sport.isWrestling,
-                    isCollectiveSport: sport.isCollectiveSport,
-                    isTableTennis,
-                    taekwondoType,
-                    wushuType,
-                  }}
-                  onGenerateMatches={(g) =>
-                    handlers.generateRoundRobin({
-                      phaseId: g.phaseId,
-                      registrationIds: (g.groupStandings ?? []).map((gs) => gs.registrationId),
-                    })
-                  }
-                  isGenerating={mutations.initializeRoundRobin.isPending}
-                />
+          {/* ── Sección bracket de eliminación ── */}
+          {eliminationMatches.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="h-5 w-5 text-purple-600" />
+                <h3 className="text-base font-semibold text-slate-700">
+                  Bracket de Eliminación
+                </h3>
+                <Badge variant="default" size="sm">
+                  {eliminationMatches.length} partidos
+                </Badge>
               </div>
-            ))}
-          </div>
+
+              <div className="space-y-3">
+                {eliminationMatches.map((match) => {
+                  const participants = match.participations || [];
+                  const statusConfig = getStatusConfig(match.status);
+
+                  const canReassign =
+                    participants.length > 0 &&
+                    match.status !== "finalizado" &&
+                    wushuType !== "taolu" &&
+                    !isTiroDeportivo;
+
+                  return (
+                    <Card key={match.matchId} variant="elevated" padding="md" hover className="group">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            {match.matchNumber && (
+                              <span className="text-sm font-bold text-slate-900">
+                                Partido #{match.matchNumber}
+                              </span>
+                            )}
+                            {match.round && (
+                              <Badge variant="default" size="sm">
+                                {match.round}
+                              </Badge>
+                            )}
+                            <Badge
+                              variant={statusConfig.variant}
+                              dot={statusConfig.dot}
+                              size="sm"
+                            >
+                              {statusConfig.label}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-sm text-slate-600">
+                            {match.scheduledTime && (
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-4 w-4" />
+                                <span>
+                                  {new Date(match.scheduledTime).toLocaleString("es-ES")}
+                                </span>
+                              </div>
+                            )}
+                            {match.platformNumber && (
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="h-4 w-4" />
+                                <span>Plataforma {match.platformNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlers.deleteMatch(match.matchId);
+                          }}
+                          className="relative z-10 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"
+                          aria-label="Eliminar partido"
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      {/* Participantes */}
+                      {participants.length > 0 ? (
+                        <div className="space-y-2 mb-4">
+                          {participants.map((participation) => {
+                            const reg = participation.registration;
+                            const name =
+                              reg?.athlete?.name ?? reg?.team?.name ?? "Sin nombre";
+                            const institution =
+                              reg?.athlete?.institution ?? reg?.team?.institution;
+                            const logoUrl = institution?.logoUrl;
+                            const isWinner =
+                              match.winnerRegistrationId ===
+                              participation.registrationId;
+
+                            return (
+                              <div
+                                key={participation.participationId}
+                                className={`flex items-center justify-between p-3 rounded-xl transition-all ${
+                                  isWinner
+                                    ? "bg-gradient-to-r from-emerald-100 to-emerald-50 border-2 border-emerald-300"
+                                    : "bg-slate-50 hover:bg-slate-100"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {logoUrl ? (
+                                    <img
+                                      src={getImageUrl(logoUrl)}
+                                      alt={institution?.name || ""}
+                                      className="h-10 w-10 rounded-lg object-contain bg-white p-1"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center">
+                                      <Trophy className="h-5 w-5 text-slate-400" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-bold text-sm text-slate-900">
+                                      {name}
+                                    </p>
+                                    {institution && (
+                                      <p className="text-xs text-slate-500">
+                                        {institution.name}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {isWinner && (
+                                    <Award className="h-5 w-5 text-emerald-600 ml-1" />
+                                  )}
+                                </div>
+                                <Badge
+                                  variant={
+                                    participation.corner === "blue" ||
+                                    participation.corner === "A"
+                                      ? "primary"
+                                      : "default"
+                                  }
+                                  size="sm"
+                                >
+                                  {participation.corner === "blue"
+                                    ? "Azul"
+                                    : participation.corner === "white"
+                                    ? "Blanco"
+                                    : participation.corner === "A"
+                                    ? "Equipo A"
+                                    : participation.corner === "B"
+                                    ? "Equipo B"
+                                    : participation.corner}
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 bg-slate-50 rounded-xl mb-4">
+                          <Trophy className="h-8 w-8 text-slate-300 mx-auto mb-1" />
+                          <p className="text-sm text-slate-400">
+                            Sin participantes asignados
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Acciones */}
+                      <div className="flex flex-wrap gap-2">
+                        {participants.length === 1 &&
+                          match.status !== "finalizado" && (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              onClick={async () => {
+                                const p = participants[0];
+                                const name =
+                                  p.registration?.athlete?.name ??
+                                  p.registration?.team?.name ??
+                                  "este participante";
+                                if (
+                                  confirm(`¿Avanzar a ${name} automáticamente?`)
+                                )
+                                  await handlers.advanceWinner(
+                                    match.matchId,
+                                    p.registrationId!
+                                  );
+                              }}
+                            >
+                              Pasar Participante
+                            </Button>
+                          )}
+
+                        {participants.length < 2 &&
+                          match.status !== "finalizado" &&
+                          wushuType !== "taolu" &&
+                          !isTiroDeportivo && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              icon={<UserPlus className="h-4 w-4" />}
+                              onClick={() => {
+                                closeModal("result");
+                                setSelectedMatch(match);
+                                openModal("assign");
+                              }}
+                            >
+                              Asignar
+                            </Button>
+                          )}
+
+                        {participants.length === 2 && (
+                          <>
+                            {(sport.isJudo ||
+                              sport.isKarate ||
+                              sport.isWushu ||
+                              sport.isWrestling ||
+                              !!taekwondoType) && (
+                              <Button
+                                variant="gradient"
+                                size="sm"
+                                onClick={() => {
+                                  closeModal("assign");
+                                  setSelectedMatch(match);
+                                  setSelectedMatchId(match.matchId);
+                                  openModal("result");
+                                }}
+                              >
+                                {match.participant1Score !== null ||
+                                match.status === "finalizado"
+                                  ? "Editar Puntaje"
+                                  : "Registrar Puntaje"}
+                              </Button>
+                            )}
+                            {sport.isCollectiveSport && (
+                              <Button
+                                variant="gradient"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedMatch(match);
+                                  openModal("result");
+                                }}
+                              >
+                                {match.status === "finalizado"
+                                  ? "Editar Resultado"
+                                  : "Registrar Resultado"}
+                              </Button>
+                            )}
+                            {isTableTennis && (
+                              <Button
+                                variant="gradient"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedMatch(match);
+                                  openModal("result");
+                                }}
+                              >
+                                {match.status === "finalizado"
+                                  ? "Ver/Editar Match"
+                                  : "Gestionar Match"}
+                              </Button>
+                            )}
+                            {!sport.isJudo &&
+                              !sport.isKarate &&
+                              !sport.isWushu &&
+                              !sport.isWrestling &&
+                              !sport.isCollectiveSport &&
+                              !taekwondoType &&
+                              !isTableTennis &&
+                              match.status !== "finalizado" && (
+                                <Button
+                                  variant="gradient"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedMatch(match);
+                                    openModal("result");
+                                  }}
+                                >
+                                  Registrar Resultado
+                                </Button>
+                              )}
+                          </>
+                        )}
+
+                        {canReassign && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            icon={<UserPlus className="h-4 w-4" />}
+                            disabled={mutations.deleteParticipation.isPending}
+                            onClick={() => {
+                              const names = participants
+                                .map(
+                                  (p) =>
+                                    p.registration?.athlete?.name ??
+                                    p.registration?.team?.name ??
+                                    "Participante"
+                                )
+                                .join(" y ");
+                              if (
+                                window.confirm(
+                                  `¿Quitar a ${names} de este partido para reasignarlos?`
+                                )
+                              ) {
+                                participants.forEach((p) => {
+                                  if (p.registrationId) {
+                                    handlers.removeParticipant(
+                                      match.matchId,
+                                      p.registrationId
+                                    );
+                                  }
+                                });
+                              }
+                            }}
+                          >
+                            Reasignar
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       );
     }

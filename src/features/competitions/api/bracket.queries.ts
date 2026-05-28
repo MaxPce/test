@@ -1,18 +1,22 @@
+// src/features/competitions/api/bracket.queries.ts
+
 import { useQuery } from "@tanstack/react-query";
 import { bracketApi } from "./bracket.api";
 
 export function useBracketStructure(phaseId: number, enabled: boolean = true) {
   return useQuery({
     queryKey: ["bracket", phaseId, "structure"],
-    queryFn: () => bracketApi.getBracketStructure(phaseId), 
+    queryFn: () => bracketApi.getBracketStructure(phaseId),
     enabled: enabled && phaseId > 0,
+    staleTime: 0,          
+    refetchOnMount: true,  
   });
 }
 
 export function useBracketComplete(phaseId: number) {
   return useQuery({
     queryKey: ["bracket", phaseId, "complete"],
-    queryFn: () => bracketApi.isBracketComplete(phaseId), 
+    queryFn: () => bracketApi.isBracketComplete(phaseId),
     enabled: phaseId > 0,
   });
 }

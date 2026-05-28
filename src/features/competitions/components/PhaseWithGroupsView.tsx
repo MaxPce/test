@@ -1,3 +1,5 @@
+// src/features/competitions/components/PhaseWithGroupsView.tsx
+
 import { useState } from "react";
 import { GitBranch, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -6,6 +8,7 @@ import { BracketView } from "./BracketView";
 import { SetupGroupStageModal } from "./SetupGroupStageModal";
 import { GenerateBracketModal } from "./GenerateBracketModal";
 import { useBracketStructure } from "../api/bracket.queries";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Phase, AvailableRegistration } from "../types";
 
 interface Props {
@@ -18,19 +21,50 @@ export function PhaseWithGroupsView({ phase, availableRegistrations }: Props) {
   const [showBracket,     setShowBracket]     = useState(false);
   const [seededIds,       setSeededIds]       = useState<number[]>([]);
 
+  const queryClient = useQueryClient();
   const hasSubPhases = (phase.subPhases ?? []).length > 0;
 
-  const { data: bracketData } = useBracketStructure(phase.phaseId);
+  const { data: bracketData, isLoading, isError, error } = useBracketStructure(phase.phaseId);
 
-  const bracketMatches = [
-    ...(bracketData?.mainBracket ?? []),
-    ...(bracketData?.thirdPlaceMatch ? [bracketData.thirdPlaceMatch] : []),
-  ];
+  console.log("=== BRACKET DIAGNOSTIC ===");
+  console.log("phaseId:", phase.phaseId);
+  console.log("isLoading:", isLoading);
+  console.log("isError:", isError);
+  console.log("error:", error);
+  console.log("bracketData (raw):", bracketData);
+  console.log("bracketData keys:", bracketData ? Object.keys(bracketData) : "null/undefined");
+  console.log("bracketData.mainBracket:", bracketData?.mainBracket);
+  console.log("bracketData.matches:", bracketData?.matches);
+  console.log("bracketData.bracketByRound:", bracketData?.bracketByRound);
+  console.log("==========================");
+  const bracketMatches = (bracketData?.matches ?? []).filter(
+    (m: any) => m.round !== "grupo"
+  );
   const hasBracket = bracketMatches.length > 0;
 
-  const handleQualifiedReady = (qualifiedIds: number[]) => {
+  // Callback que llega desde GroupStageView al cerrar grupos
+  const handleGroupsClosed = (qualifiedIds: number[]) => {
     setSeededIds(qualifiedIds);
-    setShowBracket(true);
+    // Invalidar el query del bracket para que se refresquen los matches recién creados
+    queryClient.invalidateQueries({
+      queryKey: ["bracket", phase.phaseId, "structure"],
+    });
+    // NO abrimos GenerateBracketModal — el backend ya generó los matches
+  };
+
+  // Botón "Ir al Bracket" cuando los grupos ya están cerrados pero el bracket
+  // por alguna razón no se cargó aún (caso raro, pero por si acaso)
+  const handleGoToBracket = (qualifiedIds: number[]) => {
+    setSeededIds(qualifiedIds);
+    if (!hasBracket) {
+      // Solo abrir el modal si realmente no hay bracket
+      setShowBracket(true);
+    } else {
+      // Si ya hay bracket, solo refrescar el query
+      queryClient.invalidateQueries({
+        queryKey: ["bracket", phase.phaseId, "structure"],
+      });
+    }
   };
 
   return (
@@ -59,7 +93,7 @@ export function PhaseWithGroupsView({ phase, availableRegistrations }: Props) {
       {hasSubPhases && (
         <GroupStageView
           parentPhase={phase}
-          onQualifiedReady={handleQualifiedReady}
+          onQualifiedReady={handleGroupsClosed}
         />
       )}
 
@@ -81,7 +115,8 @@ export function PhaseWithGroupsView({ phase, availableRegistrations }: Props) {
         availableRegistrations={availableRegistrations}
       />
 
-      {showBracket && (
+      {/* Solo abrir GenerateBracketModal si el bracket NO existe aún */}
+      {showBracket && !hasBracket && (
         <GenerateBracketModal
           isOpen={showBracket}
           onClose={() => setShowBracket(false)}

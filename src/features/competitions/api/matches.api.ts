@@ -16,15 +16,34 @@ export const matchesApi = {
     return response.data;
   },
 
+  // Trae los matches de la fase padre + los IDs de clasificados disponibles
+  // para asignación manual en brackets generados desde fase de grupos.
+  getWithQualifiers: async (
+    phaseId: number
+  ): Promise<{
+    matches: Match[];
+    qualifiedRegistrationIds: number[];
+  }> => {
+    const [matchesResponse, registrationsResponse] = await Promise.all([
+      apiClient.get(`/competitions/matches?phaseId=${phaseId}`),
+      apiClient.get(`/competitions/phases/${phaseId}/registrations`),
+    ]);
+
+    const matches: Match[] = matchesResponse.data;
+    const qualifiedRegistrationIds: number[] = (
+      registrationsResponse.data as Array<{ registrationId: number }>
+    ).map((pr) => pr.registrationId);
+
+    return { matches, qualifiedRegistrationIds };
+  },
+
   getOne: async (id: number): Promise<Match> => {
-    // Primero intentar obtener con relaciones completas desde table-tennis
     try {
       const response = await apiClient.get(
         `/competitions/matches/${id}/table-tennis`
       );
-      return response.data.match; // El endpoint de table-tennis devuelve { match, lineups, games }
-    } catch (error) {
-      // Si falla (por ejemplo, no es tenis de mesa), usar el endpoint normal
+      return response.data.match;
+    } catch {
       const response = await apiClient.get(`/competitions/matches/${id}`);
       return response.data;
     }
