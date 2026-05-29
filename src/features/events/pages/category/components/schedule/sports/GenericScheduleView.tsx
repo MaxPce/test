@@ -1211,9 +1211,9 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
       {modals.generateTennisPhases && sport.isTennis && (
         <GenerateTennisPhasesModal
           isOpen={modals.generateTennisPhases}
-          onClose={() => closeModal("generateTennisPhases")}
+          onClose={() => closeModal('generateTennisPhases')}
           eventCategoryId={eventCategory.eventCategoryId}
-          categoryName={eventCategory.category?.name ?? "Categoría"}
+          categoryName={eventCategory.category?.name ?? 'Categoría'}
           allRegistrations={eventCategory.registrations ?? []}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
