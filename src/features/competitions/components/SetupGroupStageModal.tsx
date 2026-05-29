@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Users, ChevronRight, Search, X } from "lucide-react";
-import { Button }  from "@/components/ui/Button";
-import { Modal }   from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Modal }  from "@/components/ui/Modal";
 import { useCreateGroupStage } from "../api/group-stage.mutations";
 import { usePhaseRegistrations } from "../api/phaseRegistrations.queries";
 import type { Phase } from "../types";
@@ -14,14 +14,30 @@ interface Props {
   phase:   Phase;
 }
 
-const GROUP_LABELS = ["A","B","C","D","E","F","G","H"];
+// ── Genera etiquetas dinámicamente, sin límite ────────────────────────────
+// Modo "letter": A, B, …, Z, AA, AB, …
+// Modo "number": 1, 2, 3, …
+function getLabel(index: number, mode: "letter" | "number"): string {
+  if (mode === "number") return String(index + 1);
+  // Letras: A=0…Z=25, AA=26…AZ=51, BA=52…
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let label = "";
+  let n = index;
+  do {
+    label = alphabet[n % 26] + label;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return label;
+}
+// ─────────────────────────────────────────────────────────────────────────
 
 export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
   const [numGroups,          setNumGroups]          = useState(2);
   const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
+  const [labelMode,          setLabelMode]          = useState<"letter" | "number">("letter");
   const [groups,             setGroups]             = useState<number[][]>(() => Array.from({ length: 2 }, () => []));
   const [unassigned,         setUnassigned]         = useState<Set<number>>(new Set());
-  const [search,             setSearch]             = useState(""); // ← NUEVO
+  const [search,             setSearch]             = useState("");
 
   const createGroupStage = useCreateGroupStage();
 
@@ -34,10 +50,11 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
     const ids = phaseRegs.map((pr) => pr.registrationId);
     setUnassigned(new Set(ids));
     setGroups(Array.from({ length: numGroups }, () => []));
-    setSearch(""); // limpiar búsqueda al abrir
+    setSearch("");
   }, [isOpen, phaseRegs]);
 
-  const handleNumGroupsChange = (n: number) => {
+  const handleNumGroupsChange = (raw: string) => {
+    const n = Math.min(50, Math.max(2, parseInt(raw, 10) || 2));
     setNumGroups(n);
     setGroups((prev) => Array.from({ length: n }, (_, i) => prev[i] ?? []));
   };
@@ -65,20 +82,18 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
     setUnassigned((prev) => new Set([...prev, registrationId]));
   };
 
-  // ── Filtra el pool por el texto de búsqueda ──────────────────────────────
   const filteredUnassigned = [...unassigned].filter((id) =>
     getName(id).toLowerCase().includes(search.toLowerCase().trim()),
   );
-  // ─────────────────────────────────────────────────────────────────────────
 
   const canSave = groups.every((g) => g.length >= 2) && !createGroupStage.isPending;
 
   const handleSave = () => {
     createGroupStage.mutate(
       {
-        parentPhaseId:    phase.phaseId,
-        groups:           groups.map((ids, i) => ({
-          label:           GROUP_LABELS[i] ?? `${i + 1}`,
+        parentPhaseId: phase.phaseId,
+        groups: groups.map((ids, i) => ({
+          label:           getLabel(i, labelMode),
           registrationIds: ids,
         })),
         qualifiersPerGroup,
@@ -104,24 +119,26 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
 
         {!isLoading && (
           <>
-            {/* ── Config rápida ── */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* ── Config ── */}
+            <div className="grid grid-cols-3 gap-4">
+
+              {/* Número de grupos — input libre sin límite */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Número de grupos
                 </label>
-                <select
+                <input
+                  type="number"
+                  min={2}
+                  max={50}
                   value={numGroups}
-                  onChange={(e) => handleNumGroupsChange(Number(e.target.value))}
+                  onChange={(e) => handleNumGroupsChange(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm
                              focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {[2,3,4,6,8].map((n) => (
-                    <option key={n} value={n}>{n} grupos</option>
-                  ))}
-                </select>
+                />
               </div>
 
+              {/* Clasifican por grupo */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Clasifican por grupo
@@ -132,23 +149,62 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm
                              focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {[1,2,3,4].map((n) => (
+                  {[1, 2, 3, 4].map((n) => (
                     <option key={n} value={n}>{n}</option>
                   ))}
                 </select>
               </div>
+
+              {/* Toggle letra / número */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Etiquetas
+                </label>
+                <div className="flex rounded-lg border border-slate-300 overflow-hidden text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setLabelMode("letter")}
+                    className={`flex-1 py-2 font-medium transition-colors ${
+                      labelMode === "letter"
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    A, B, C…
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLabelMode("number")}
+                    className={`flex-1 py-2 font-medium transition-colors border-l border-slate-300 ${
+                      labelMode === "number"
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    1, 2, 3…
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {/* Vista previa de etiquetas cuando hay muchos grupos */}
+            {numGroups > 0 && (
+              <p className="text-xs text-slate-400 -mt-2">
+                Vista previa:{" "}
+                {Array.from({ length: Math.min(numGroups, 6) }, (_, i) =>
+                  getLabel(i, labelMode),
+                ).join(", ")}
+                {numGroups > 6 && `, … ${getLabel(numGroups - 1, labelMode)}`}
+              </p>
+            )}
 
             {/* ── Pool sin asignar + buscador ── */}
             {unassigned.size > 0 && (
               <div>
-                {/* Header del pool con contador y buscador */}
                 <div className="flex items-center justify-between mb-2 gap-3">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide shrink-0">
                     Sin asignar ({unassigned.size})
                   </p>
-
-                  {/* ── Buscador ── */}
                   <div className="relative flex-1 max-w-xs">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                     <input
@@ -173,13 +229,10 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                   </div>
                 </div>
 
-                {/* Lista filtrada */}
-                <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 min-h-[56px]">
+                <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 min-h-[56px] max-h-52 overflow-y-auto">
                   {filteredUnassigned.length === 0 ? (
                     <p className="text-xs text-slate-400 w-full text-center py-2">
-                      {search
-                        ? `Sin resultados para "${search}"`
-                        : "Todos asignados"}
+                      {search ? `Sin resultados para "${search}"` : "Todos asignados"}
                     </p>
                   ) : (
                     filteredUnassigned.map((id) => (
@@ -189,7 +242,7 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                                    rounded-lg px-2 py-1 text-sm text-slate-700"
                       >
                         <span>{getName(id)}</span>
-                        <div className="flex gap-1 ml-1">
+                        <div className="flex gap-1 ml-1 flex-wrap">
                           {groups.map((_, gi) => (
                             <button
                               key={gi}
@@ -197,9 +250,9 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                               onClick={() => assign(id, gi)}
                               className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700
                                          rounded px-1.5 py-0.5 font-medium transition-colors"
-                              title={`Asignar al Grupo ${GROUP_LABELS[gi]}`}
+                              title={`Asignar al Grupo ${getLabel(gi, labelMode)}`}
                             >
-                              {GROUP_LABELS[gi]}
+                              {getLabel(gi, labelMode)}
                             </button>
                           ))}
                         </div>
@@ -220,7 +273,7 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                   <div className="bg-slate-50 px-3 py-2 flex items-center justify-between border-b border-slate-200">
                     <span className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
                       <Users className="h-4 w-4" />
-                      Grupo {GROUP_LABELS[gi]}
+                      Grupo {getLabel(gi, labelMode)}
                     </span>
                     <span className="text-xs text-slate-400">{memberIds.length} participantes</span>
                   </div>
