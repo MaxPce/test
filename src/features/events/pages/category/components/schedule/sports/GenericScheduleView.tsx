@@ -1218,7 +1218,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
         />
-      )}
+)}
     </div>
   );
 }
