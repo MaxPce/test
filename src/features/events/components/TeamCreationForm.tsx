@@ -1,5 +1,6 @@
+// src/features/events/components/TeamCreationForm.tsx
 import { useState, useMemo } from "react";
-import { Plus, X, UserCircle2, AlertCircle, Tag } from "lucide-react";
+import { Plus, X, UserCircle2, AlertCircle, Tag, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -64,6 +65,9 @@ export function TeamCreationForm({
   isLoading,
 }: TeamCreationFormProps) {
   const [teamName, setTeamName] = useState("");
+  // 🆕 Rastrear si el nombre fue autocompletado o escrito a mano
+  const [autoFilledName, setAutoFilledName] = useState(false);
+
   const [selectedInstitution, setSelectedInstitution] = useState<number>(0);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [selectedAthlete, setSelectedAthlete] = useState<number>(0);
@@ -160,6 +164,47 @@ export function TeamCreationForm({
     );
   }, [athletesFromSismaster, selectedInstitution, members]);
 
+  // ─── 🆕 Handler de selección de institución con autocompletado ───────────
+  const handleInstitutionChange = (sismasterId: number) => {
+    setSelectedInstitution(sismasterId);
+    setMembers([]);
+    setSelectedAthlete(0);
+
+    if (sismasterId === 0) {
+      // Limpió la selección: resetear nombre solo si era autocompletado
+      if (autoFilledName) {
+        setTeamName("");
+        setAutoFilledName(false);
+      }
+      return;
+    }
+
+    const inst = institutions.find((i) => i.sismasterId === sismasterId);
+    if (!inst) return;
+
+    // Autocompletar si el campo está vacío O si aún tiene el valor
+    // autocompletado anterior (no pisamos lo que el usuario haya escrito)
+    if (teamName === "" || autoFilledName) {
+      setTeamName(inst.name);
+      setAutoFilledName(true);
+    }
+  };
+
+  // 🆕 Botón para volver al nombre de la institución
+  const handleResetToInstitutionName = () => {
+    if (selectedInstitutionData) {
+      setTeamName(selectedInstitutionData.name);
+      setAutoFilledName(true);
+    }
+  };
+
+  // 🆕 Cuando el usuario edita el nombre manualmente
+  const handleTeamNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTeamName(e.target.value);
+    setAutoFilledName(false); // ya no es autocompletado
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
   const institutionOptions = [
     { value: 0, label: "Seleccione una institución" },
     ...institutions.map((inst) => ({
@@ -219,7 +264,7 @@ export function TeamCreationForm({
 
     onSubmit({
       teamName: teamName.trim(),
-      institutionId: selectedInstitutionData.localId, // ID LOCAL
+      institutionId: selectedInstitutionData.localId,
       categoryId,
       members: members.map((m) => ({ athleteId: m.athleteId, rol: m.rol })),
     });
@@ -230,6 +275,12 @@ export function TeamCreationForm({
     if (rol === "titular") return "success" as const;
     return "default" as const;
   };
+
+  // 🆕 ¿Mostrar el botón "Volver al nombre de institución"?
+  const showResetNameButton =
+    selectedInstitutionData !== null &&
+    !autoFilledName &&
+    teamName !== selectedInstitutionData.name;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -295,24 +346,57 @@ export function TeamCreationForm({
               Información del Equipo
             </h3>
 
-            <Input
-              label="Nombre del Equipo *"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              required
-            />
-
+            {/* 🆕 Select de institución PRIMERO para poder autocompletar el nombre */}
             <Select
               label={`Institución * (${institutions.length} disponibles)`}
               value={selectedInstitution}
-              onChange={(e) => {
-                setSelectedInstitution(Number(e.target.value)); // SISMASTER ID
-                setMembers([]);
-                setSelectedAthlete(0);
-              }}
+              onChange={(e) => handleInstitutionChange(Number(e.target.value))}
               options={institutionOptions}
               required
             />
+
+            {/* 🆕 Input de nombre con hint y botón de reset */}
+            <div className="space-y-1">
+              <Input
+                label="Nombre del Equipo *"
+                value={teamName}
+                onChange={handleTeamNameChange}
+                placeholder={
+                  selectedInstitution === 0
+                    ? "Selecciona una institución primero..."
+                    : "Nombre del equipo"
+                }
+                required
+              />
+              <div className="flex items-center justify-between px-1 min-h-[20px]">
+                {/* Hint de estado */}
+                {teamName !== "" && (
+                  <span
+                    className={`text-xs ${
+                      autoFilledName
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {autoFilledName
+                      ? "✓ Autocompletado desde institución"
+                      : "✏ Nombre personalizado"}
+                  </span>
+                )}
+
+                {/* Botón volver al nombre de institución */}
+                {showResetNameButton && (
+                  <button
+                    type="button"
+                    onClick={handleResetToInstitutionName}
+                    className="ml-auto flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Usar nombre de institución
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {selectedInstitution > 0 && (
