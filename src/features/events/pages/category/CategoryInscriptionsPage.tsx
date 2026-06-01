@@ -196,7 +196,8 @@ export function CategoryInscriptionsPage() {
               registrations={registrations}
               onDelete={handleDeleteRegistration}
               isDeleting={deleteRegistrationMutation.isPending}
-              eventId={eventCategory.externalEventId ?? undefined} 
+              eventId={eventCategory.externalEventId ?? undefined}
+              eventCategory={eventCategory} 
             />
           </CardBody>
         </Card>

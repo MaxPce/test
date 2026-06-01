@@ -15,6 +15,9 @@ import { useUpdateRegistrationSeed } from "../api/registrations.mutations";
 import { TeamEditModal } from "./TeamEditModal";
 import type { Team } from "@/features/institutions/types";
 import type { Registration } from "../types";
+import type { EventCategory } from "../types";
+
+
 import React from "react";
 
 interface RegistrationsListProps {
@@ -22,6 +25,7 @@ interface RegistrationsListProps {
   onDelete: (registrationId: number) => void;
   isDeleting?: boolean;
   eventId?: number;
+  eventCategory?: EventCategory;
 }
 
 export function RegistrationsList({
@@ -29,6 +33,7 @@ export function RegistrationsList({
   onDelete,
   isDeleting,
   eventId,
+  eventCategory,
 }: RegistrationsListProps) {
   const [editingSeedId, setEditingSeedId] = useState<number | null>(null);
   const [seedValue, setSeedValue] = useState<string>("");
@@ -359,8 +364,9 @@ export function RegistrationsList({
           onClose={() => setEditingTeam(null)}
           team={editingTeam}
           eventId={eventId ?? 0}
+          eventCategory={eventCategory!} 
         />
-      )}
+        )}
     </>
   );
 }

@@ -65,14 +65,13 @@ export function TeamCreationForm({
   isLoading,
 }: TeamCreationFormProps) {
   const [teamName, setTeamName] = useState("");
-  // 🆕 Rastrear si el nombre fue autocompletado o escrito a mano
   const [autoFilledName, setAutoFilledName] = useState(false);
-
   const [selectedInstitution, setSelectedInstitution] = useState<number>(0);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [selectedAthlete, setSelectedAthlete] = useState<number>(0);
   const [selectedRole, setSelectedRole] = useState<string>("titular");
   const [manualIdparam, setManualIdparam] = useState<number | null>(null);
+  const [extraIdparam, setExtraIdparam] = useState<number | null>(null);
 
   const { data: localInstitutions = [] } = useInstitutions();
 
@@ -109,7 +108,15 @@ export function TeamCreationForm({
       !!localSportId && !!effectiveIdparam,
     );
 
-  const isLoadingData = isLoadingCategories || isLoadingAthletes;
+  const { data: extraAthletesFromSismaster = [], isLoading: isLoadingExtra } =
+    useAthletesByCategory(
+      eventId,
+      localSportId!,
+      extraIdparam ?? 0,
+      !!localSportId && !!extraIdparam,
+    );
+
+  const isLoadingData = isLoadingCategories || isLoadingAthletes || isLoadingExtra;
 
   const institutions = useMemo(() => {
     const localByName = new Map(
@@ -128,7 +135,14 @@ export function TeamCreationForm({
       }
     >();
 
-    athletesFromSismaster.forEach((a) => {
+    const allAthletes = [
+      ...athletesFromSismaster,
+      ...extraAthletesFromSismaster.filter(
+        (ea) => !athletesFromSismaster.some((a) => a.idperson === ea.idperson),
+      ),
+    ];
+
+    allAthletes.forEach((a) => {
       if (!a.idinstitution || !a.institutionName) return;
 
       const localInstitution = localByName.get(
@@ -147,7 +161,7 @@ export function TeamCreationForm({
     return Array.from(map.values()).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-  }, [athletesFromSismaster, localInstitutions]);
+  }, [athletesFromSismaster, extraAthletesFromSismaster, localInstitutions]);
 
   const selectedInstitutionData = useMemo(() => {
     return (
@@ -157,21 +171,26 @@ export function TeamCreationForm({
   }, [institutions, selectedInstitution]);
 
   const availableAthletes = useMemo(() => {
-    return athletesFromSismaster.filter(
+    const allAthletes = [
+      ...athletesFromSismaster,
+      ...extraAthletesFromSismaster.filter(
+        (ea) => !athletesFromSismaster.some((a) => a.idperson === ea.idperson),
+      ),
+    ];
+
+    return allAthletes.filter(
       (a) =>
         a.idinstitution === selectedInstitution &&
         !members.some((m) => m.athleteId === a.idperson),
     );
-  }, [athletesFromSismaster, selectedInstitution, members]);
+  }, [athletesFromSismaster, extraAthletesFromSismaster, selectedInstitution, members]);
 
-  // ─── 🆕 Handler de selección de institución con autocompletado ───────────
   const handleInstitutionChange = (sismasterId: number) => {
     setSelectedInstitution(sismasterId);
     setMembers([]);
     setSelectedAthlete(0);
 
     if (sismasterId === 0) {
-      // Limpió la selección: resetear nombre solo si era autocompletado
       if (autoFilledName) {
         setTeamName("");
         setAutoFilledName(false);
@@ -182,15 +201,12 @@ export function TeamCreationForm({
     const inst = institutions.find((i) => i.sismasterId === sismasterId);
     if (!inst) return;
 
-    // Autocompletar si el campo está vacío O si aún tiene el valor
-    // autocompletado anterior (no pisamos lo que el usuario haya escrito)
     if (teamName === "" || autoFilledName) {
       setTeamName(inst.name);
       setAutoFilledName(true);
     }
   };
 
-  // 🆕 Botón para volver al nombre de la institución
   const handleResetToInstitutionName = () => {
     if (selectedInstitutionData) {
       setTeamName(selectedInstitutionData.name);
@@ -198,12 +214,10 @@ export function TeamCreationForm({
     }
   };
 
-  // 🆕 Cuando el usuario edita el nombre manualmente
   const handleTeamNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTeamName(e.target.value);
-    setAutoFilledName(false); // ya no es autocompletado
+    setAutoFilledName(false);
   };
-  // ────────────────────────────────────────────────────────────────────────
 
   const institutionOptions = [
     { value: 0, label: "Seleccione una institución" },
@@ -233,6 +247,16 @@ export function TeamCreationForm({
       value: String(p.idparam),
       label: `${p.name} (${p.athleteCount} atletas)`,
     })),
+  ];
+
+  const extraCategoryOptions = [
+    { value: "", label: "— Solo esta categoría —" },
+    ...sismasterCategories
+      .filter((p) => p.idparam !== effectiveIdparam)
+      .map((p) => ({
+        value: String(p.idparam),
+        label: `${p.name} (${p.athleteCount} atletas)`,
+      })),
   ];
 
   const addMember = () => {
@@ -276,7 +300,6 @@ export function TeamCreationForm({
     return "default" as const;
   };
 
-  // 🆕 ¿Mostrar el botón "Volver al nombre de institución"?
   const showResetNameButton =
     selectedInstitutionData !== null &&
     !autoFilledName &&
@@ -346,7 +369,6 @@ export function TeamCreationForm({
               Información del Equipo
             </h3>
 
-            {/* 🆕 Select de institución PRIMERO para poder autocompletar el nombre */}
             <Select
               label={`Institución * (${institutions.length} disponibles)`}
               value={selectedInstitution}
@@ -355,7 +377,6 @@ export function TeamCreationForm({
               required
             />
 
-            {/* 🆕 Input de nombre con hint y botón de reset */}
             <div className="space-y-1">
               <Input
                 label="Nombre del Equipo *"
@@ -369,13 +390,10 @@ export function TeamCreationForm({
                 required
               />
               <div className="flex items-center justify-between px-1 min-h-[20px]">
-                {/* Hint de estado */}
                 {teamName !== "" && (
                   <span
                     className={`text-xs ${
-                      autoFilledName
-                        ? "text-green-600"
-                        : "text-gray-400"
+                      autoFilledName ? "text-green-600" : "text-gray-400"
                     }`}
                   >
                     {autoFilledName
@@ -384,7 +402,6 @@ export function TeamCreationForm({
                   </span>
                 )}
 
-                {/* Botón volver al nombre de institución */}
                 {showResetNameButton && (
                   <button
                     type="button"
@@ -410,7 +427,52 @@ export function TeamCreationForm({
                 </Badge>
               </div>
 
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                <div className="space-y-1">
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                   
+                    Buscar en otra categoría
+                    <span className="text-gray-400 font-normal normal-case tracking-normal">
+                      (opcional)
+                    </span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={String(extraIdparam ?? "")}
+                      onChange={(e) =>
+                        setExtraIdparam(
+                          e.target.value ? Number(e.target.value) : null,
+                        )
+                      }
+                      options={extraCategoryOptions}
+                    />
+                    {extraIdparam && (
+                      <button
+                        type="button"
+                        onClick={() => setExtraIdparam(null)}
+                        className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Quitar categoría extra"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {extraIdparam && (
+                    <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">
+                      Mostrando atletas de <strong>2 categorías</strong>. Útil
+                      cuando el atleta está en individual pero participa en equipo.
+                    </p>
+                  )}
+
+                  {isLoadingExtra && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Spinner size="sm" />
+                      Cargando atletas de la categoría extra...
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Select
                     label="Atleta"
@@ -439,9 +501,11 @@ export function TeamCreationForm({
                   </div>
                 </div>
 
-                {availableAthletes.length === 0 && (
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    Todos los atletas de esta institución ya fueron agregados
+                {availableAthletes.length === 0 && !isLoadingExtra && (
+                  <p className="text-xs text-gray-500 text-center">
+                    {extraIdparam
+                      ? "Todos los atletas de ambas categorías ya fueron agregados"
+                      : "Todos los atletas de esta institución ya fueron agregados"}
                   </p>
                 )}
               </div>

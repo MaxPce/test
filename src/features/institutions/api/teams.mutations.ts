@@ -75,9 +75,8 @@ export const useAddTeamMember = () => {
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: teamKeys.detail(variables.teamId),
-      });
+      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); 
     },
   });
 };
@@ -96,9 +95,8 @@ export const useRemoveTeamMember = () => {
       await apiClient.delete(ENDPOINTS.TEAMS.REMOVE_MEMBER(teamId, athleteId));
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: teamKeys.detail(variables.teamId),
-      });
+      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); // 🆕
     },
   });
 };
@@ -123,9 +121,9 @@ export const useUpdateTeamMemberRole = () => {
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: teamKeys.detail(variables.teamId),
-      });
+      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); // 🆕
     },
+    
   });
 };
