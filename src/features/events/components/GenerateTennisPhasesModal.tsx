@@ -17,7 +17,9 @@ import {
 import { useGenerateTennisPhases } from '@/features/competitions/api/tennis-phases.mutations';
 import type { TennisPhaseFormat } from '@/features/competitions/api/tennis-phases.api';
 
+
 // ─── Tipos internos ───────────────────────────────────────────────────────────
+
 
 interface NivCatCombo {
   idniv: string;
@@ -25,15 +27,24 @@ interface NivCatCombo {
   total: number;
 }
 
+
 type ParticipantKind = 'individual' | 'doubles' | 'team';
+
+// ── NUEVO ──
+type GroupGender = 'M' | 'F' | 'mixed';
+type GroupMode   = 'single' | 'by_gender';
+
 
 interface TennisAthlete {
   registrationId: number;
   name: string;
   institution?: string | null;
-  kind: ParticipantKind;          
-  memberCount?: number;           
+  kind: ParticipantKind;
+  memberCount?: number;
+  members?: any[];       // ── NUEVO: integrantes del equipo/pareja
+  gender?: GroupGender;  // ── NUEVO: género predominante del equipo
 }
+
 
 interface TennisPhaseGroup {
   key: string;
@@ -44,7 +55,9 @@ interface TennisPhaseGroup {
   athletes: TennisAthlete[];
 }
 
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 function getCatLabel(idcat: string): string {
   const c = idcat.toLowerCase().trim();
@@ -53,6 +66,7 @@ function getCatLabel(idcat: string): string {
   return idcat.toUpperCase();
 }
 
+
 function getNivLabel(idniv: string): string {
   const n = idniv.toLowerCase().trim();
   if (n.includes('novel')) return 'Nv';
@@ -60,15 +74,19 @@ function getNivLabel(idniv: string): string {
   return idniv.toUpperCase();
 }
 
+
 function buildPhaseName(idniv: string, idcat: string, categoryName: string): string {
   const catPart = getCatLabel(idcat);
   const nivPart = idniv ? ` ${getNivLabel(idniv)}` : '';
   return `${catPart}${nivPart} ${categoryName}`.trim();
 }
+
+
 function getParticipantKind(reg: any): ParticipantKind {
   if (!reg?.team) return 'individual';
   return (reg.team.members?.length ?? 0) === 2 ? 'doubles' : 'team';
 }
+
 
 function getParticipantName(reg: any): string {
   const kind = getParticipantKind(reg);
@@ -82,6 +100,7 @@ function getParticipantName(reg: any): string {
   return reg.team?.name ?? `Equipo ${reg.registrationId}`;
 }
 
+
 function getParticipantInstitution(reg: any): string | null {
   return (
     reg.athlete?.institution?.name ??
@@ -90,7 +109,93 @@ function getParticipantInstitution(reg: any): string | null {
   );
 }
 
+
+// ── NUEVO: género predominante del registro (equipo/pareja) ──
+function getTeamGender(reg: any): GroupGender {
+  const members: any[] = reg.team?.members ?? [];
+  if (members.length === 0) {
+    // individuo
+    const g = reg.athlete?.gender ?? '';
+    if (g === 'M') return 'M';
+    if (g === 'F') return 'F';
+    return 'mixed';
+  }
+  const genders = members.map((m) => m.athlete?.gender ?? '');
+  const hasM = genders.some((g) => g === 'M');
+  const hasF = genders.some((g) => g === 'F');
+  if (hasM && hasF) return 'mixed';
+  if (hasM) return 'M';
+  if (hasF) return 'F';
+  return 'mixed';
+}
+
+
+// ── NUEVO: dobles mixtos (2 miembros, un M y una F) — no se divide por género ──
+function isMixedDoubles(reg: any): boolean {
+  if ((reg.team?.members?.length ?? 0) !== 2) return false;
+  return getTeamGender(reg) === 'mixed';
+}
+
+
+// ── NUEVO: construye grupos desde registros locales según el modo de agrupación ──
+function buildGroupsFromRegistrations(
+  regs: any[],
+  mode: GroupMode,
+  categoryName: string,
+): TennisPhaseGroup[] {
+  const toAthlete = (reg: any): TennisAthlete => ({
+    registrationId: reg.registrationId,
+    name: getParticipantName(reg),
+    institution: getParticipantInstitution(reg),
+    kind: getParticipantKind(reg),
+    memberCount: reg.team?.members?.length,
+    members: reg.team?.members ?? [],
+    gender: getTeamGender(reg),
+  });
+
+  if (mode === 'single') {
+    return [{
+      key: 'tennis-phase-group',
+      phaseName: categoryName,
+      idniv: '', idcat: '',
+      format: 'single_elimination' as TennisPhaseFormat,
+      athletes: regs.map(toAthlete),
+    }];
+  }
+
+  // by_gender
+  const masc = regs.filter((r) => getTeamGender(r) === 'M');
+  const fem  = regs.filter((r) => getTeamGender(r) === 'F');
+  const mix  = regs.filter((r) => getTeamGender(r) === 'mixed');
+  const result: TennisPhaseGroup[] = [];
+
+  if (masc.length) result.push({
+    key: 'group-M',
+    phaseName: `${categoryName} — Masculino`,
+    idniv: '', idcat: 'M',
+    format: 'single_elimination' as TennisPhaseFormat,
+    athletes: masc.map(toAthlete),
+  });
+  if (fem.length) result.push({
+    key: 'group-F',
+    phaseName: `${categoryName} — Femenino`,
+    idniv: '', idcat: 'F',
+    format: 'single_elimination' as TennisPhaseFormat,
+    athletes: fem.map(toAthlete),
+  });
+  if (mix.length) result.push({
+    key: 'group-mix',
+    phaseName: `${categoryName} — Mixtos`,
+    idniv: '', idcat: '',
+    format: 'single_elimination' as TennisPhaseFormat,
+    athletes: mix.map(toAthlete),
+  });
+  return result;
+}
+
+
 // ─── Opciones de formato ──────────────────────────────────────────────────────
+
 
 const FORMAT_OPTIONS: {
   value: TennisPhaseFormat;
@@ -118,7 +223,9 @@ const FORMAT_OPTIONS: {
   },
 ];
 
+
 // ─── Props ────────────────────────────────────────────────────────────────────
+
 
 export interface GenerateTennisPhasesModalProps {
   isOpen: boolean;
@@ -130,7 +237,9 @@ export interface GenerateTennisPhasesModalProps {
   allRegistrations: any[];
 }
 
+
 // ─── Componente ───────────────────────────────────────────────────────────────
+
 
 export function GenerateTennisPhasesModal({
   isOpen,
@@ -141,8 +250,13 @@ export function GenerateTennisPhasesModal({
   sismasterSportId,
   allRegistrations,
 }: GenerateTennisPhasesModalProps) {
+
   const mutation = useGenerateTennisPhases();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
+
+  // ── NUEVO: estado de modo de agrupación ──
+  const [groupMode, setGroupMode] = useState<GroupMode>('single');
+
 
   // ── Consulta combos niv/cat desde Sismaster ─────────────────────────────────
   const {
@@ -161,7 +275,9 @@ export function GenerateTennisPhasesModal({
     staleTime: 1000 * 60 * 5,
   });
 
+
   const combos = combosData?.combos ?? [];
+
 
   // ── Consulta registrationIds por combo ─────────────────────────────────────
   const comboQueries = useQueries({
@@ -191,8 +307,13 @@ export function GenerateTennisPhasesModal({
     })),
   });
 
+
   const loadingCombosData = comboQueries.some((q) => q.isLoading);
-  const allQueriesDone = combos.length > 0 && comboQueries.every((q) => q.isSuccess);
+  const allQueriesDone =
+    !loadingCombos &&
+    combosData !== undefined &&
+    (combos.length === 0 || comboQueries.every((q) => q.isSuccess));
+
 
   // ── Mapa de atletas registrados ─────────────────────────────────────────────
   const regMap = useMemo(() => {
@@ -203,12 +324,15 @@ export function GenerateTennisPhasesModal({
         registrationId: reg.registrationId,
         name: getParticipantName(reg),
         institution: getParticipantInstitution(reg),
-        kind,                                              
-        memberCount: reg.team?.members?.length,            
+        kind,
+        memberCount: reg.team?.members?.length,
+        members: reg.team?.members ?? [],   // ── NUEVO
+        gender: getTeamGender(reg),         // ── NUEVO
       });
     }
     return map;
   }, [allRegistrations]);
+
 
   // ── Grupos desde Sismaster ──────────────────────────────────────────────────
   const initialGroups = useMemo((): TennisPhaseGroup[] => {
@@ -244,29 +368,26 @@ export function GenerateTennisPhasesModal({
       });
   }, [allQueriesDone, combos, comboQueries, regMap, categoryName]);
 
+
   // ── Grupo fallback sin Sismaster ────────────────────────────────────────────
   const fallbackGroup = useMemo((): TennisPhaseGroup[] => {
     if (hasSismaster || !isOpen) return [];
-    const athletes: TennisAthlete[] = allRegistrations.map((reg) => ({
-      registrationId: reg.registrationId,
-      name: getParticipantName(reg),
-      institution: getParticipantInstitution(reg),
-      kind: getParticipantKind(reg),                        
-      memberCount: reg.team?.members?.length,               
-    }));
+    // ── NUEVO: usa buildGroupsFromRegistrations respetando el groupMode ──
+    const groups = buildGroupsFromRegistrations(allRegistrations, groupMode, categoryName);
+    return groups;
+  }, [hasSismaster, isOpen, allRegistrations, categoryName, groupMode]);
 
-    if (athletes.length === 0) return [];
-    return [
-      {
-        key: 'tennis-phase-group',
-        phaseName: categoryName,
-        idniv: '',
-        idcat: '',
-        format: 'single_elimination' as TennisPhaseFormat,
-        athletes,
-      },
-    ];
-  }, [hasSismaster, isOpen, allRegistrations, categoryName]);
+
+  const canSplitByGender = useMemo(() => {
+    if (allRegistrations.length === 0) return false;
+    const eligible = allRegistrations.filter((reg) => !isMixedDoubles(reg));
+    console.log('[canSplitByGender] eligible:', eligible.length,
+      '| genders:', eligible.map(r => `${r.team?.name ?? r.registrationId}:${getTeamGender(r)}`));
+    const hasM = eligible.some((reg) => getTeamGender(reg) === 'M');
+    const hasF = eligible.some((reg) => getTeamGender(reg) === 'F');
+    return hasM && hasF;
+  }, [allRegistrations]);
+
 
   // ── Estado local ────────────────────────────────────────────────────────────
   const [groups, setGroups] = useState<TennisPhaseGroup[]>([]);
@@ -274,44 +395,73 @@ export function GenerateTennisPhasesModal({
   const [selectedRegId, setSelectedRegId] = useState<number | null>(null);
   const [sourceGroupKey, setSourceGroupKey] = useState<string | null>(null);
 
+
   const hasInitialized = useRef(false);
   const prevOpenRef = useRef(false);
   const initialGroupsRef = useRef<TennisPhaseGroup[]>([]);
   initialGroupsRef.current = initialGroups;
 
+
   useEffect(() => {
+    // Reset al cerrar
     if (!isOpen && prevOpenRef.current) {
       hasInitialized.current = false;
       setGroups([]);
       setSelectedGroupKeys(new Set());
       setSelectedRegId(null);
       setSourceGroupKey(null);
+      setGroupMode('single'); // ── NUEVO: reset del modo
     }
     prevOpenRef.current = isOpen;
     if (!isOpen || hasInitialized.current) return;
 
-    if (hasSismaster && allQueriesDone) {
+    // ── Path Sismaster: esperar que terminen TODAS las queries ──
+    if (hasSismaster) {
+      if (!allQueriesDone) return;
+
       const g = initialGroupsRef.current;
       if (g.length > 0) {
         hasInitialized.current = true;
         setGroups(g);
         setSelectedGroupKeys(new Set(g.map((grp) => grp.key)));
+      } else {
+        // Sismaster sin resultados → fallback local con registros
+        // ── NUEVO: usa buildGroupsFromRegistrations ──
+        const built = buildGroupsFromRegistrations(allRegistrations, 'single', categoryName);
+        if (built.length > 0 && built[0].athletes.length > 0) {
+          hasInitialized.current = true;
+          setGroups(built);
+          setSelectedGroupKeys(new Set(built.map((g) => g.key)));
+        }
       }
       return;
     }
 
-    if (!hasSismaster && fallbackGroup.length > 0) {
+    // ── Path sin Sismaster ──
+    if (fallbackGroup.length > 0) {
       hasInitialized.current = true;
       setGroups(fallbackGroup);
       setSelectedGroupKeys(new Set(fallbackGroup.map((g) => g.key)));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, allQueriesDone, hasSismaster, fallbackGroup]);
+  }, [isOpen, allQueriesDone, hasSismaster, fallbackGroup, allRegistrations, categoryName]);
+
+
+  // ── NUEVO: cuando cambia groupMode en path no-sismaster, reconstruir grupos ──
+  useEffect(() => {
+    if (!isOpen || hasSismaster || !hasInitialized.current) return;
+    const built = buildGroupsFromRegistrations(allRegistrations, groupMode, categoryName);
+    setGroups(built);
+    setSelectedGroupKeys(new Set(built.map((g) => g.key)));
+    setSelectedRegId(null);
+    setSourceGroupKey(null);
+  }, [groupMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const setGroupFormat = (key: string, format: TennisPhaseFormat) => {
     setGroups((prev) => prev.map((g) => (g.key === key ? { ...g, format } : g)));
   };
+
 
   const toggleGroupSelection = (key: string) => {
     setSelectedGroupKeys((prev) => {
@@ -321,7 +471,9 @@ export function GenerateTennisPhasesModal({
     });
   };
 
+
   const allSelected = groups.length > 0 && groups.every((g) => selectedGroupKeys.has(g.key));
+
 
   const toggleSelectAll = () => {
     if (allSelected) {
@@ -330,6 +482,7 @@ export function GenerateTennisPhasesModal({
       setSelectedGroupKeys(new Set(groups.map((g) => g.key)));
     }
   };
+
 
   const handleSelectAthlete = (groupKey: string, registrationId: number) => {
     if (selectedRegId === registrationId && sourceGroupKey === groupKey) {
@@ -340,6 +493,7 @@ export function GenerateTennisPhasesModal({
     setSelectedRegId(registrationId);
     setSourceGroupKey(groupKey);
   };
+
 
   const handleMoveToGroup = (targetKey: string) => {
     if (!selectedRegId || !sourceGroupKey || targetKey === sourceGroupKey) return;
@@ -357,6 +511,7 @@ export function GenerateTennisPhasesModal({
     setSelectedRegId(null);
     setSourceGroupKey(null);
   };
+
 
   const handleGenerate = async () => {
     const validGroups = groups.filter(
@@ -380,6 +535,7 @@ export function GenerateTennisPhasesModal({
     }
   };
 
+
   // ── Derivados ───────────────────────────────────────────────────────────────
   const isLoading = loadingCombos || loadingCombosData;
   const validGroups = groups.filter(
@@ -388,10 +544,19 @@ export function GenerateTennisPhasesModal({
   const totalAthletes = validGroups.reduce((acc, g) => acc + g.athletes.length, 0);
   const canMoveAthletes = groups.length > 1;
 
+  // ── NUEVO: etiqueta del toggle de agrupación ──
+  const kindLabel = allRegistrations.every((r) => getParticipantKind(r) === 'team')
+    ? 'Equipos'
+    : allRegistrations.every((r) => getParticipantKind(r) === 'doubles')
+      ? 'Dobles'
+      : 'Participantes';
+
+
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Generar Fases — ${categoryName}`} size="xl">
       <div className="space-y-4">
+
 
         {isLoading && (
           <div className="flex items-center justify-center gap-3 py-12 text-slate-500">
@@ -399,6 +564,7 @@ export function GenerateTennisPhasesModal({
             <span className="text-sm">Cargando grupos desde Sismaster...</span>
           </div>
         )}
+
 
         {!hasSismaster && !isLoading && groups.length === 0 && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
@@ -410,6 +576,7 @@ export function GenerateTennisPhasesModal({
           </div>
         )}
 
+
         {combosError && !isLoading && (
           <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -417,14 +584,58 @@ export function GenerateTennisPhasesModal({
           </div>
         )}
 
-        {hasSismaster && !isLoading && !combosError && allQueriesDone && groups.length === 0 && (
-          <p className="py-10 text-center text-sm text-slate-500">
-            No se encontraron atletas inscritos con nivel/categoría en Sismaster.
-          </p>
-        )}
+
+        {hasSismaster && !isLoading && !combosError && allQueriesDone &&
+          groups.length === 0 && allRegistrations.length === 0 && (
+            <p className="py-10 text-center text-sm text-slate-500">
+              No se encontraron atletas inscritos con nivel/categoría en Sismaster.
+            </p>
+          )}
+
 
         {!isLoading && groups.length > 0 && (
           <>
+            {/* ── Toggle de agrupación — aparece tanto en path sismaster como local ── */}
+            {canSplitByGender && groups.length > 0 && !isLoading && (
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="text-xs font-medium text-slate-500 mr-1">Agrupar por:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGroupMode('single');
+                    const built = buildGroupsFromRegistrations(allRegistrations, 'single', categoryName);
+                    setGroups(built);
+                    setSelectedGroupKeys(new Set(built.map((g) => g.key)));
+                  }}
+                  className={[
+                    'rounded-full border px-3 py-1 text-xs font-medium transition-all',
+                    groupMode === 'single'
+                      ? 'border-slate-700 bg-slate-700 text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+                  ].join(' ')}
+                >
+                  {kindLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGroupMode('by_gender');
+                    const built = buildGroupsFromRegistrations(allRegistrations, 'by_gender', categoryName);
+                    setGroups(built);
+                    setSelectedGroupKeys(new Set(built.map((g) => g.key)));
+                  }}
+                  className={[
+                    'rounded-full border px-3 py-1 text-xs font-medium transition-all',
+                    groupMode === 'by_gender'
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
+                  ].join(' ')}
+                >
+                  ♂ Masculino / ♀ Femenino
+                </button>
+              </div>
+            )}
+
             {/* Barra de selección global */}
             <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <span className="text-xs font-medium text-slate-600">
@@ -444,6 +655,7 @@ export function GenerateTennisPhasesModal({
               </button>
             </div>
 
+
             {/* Grid de grupos */}
             <div className="grid max-h-[55vh] grid-cols-1 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
               {groups.map((group) => {
@@ -453,6 +665,7 @@ export function GenerateTennisPhasesModal({
                   selectedRegId !== null &&
                   sourceGroupKey !== null &&
                   sourceGroupKey !== group.key;
+
 
                 return (
                   <div
@@ -498,6 +711,7 @@ export function GenerateTennisPhasesModal({
                         )}
                       </div>
 
+
                       {/* Selector de formato por grupo */}
                       {isGroupSelected && (
                         <div className="flex flex-wrap gap-1.5">
@@ -520,6 +734,7 @@ export function GenerateTennisPhasesModal({
                         </div>
                       )}
                     </div>
+
 
                     {/* Lista de atletas */}
                     <div className="space-y-1.5">
@@ -553,7 +768,7 @@ export function GenerateTennisPhasesModal({
                               <div className="flex items-center justify-between gap-2">
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-1.5 mb-0.5">
-                                    {/* Badge de tipo — solo si NO es individual */}
+                                    {/* Badge de tipo */}
                                     {athlete.kind === 'doubles' && (
                                       <span className="shrink-0 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
                                         Dobles
@@ -573,6 +788,36 @@ export function GenerateTennisPhasesModal({
                                       {athlete.institution}
                                     </p>
                                   )}
+
+                                  {/* ── NUEVO: lista de integrantes del equipo/pareja ── */}
+                                  {(athlete.kind === 'team' || athlete.kind === 'doubles') &&
+                                    athlete.members && athlete.members.length > 0 && (
+                                    <div className="mt-1.5 space-y-0.5 pl-1 border-l-2 border-slate-200">
+                                      {athlete.members.map((m: any) => (
+                                        <div key={m.tmId} className="flex items-center gap-1.5">
+                                          {/* Badge de género del atleta */}
+                                          <span className={[
+                                            'shrink-0 rounded-sm px-1 text-[9px] font-bold leading-4',
+                                            m.athlete?.gender === 'M'
+                                              ? 'bg-blue-100 text-blue-700'
+                                              : m.athlete?.gender === 'F'
+                                                ? 'bg-pink-100 text-pink-700'
+                                                : 'bg-slate-100 text-slate-500',
+                                          ].join(' ')}>
+                                            {m.athlete?.gender === 'M' ? '♂' : m.athlete?.gender === 'F' ? '♀' : '?'}
+                                          </span>
+                                          <span className="truncate text-[11px] text-slate-600">
+                                            {m.athlete?.name ?? '—'}
+                                          </span>
+                                          {m.rol && m.rol !== 'titular' && (
+                                            <span className="shrink-0 text-[9px] text-slate-400 italic">
+                                              {m.rol}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                                 {isSelected && (
                                   <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-blue-500" />
@@ -589,6 +834,7 @@ export function GenerateTennisPhasesModal({
             </div>
           </>
         )}
+
 
         {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">

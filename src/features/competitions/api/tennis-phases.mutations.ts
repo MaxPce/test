@@ -29,10 +29,10 @@ export function useGenerateTennisPhases() {
     }) => tennisPhasesApi.generate(eventCategoryId, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ['tennis-phases', variables.eventCategoryId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['tennis', variables.eventCategoryId],
+        predicate: (query) =>
+          query.queryKey.some(
+            (k) => k === variables.eventCategoryId
+          ),
       });
     },
   });

@@ -8,18 +8,16 @@ import { useCreateGroupStage } from "../api/group-stage.mutations";
 import { usePhaseRegistrations } from "../api/phaseRegistrations.queries";
 import type { Phase } from "../types";
 
+
 interface Props {
   isOpen:  boolean;
   onClose: () => void;
   phase:   Phase;
 }
 
-// ── Genera etiquetas dinámicamente, sin límite ────────────────────────────
-// Modo "letter": A, B, …, Z, AA, AB, …
-// Modo "number": 1, 2, 3, …
+
 function getLabel(index: number, mode: "letter" | "number"): string {
   if (mode === "number") return String(index + 1);
-  // Letras: A=0…Z=25, AA=26…AZ=51, BA=52…
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   let label = "";
   let n = index;
@@ -29,7 +27,36 @@ function getLabel(index: number, mode: "letter" | "number"): string {
   } while (n >= 0);
   return label;
 }
-// ─────────────────────────────────────────────────────────────────────────
+
+
+// ── helpers para tipo de registro y miembros ───────────────────────
+type RegKind = "individual" | "doubles" | "mixed_doubles" | "team";
+
+function getRegKind(pr: { registration: any }): RegKind {
+  const reg = pr?.registration;
+  if (!reg?.team) return "individual";
+  const members: any[] = reg.team?.members ?? [];
+  if (members.length === 2) {
+    const genders = members.map((m) => m?.athlete?.gender ?? m?.gender ?? "");
+    const hasBoth = genders.includes("M") && genders.includes("F");
+    return hasBoth ? "mixed_doubles" : "doubles";
+  }
+  return "team";
+}
+
+function getMemberNames(pr: { registration: any }): string[] {
+  const members: any[] = pr?.registration?.team?.members ?? [];
+  return members.map((m) => m?.athlete?.name ?? m?.athleteName ?? "?");
+}
+
+const KIND_CONFIG: Record<RegKind, { label: string; cls: string }> = {
+  individual:    { label: "Ind",    cls: "bg-violet-100 text-violet-700" },
+  doubles:       { label: "Dbl",    cls: "bg-emerald-100 text-emerald-700" },
+  mixed_doubles: { label: "Mix",    cls: "bg-pink-100 text-pink-700" },
+  team:          { label: "Equipo", cls: "bg-amber-100 text-amber-700" },
+};
+// ── FIN NUEVO ─────────────────────────────────────────────────────────────
+
 
 export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
   const [numGroups,          setNumGroups]          = useState(2);
@@ -39,11 +66,14 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
   const [unassigned,         setUnassigned]         = useState<Set<number>>(new Set());
   const [search,             setSearch]             = useState("");
 
+
   const createGroupStage = useCreateGroupStage();
+
 
   const { data: phaseRegs = [], isLoading } = usePhaseRegistrations(
     isOpen ? phase.phaseId : null,
   );
+
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,20 +83,29 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
     setSearch("");
   }, [isOpen, phaseRegs]);
 
+
   const handleNumGroupsChange = (raw: string) => {
     const n = Math.min(50, Math.max(2, parseInt(raw, 10) || 2));
     setNumGroups(n);
     setGroups((prev) => Array.from({ length: n }, (_, i) => prev[i] ?? []));
   };
 
+
+  // ── helper para buscar el phaseReg por id ──────────────────────
+  const getPhaseReg = (id: number) =>
+    phaseRegs.find((r) => r.registrationId === id);
+  // ── FIN NUEVO ──────────────────────────────────────────────────────────
+
   const getName = (id: number) => {
-    const pr = phaseRegs.find((r) => r.registrationId === id);
+    // sin cambios
+    const pr = getPhaseReg(id); // usa getPhaseReg en vez de phaseRegs.find inline
     return (
       pr?.registration?.athlete?.name ??
       pr?.registration?.team?.name ??
       `#${id}`
     );
   };
+
 
   const assign = (registrationId: number, groupIndex: number) => {
     setGroups((prev) =>
@@ -75,6 +114,7 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
     setUnassigned((prev) => { const s = new Set(prev); s.delete(registrationId); return s; });
   };
 
+
   const unassign = (registrationId: number, groupIndex: number) => {
     setGroups((prev) =>
       prev.map((g, i) => (i === groupIndex ? g.filter((id) => id !== registrationId) : g)),
@@ -82,11 +122,14 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
     setUnassigned((prev) => new Set([...prev, registrationId]));
   };
 
+
   const filteredUnassigned = [...unassigned].filter((id) =>
     getName(id).toLowerCase().includes(search.toLowerCase().trim()),
   );
 
+
   const canSave = groups.every((g) => g.length >= 2) && !createGroupStage.isPending;
+
 
   const handleSave = () => {
     createGroupStage.mutate(
@@ -102,6 +145,7 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
     );
   };
 
+
   return (
     <Modal
       isOpen={isOpen}
@@ -111,18 +155,19 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
     >
       <div className="space-y-5 p-1">
 
+
         {isLoading && (
           <div className="py-8 text-center text-sm text-slate-400 animate-pulse">
             Cargando participantes de la fase...
           </div>
         )}
 
+
         {!isLoading && (
           <>
             {/* ── Config ── */}
             <div className="grid grid-cols-3 gap-4">
 
-              {/* Número de grupos — input libre sin límite */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Número de grupos
@@ -138,7 +183,6 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                 />
               </div>
 
-              {/* Clasifican por grupo */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Clasifican por grupo
@@ -155,7 +199,6 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                 </select>
               </div>
 
-              {/* Toggle letra / número */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Etiquetas
@@ -187,7 +230,7 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
               </div>
             </div>
 
-            {/* Vista previa de etiquetas cuando hay muchos grupos */}
+
             {numGroups > 0 && (
               <p className="text-xs text-slate-400 -mt-2">
                 Vista previa:{" "}
@@ -197,6 +240,7 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                 {numGroups > 6 && `, … ${getLabel(numGroups - 1, labelMode)}`}
               </p>
             )}
+
 
             {/* ── Pool sin asignar + buscador ── */}
             {unassigned.size > 0 && (
@@ -211,7 +255,7 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                       type="text"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Buscar atleta..."
+                      placeholder="Buscar atleta/equipo..."
                       className="w-full pl-8 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg
                                  bg-white placeholder:text-slate-400 text-slate-700
                                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -235,33 +279,64 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                       {search ? `Sin resultados para "${search}"` : "Todos asignados"}
                     </p>
                   ) : (
-                    filteredUnassigned.map((id) => (
-                      <div
-                        key={id}
-                        className="flex items-center gap-1 bg-white border border-slate-200
-                                   rounded-lg px-2 py-1 text-sm text-slate-700"
-                      >
-                        <span>{getName(id)}</span>
-                        <div className="flex gap-1 ml-1 flex-wrap">
-                          {groups.map((_, gi) => (
-                            <button
-                              key={gi}
-                              type="button"
-                              onClick={() => assign(id, gi)}
-                              className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700
-                                         rounded px-1.5 py-0.5 font-medium transition-colors"
-                              title={`Asignar al Grupo ${getLabel(gi, labelMode)}`}
-                            >
-                              {getLabel(gi, labelMode)}
-                            </button>
-                          ))}
+                    filteredUnassigned.map((id) => {
+                      // ── NUEVO: obtener kind y miembros ────────────────
+                      const pr          = getPhaseReg(id);
+                      const kind        = pr ? getRegKind(pr) : "individual";
+                      const members     = pr ? getMemberNames(pr) : [];
+                      const cfg         = KIND_CONFIG[kind];
+                      const isComposite = kind !== "individual";
+                      // ── FIN NUEVO ─────────────────────────────────────
+
+                      return (
+                        // ── NUEVO: chip expandido con badge + miembros ──
+                        <div
+                          key={id}
+                          className="flex flex-col gap-1 bg-white border border-slate-200
+                                     rounded-lg px-2 py-1.5 text-sm text-slate-700 min-w-0"
+                        >
+                          {/* Fila principal */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${cfg.cls}`}>
+                              {cfg.label}
+                            </span>
+                            <span className="font-medium">{getName(id)}</span>
+                            <div className="flex gap-1 ml-auto flex-wrap">
+                              {groups.map((_, gi) => (
+                                <button
+                                  key={gi}
+                                  type="button"
+                                  onClick={() => assign(id, gi)}
+                                  className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700
+                                             rounded px-1.5 py-0.5 font-medium transition-colors"
+                                  title={`Asignar al Grupo ${getLabel(gi, labelMode)}`}
+                                >
+                                  {getLabel(gi, labelMode)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Miembros (solo dobles/equipo) */}
+                          {isComposite && members.length > 0 && (
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 pl-1 border-t border-slate-100 pt-1">
+                              {members.map((m, i) => (
+                                <span key={i} className="text-[11px] text-slate-400 flex items-center gap-0.5">
+                                  <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                                  {m}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))
+                        // ── FIN NUEVO ───────────────────────────────────
+                      );
+                    })
                   )}
                 </div>
               </div>
             )}
+
 
             {/* ── Grupos ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -284,27 +359,60 @@ export function SetupGroupStageModal({ isOpen, onClose, phase }: Props) {
                         Usa los botones de arriba para asignar
                       </p>
                     )}
-                    {memberIds.map((id) => (
-                      <div
-                        key={id}
-                        className="flex items-center justify-between px-2 py-1.5 bg-white
-                                   border border-slate-100 rounded-lg text-sm text-slate-800"
-                      >
-                        <span>{getName(id)}</span>
-                        <button
-                          type="button"
-                          onClick={() => unassign(id, gi)}
-                          className="text-slate-300 hover:text-red-400 transition-colors ml-2 text-base leading-none"
-                          title="Quitar del grupo"
+                    {memberIds.map((id) => {
+                      // ── NUEVO: obtener kind y miembros ────────────────
+                      const pr          = getPhaseReg(id);
+                      const kind        = pr ? getRegKind(pr) : "individual";
+                      const members     = pr ? getMemberNames(pr) : [];
+                      const cfg         = KIND_CONFIG[kind];
+                      const isComposite = kind !== "individual";
+                      // ── FIN NUEVO ─────────────────────────────────────
+
+                      return (
+                        // ── NUEVO: fila expandida con badge + miembros ──
+                        <div
+                          key={id}
+                          className="px-2 py-1.5 bg-white border border-slate-100
+                                     rounded-lg text-sm text-slate-800"
                         >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+                          {/* Fila principal */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${cfg.cls}`}>
+                                {cfg.label}
+                              </span>
+                              <span className="truncate font-medium">{getName(id)}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => unassign(id, gi)}
+                              className="text-slate-300 hover:text-red-400 transition-colors shrink-0 text-base leading-none"
+                              title="Quitar del grupo"
+                            >
+                              ×
+                            </button>
+                          </div>
+
+                          {/* Miembros (solo dobles/equipo) */}
+                          {isComposite && members.length > 0 && (
+                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 pl-1 border-t border-slate-100 pt-1">
+                              {members.map((m, i) => (
+                                <span key={i} className="text-[11px] text-slate-400 flex items-center gap-0.5">
+                                  <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" />
+                                  {m}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        // ── FIN NUEVO ───────────────────────────────────
+                      );
+                    })}
                   </div>
                 </div>
               ))}
             </div>
+
 
             {/* ── Footer ── */}
             <div className="flex items-center justify-between pt-2 border-t border-slate-100">

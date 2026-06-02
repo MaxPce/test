@@ -873,7 +873,8 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
 
 
   // ── Render ────────────────────────────────────────────────────────────────
-
+  console.log('[Debug Modal Tenis] registrations count:', eventCategory.registrations?.length ?? 0);
+  console.log('[Debug Modal Tenis] primer registro:', JSON.stringify(eventCategory.registrations?.[0], null, 2));
 
   return (
     <div className="space-y-6 animate-in">

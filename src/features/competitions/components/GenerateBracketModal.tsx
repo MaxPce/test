@@ -14,6 +14,8 @@ import { apiClient } from "@/lib/api/client";
 export interface AvailableRegistration {
   registrationId: number;
   displayName: string;
+  
+  members?: { name: string; institutionAbrev?: string }[];
 }
 
 
@@ -240,7 +242,16 @@ export function GenerateBracketModal({
 
   // ────────────────────────────────────────────────────────────────────────
 
-
+  const MemberList = ({ members }: { members: NonNullable<AvailableRegistration["members"]> }) => (
+    <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5 pl-0.5">
+      {members.map((m, i) => (
+        <span key={i} className="text-[11px] text-gray-400 flex items-center gap-0.5">
+          <span className="w-1 h-1 rounded-full bg-gray-300 shrink-0" />
+          {m.name}{m.institutionAbrev ? ` (${m.institutionAbrev})` : ""}
+        </span>
+      ))}
+    </div>
+  );
   return (
     <Modal
       isOpen={isOpen}
@@ -437,7 +448,6 @@ export function GenerateBracketModal({
                   nivCatResult !== undefined &&
                   !nivCatResult.registrationIds.includes(reg.registrationId);
 
-                // ← NUEVO: marcar visualmente el orden de seeding (si viene de grupos)
                 const seedIndex = comesFromGroupStage
                   ? preSelectedRegistrationIds!.indexOf(reg.registrationId)
                   : -1;
@@ -445,7 +455,7 @@ export function GenerateBracketModal({
                 return (
                   <label
                     key={reg.registrationId}
-                    className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-opacity ${
+                    className={`flex items-start gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-opacity ${
                       isFiltered ? "opacity-30" : ""
                     }`}
                   >
@@ -453,21 +463,26 @@ export function GenerateBracketModal({
                       type="checkbox"
                       checked={selectedIds.has(reg.registrationId)}
                       onChange={() => toggleParticipant(reg.registrationId)}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-0.5 shrink-0"
                     />
-                    <span className="text-sm text-gray-800 flex-1">
-                      {reg.displayName}
-                    </span>
+                    {/* NUEVO: columna nombre + miembros */}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-gray-800">{reg.displayName}</span>
+                      {reg.members && reg.members.length > 0 && (
+                        <MemberList members={reg.members} />
+                      )}
+                    </div>
                     {/* Badge de seeding cuando viene de grupos */}
                     {seedIndex !== -1 && (
                       <span className="text-xs font-bold text-emerald-600 bg-emerald-50
-                                       border border-emerald-200 rounded-full px-1.5 py-0.5
-                                       tabular-nums">
+                                      border border-emerald-200 rounded-full px-1.5 py-0.5
+                                      tabular-nums shrink-0">
                         #{seedIndex + 1}
                       </span>
                     )}
                   </label>
                 );
+
               })}
           </div>
 
