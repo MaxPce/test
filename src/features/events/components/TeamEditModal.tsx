@@ -16,6 +16,8 @@ import {
 } from "@/features/institutions/api/sismaster.queries";
 import type { Team } from "@/features/institutions/types";
 import type { EventCategory } from "@/features/events/types";
+import { useTeam } from "@/features/institutions/api/teams.queries";
+
 
 interface TeamEditModalProps {
   isOpen: boolean;
@@ -55,6 +57,8 @@ export function TeamEditModal({
   const addMemberMutation = useAddTeamMember();
   const removeMemberMutation = useRemoveTeamMember();
   const updateRoleMutation = useUpdateTeamMemberRole();
+  const { data: liveTeam } = useTeam(team.teamId);
+    const liveMembers = liveTeam?.members ?? team.members ?? [];
 
   const localSportId =
     (eventCategory.category as any)?.sportId ??
@@ -103,7 +107,8 @@ export function TeamEditModal({
       !!localSportId && !!extraIdparam,
     );
 
-  const currentMemberIds = new Set(team.members?.map((m) => m.athleteId) ?? []);
+  const currentMemberIds = new Set(liveMembers.map((m) => m.athleteId));
+  
 
   const filteredAthletes = availableAthletes.filter(
     (a: SismasterAthlete) =>
@@ -213,13 +218,13 @@ export function TeamEditModal({
         {/* Miembros actuales */}
         <div>
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Integrantes ({team.members?.length ?? 0})
+            Integrantes ({liveMembers.length})
           </label>
           <div className="mt-2 space-y-2 max-h-52 overflow-y-auto pr-1">
-            {(team.members ?? []).length === 0 ? (
+            {(liveMembers.length === 0) ? (
               <p className="text-sm text-gray-400 text-center py-4">Sin integrantes aún</p>
             ) : (
-              team.members!.map((member) => (
+              liveMembers.map((member) => (
                 <div
                   key={member.athleteId}
                   className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100"
@@ -315,7 +320,7 @@ export function TeamEditModal({
                         {searchQuery ? "Sin resultados" : "Escribe para buscar"}
                       </p>
                     ) : (
-                      filteredAthletes.slice(0, 10).map((athlete) => (
+                      filteredAthletes.map((athlete) => (
                         <button
                           key={athlete.idperson}
                           onClick={() => handleAddMember(athlete.idperson)}
@@ -355,10 +360,11 @@ export function TeamEditModal({
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">— Seleccionar categoría de origen —</option>
-                        {extraCategoryOptions.map((p) => (
-                          <option key={p.idparam} value={p.idparam}>
+                        {sismasterCategories.map((p) => (
+                        <option key={p.idparam} value={p.idparam}>
                             {p.name} ({p.athleteCount} atletas)
-                          </option>
+                            {p.idparam === effectiveCurrentIdparam ? " (categoría actual)" : ""}
+                        </option>
                         ))}
                       </select>
 
@@ -385,7 +391,7 @@ export function TeamEditModal({
                                 {crossSearch ? "Sin resultados" : "No hay atletas disponibles en esta categoría"}
                               </p>
                             ) : (
-                              filteredExtraAthletes.slice(0, 10).map((athlete) => (
+                              filteredExtraAthletes.map((athlete) => (
                                 <button
                                   key={athlete.idperson}
                                   onClick={() => handleAddMember(athlete.idperson)}

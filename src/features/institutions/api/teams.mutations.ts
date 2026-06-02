@@ -76,7 +76,7 @@ export const useAddTeamMember = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
-      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); 
+      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); // ← AÑADE ESTO
     },
   });
 };
@@ -96,7 +96,7 @@ export const useRemoveTeamMember = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
-      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); // 🆕
+      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); // ← AÑADE ESTO
     },
   });
 };
@@ -121,9 +121,9 @@ export const useUpdateTeamMemberRole = () => {
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.teamId) });
-      queryClient.invalidateQueries({ queryKey: teamKeys.lists() }); // 🆕
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.detail(variables.teamId),
+      });
     },
-    
   });
 };
