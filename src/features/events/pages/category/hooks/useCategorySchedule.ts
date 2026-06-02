@@ -141,14 +141,34 @@ export function useCategorySchedule(eventCategory: EventCategory) {
 
   const availableRegistrations = useMemo(
     () =>
-      eventCategory.registrations?.map((r) => ({
-        registrationId: r.registrationId,
-        displayName: r.athlete
-          ? r.athlete.name
-          : (r.team?.name ?? `Registro #${r.registrationId}`),
-      })) ?? [],
+      eventCategory.registrations?.map((r) => {
+        // ── Equipo ─────────────────────────────────────────────────────────
+        if (r.team) {
+          return {
+            registrationId: r.registrationId,
+            displayName: r.team.institution
+              ? `${r.team.name} (${r.team.institution.abrev})`
+              : r.team.name,
+            members: r.team.members?.map((m) => ({
+              name: m.athlete?.name ?? "Integrante",
+              institutionAbrev: m.athlete?.institution?.abrev,
+            })) ?? [],
+          };
+        }
+        // ── Atleta individual ──────────────────────────────────────────────
+        return {
+          registrationId: r.registrationId,
+          displayName: r.athlete
+            ? r.athlete.institution
+              ? `${r.athlete.name} (${r.athlete.institution.abrev})`
+              : r.athlete.name
+            : `Registro #${r.registrationId}`,
+          members: [],
+        };
+      }) ?? [],
     [eventCategory.registrations],
   );
+
 
   // ── Helpers de invalidación de cache ──────────────────────────────────────
   const invalidateAthleticsCache = async (phaseId: number) => {

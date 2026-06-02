@@ -87,7 +87,7 @@ export function TeamCreationForm({
     useSportCategoriesByEvent(
       localSportId!,
       eventId,
-      !!localSportId && !directIdparam,
+      !!localSportId,  
     );
 
   const effectiveIdparam = useMemo(() => {
@@ -128,29 +128,24 @@ export function TeamCreationForm({
 
     const map = new Map<
       number,
-      {
-        sismasterId: number;
-        localId: number;
-        name: string;
-      }
+      { sismasterId: number; localId: number; name: string }
     >();
 
-    const allAthletes = [
-      ...athletesFromSismaster,
-      ...extraAthletesFromSismaster.filter(
-        (ea) => !athletesFromSismaster.some((a) => a.idperson === ea.idperson),
-      ),
-    ];
+    const allAthletes = extraIdparam
+      ? [
+          ...athletesFromSismaster,
+          ...extraAthletesFromSismaster.filter(
+            (ea) => !athletesFromSismaster.some((a) => a.idperson === ea.idperson),
+          ),
+        ]
+      : athletesFromSismaster; 
 
     allAthletes.forEach((a) => {
       if (!a.idinstitution || !a.institutionName) return;
-
       const localInstitution = localByName.get(
         normalizeInstitutionName(a.institutionName),
       );
-
       if (!localInstitution) return;
-
       map.set(a.idinstitution, {
         sismasterId: a.idinstitution,
         localId: localInstitution.institutionId,
@@ -158,10 +153,9 @@ export function TeamCreationForm({
       });
     });
 
-    return Array.from(map.values()).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-  }, [athletesFromSismaster, extraAthletesFromSismaster, localInstitutions]);
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [athletesFromSismaster, extraAthletesFromSismaster, localInstitutions, extraIdparam]);
+
 
   const selectedInstitutionData = useMemo(() => {
     return (
@@ -171,19 +165,39 @@ export function TeamCreationForm({
   }, [institutions, selectedInstitution]);
 
   const availableAthletes = useMemo(() => {
-    const allAthletes = [
-      ...athletesFromSismaster,
-      ...extraAthletesFromSismaster.filter(
-        (ea) => !athletesFromSismaster.some((a) => a.idperson === ea.idperson),
-      ),
-    ];
+    const allAthletes = extraIdparam
+      ? [
+          ...athletesFromSismaster,
+          ...extraAthletesFromSismaster.filter(
+            (ea) => !athletesFromSismaster.some((a) => a.idperson === ea.idperson),
+          ),
+        ]
+      : athletesFromSismaster;
 
     return allAthletes.filter(
       (a) =>
         a.idinstitution === selectedInstitution &&
         !members.some((m) => m.athleteId === a.idperson),
     );
-  }, [athletesFromSismaster, extraAthletesFromSismaster, selectedInstitution, members]);
+  }, [athletesFromSismaster, extraAthletesFromSismaster, selectedInstitution, members, extraIdparam]);
+
+  const handleExtraIdparamChange = (newValue: number | null) => {
+    setExtraIdparam(newValue);
+    setSelectedAthlete(0);
+    if (!newValue) {
+      const stillValid = athletesFromSismaster.some(
+        (a) => a.idinstitution === selectedInstitution,
+      );
+      if (!stillValid) {
+        setSelectedInstitution(0);
+        setMembers([]);
+        if (autoFilledName) {
+          setTeamName("");
+          setAutoFilledName(false);
+        }
+      }
+    }
+  };
 
   const handleInstitutionChange = (sismasterId: number) => {
     setSelectedInstitution(sismasterId);
@@ -251,13 +265,12 @@ export function TeamCreationForm({
 
   const extraCategoryOptions = [
     { value: "", label: "— Solo esta categoría —" },
-    ...sismasterCategories
-      .filter((p) => p.idparam !== effectiveIdparam)
-      .map((p) => ({
-        value: String(p.idparam),
-        label: `${p.name} (${p.athleteCount} atletas)`,
-      })),
+    ...sismasterCategories.map((p) => ({
+      value: String(p.idparam),
+      label: `${p.name} (${p.athleteCount} atletas)`,
+    })),
   ];
+
 
   const addMember = () => {
     const athlete = availableAthletes.find(
@@ -439,17 +452,13 @@ export function TeamCreationForm({
                   <div className="flex items-center gap-2">
                     <Select
                       value={String(extraIdparam ?? "")}
-                      onChange={(e) =>
-                        setExtraIdparam(
-                          e.target.value ? Number(e.target.value) : null,
-                        )
-                      }
+                      onChange={(e) => handleExtraIdparamChange(e.target.value ? Number(e.target.value) : null)}
                       options={extraCategoryOptions}
                     />
                     {extraIdparam && (
                       <button
                         type="button"
-                        onClick={() => setExtraIdparam(null)}
+                        onClick={() => handleExtraIdparamChange(null)}
                         className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
                         title="Quitar categoría extra"
                       >
@@ -460,8 +469,10 @@ export function TeamCreationForm({
 
                   {extraIdparam && (
                     <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">
-                      Mostrando atletas de <strong>2 categorías</strong>. Útil
-                      cuando el atleta está en individual pero participa en equipo.
+                      {extraIdparam === effectiveIdparam
+                        ? <>Mostrando atletas de <strong>esta misma categoría</strong>.</>
+                        : <>Mostrando atletas de <strong>2 categorías</strong>. Útil cuando el atleta está en individual pero participa en equipo.</>
+                      }
                     </p>
                   )}
 
