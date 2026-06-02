@@ -56,6 +56,52 @@ function normalizeInstitutionName(value: string) {
     .replace(/\s+/g, " ");
 }
 
+function findLocalInstitution(
+  localByName: Map<string, { institutionId: number; name: string }>,
+  sismasterName: string,
+) {
+  const normalized = normalizeInstitutionName(sismasterName);
+
+  // 1. Coincidencia exacta (caso actual)
+  const exact = localByName.get(normalized);
+  if (exact) return exact;
+
+  // 2. Extraer palabras significativas (ignora abreviaciones y sufijos geográficos)
+  const STOP_WORDS = new Set([
+    "de", "del", "la", "las", "los", "el", "y", "e",
+    "unv", "univ", "universidad", "privada", "nacional",
+    "pontificia", "filial",
+  ]);
+
+  const getKeywords = (s: string) =>
+    s
+      .split(/[\s\-–,.]+/)
+      .map((w) => w.trim())
+      .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
+  const sismasterKeywords = getKeywords(normalized);
+  if (sismasterKeywords.length === 0) return undefined;
+
+  // 3. Buscar la institución local cuyo nombre contenga más palabras clave
+  let bestMatch: { institutionId: number; name: string } | undefined;
+  let bestScore = 0;
+
+  for (const [localNormName, localInst] of localByName.entries()) {
+    const localKeywords = new Set(getKeywords(localNormName));
+    const matches = sismasterKeywords.filter((kw) => localKeywords.has(kw)).length;
+    const score = matches / Math.max(sismasterKeywords.length, localKeywords.size);
+
+    if (score > bestScore && score >= 0.5) {
+      // al menos el 50% de palabras clave deben coincidir
+      bestScore = score;
+      bestMatch = localInst;
+    }
+  }
+
+  return bestMatch;
+}
+
+
 export function TeamCreationForm({
   eventId,
   eventCategory,
@@ -142,9 +188,8 @@ export function TeamCreationForm({
 
     allAthletes.forEach((a) => {
       if (!a.idinstitution || !a.institutionName) return;
-      const localInstitution = localByName.get(
-        normalizeInstitutionName(a.institutionName),
-      );
+      const localInstitution = findLocalInstitution(localByName, a.institutionName);
+
       if (!localInstitution) return;
       map.set(a.idinstitution, {
         sismasterId: a.idinstitution,
