@@ -25,10 +25,14 @@ interface NivCatCombo {
   total: number;
 }
 
+type ParticipantKind = 'individual' | 'doubles' | 'team';
+
 interface TennisAthlete {
   registrationId: number;
   name: string;
   institution?: string | null;
+  kind: ParticipantKind;          
+  memberCount?: number;           
 }
 
 interface TennisPhaseGroup {
@@ -60,6 +64,30 @@ function buildPhaseName(idniv: string, idcat: string, categoryName: string): str
   const catPart = getCatLabel(idcat);
   const nivPart = idniv ? ` ${getNivLabel(idniv)}` : '';
   return `${catPart}${nivPart} ${categoryName}`.trim();
+}
+function getParticipantKind(reg: any): ParticipantKind {
+  if (!reg?.team) return 'individual';
+  return (reg.team.members?.length ?? 0) === 2 ? 'doubles' : 'team';
+}
+
+function getParticipantName(reg: any): string {
+  const kind = getParticipantKind(reg);
+  if (kind === 'individual') return reg.athlete?.name ?? `Registro ${reg.registrationId}`;
+  if (kind === 'doubles') {
+    const m = reg.team?.members ?? [];
+    const n1 = m[0]?.athlete?.name ?? '?';
+    const n2 = m[1]?.athlete?.name ?? '?';
+    return `${n1} / ${n2}`;
+  }
+  return reg.team?.name ?? `Equipo ${reg.registrationId}`;
+}
+
+function getParticipantInstitution(reg: any): string | null {
+  return (
+    reg.athlete?.institution?.name ??
+    reg.team?.institution?.name ??
+    null
+  );
 }
 
 // ─── Opciones de formato ──────────────────────────────────────────────────────
@@ -170,10 +198,13 @@ export function GenerateTennisPhasesModal({
   const regMap = useMemo(() => {
     const map = new Map<number, TennisAthlete>();
     for (const reg of allRegistrations) {
+      const kind = getParticipantKind(reg);
       map.set(reg.registrationId, {
         registrationId: reg.registrationId,
-        name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
-        institution: reg.athlete?.institution?.name ?? reg.team?.institution?.name ?? null,
+        name: getParticipantName(reg),
+        institution: getParticipantInstitution(reg),
+        kind,                                              
+        memberCount: reg.team?.members?.length,            
       });
     }
     return map;
@@ -218,9 +249,12 @@ export function GenerateTennisPhasesModal({
     if (hasSismaster || !isOpen) return [];
     const athletes: TennisAthlete[] = allRegistrations.map((reg) => ({
       registrationId: reg.registrationId,
-      name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
-      institution: reg.athlete?.institution?.name ?? reg.team?.institution?.name ?? null,
+      name: getParticipantName(reg),
+      institution: getParticipantInstitution(reg),
+      kind: getParticipantKind(reg),                        
+      memberCount: reg.team?.members?.length,               
     }));
+
     if (athletes.length === 0) return [];
     return [
       {
@@ -453,7 +487,7 @@ export function GenerateTennisPhasesModal({
                               {group.phaseName}
                             </h3>
                             <p className="mt-0.5 text-xs text-slate-500">
-                              {group.athletes.length} atleta(s)
+                              {group.athletes.length} participante(s)
                             </p>
                           </div>
                         </div>
@@ -517,10 +551,23 @@ export function GenerateTennisPhasesModal({
                               ].join(' ')}
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium text-slate-800">
-                                    {athlete.name}
-                                  </p>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 mb-0.5">
+                                    {/* Badge de tipo — solo si NO es individual */}
+                                    {athlete.kind === 'doubles' && (
+                                      <span className="shrink-0 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                                        Dobles
+                                      </span>
+                                    )}
+                                    {athlete.kind === 'team' && (
+                                      <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                                        Equipo {athlete.memberCount ? `(${athlete.memberCount})` : ''}
+                                      </span>
+                                    )}
+                                    <p className="truncate text-sm font-medium text-slate-800">
+                                      {athlete.name}
+                                    </p>
+                                  </div>
                                   {athlete.institution && (
                                     <p className="truncate text-xs text-slate-500">
                                       {athlete.institution}
@@ -554,7 +601,9 @@ export function GenerateTennisPhasesModal({
                     : 'Ninguna fase seleccionada'}
                 </p>
                 {validGroups.length > 0 && (
-                  <p className="text-slate-500">{totalAthletes} atleta(s) en las fases seleccionadas</p>
+                  <p className="text-slate-500">
+                    {totalAthletes} participante(s) en las fases seleccionadas
+                  </p>
                 )}
               </>
             )}
