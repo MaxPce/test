@@ -7,12 +7,14 @@ interface TableTennisMatchWrapperProps {
   eventCategory?: EventCategory | any;
   phase?: any;
   onClose?: () => void;
+  onMatchUpdate?: () => void;
 }
 
 export function TableTennisMatchWrapper({
   match,
   eventCategory,
   phase,
+  onMatchUpdate,
 }: TableTennisMatchWrapperProps) {
   const sportName =
     eventCategory?.category?.sport?.name?.toLowerCase() ||
@@ -58,12 +60,12 @@ export function TableTennisMatchWrapper({
     );
   }
 
-  // ✅ No validar members aquí — TableTennisMatchManager
   // fetches sus propios lineups y maneja todos los estados internamente
   return (
     <TableTennisMatchManager
       match={enrichedMatch}
       phase={phase ?? match.phase}
+      onMatchUpdate={onMatchUpdate}  
     />
   );
 }

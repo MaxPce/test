@@ -199,4 +199,14 @@ export const tableTennisApi = {
     );
     return response.data;
   },
+
+    /**
+     * Intercambiar los 2 participantes de un match PROGRAMADO
+     */
+    swapParticipants: async (matchId: number) => {
+      const response = await apiClient.patch(
+        `/competitions/matches/${matchId}/swap-participants`
+      );
+      return response.data;
+    },
 };

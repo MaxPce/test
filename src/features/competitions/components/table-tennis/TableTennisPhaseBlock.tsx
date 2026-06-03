@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Trophy, Users, Zap, ChevronDown, Loader2, User } from "lucide-react";
+import { Trophy, Users, Zap, ChevronDown, Loader2, User, ArrowLeftRight } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { tableTennisApi } from "@/features/competitions/api/table-tennis.api";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useStandings } from "@/features/competitions/api/standings.queries";
@@ -337,7 +339,10 @@ interface MatchCardProps {
   roundLabel: string;
   expandedId: number | null;
   onToggle: (id: number) => void;
+  onSwap: (matchId: number) => void;    
+  isSwapping: boolean;                     
 }
+
 
 function DoublesAvatars({
   photos,
@@ -378,11 +383,14 @@ function DoublesAvatars({
 
 
 function MatchCard({
-  match,
-  roundLabel,
-  expandedId,
-  onToggle,
-}: MatchCardProps) {
+    match,
+    roundLabel,
+    expandedId,
+    onToggle,
+    onSwap,
+    isSwapping,
+  }: MatchCardProps) {
+
   const [resolvedScore, setResolvedScore] = useState<{
     a: number;
     b: number;
@@ -519,31 +527,50 @@ function MatchCard({
 
           {/* Marcador central */}
           <div className="flex flex-col items-center gap-1 shrink-0">
-            {isFinished ? (
-              <div className="flex items-center gap-1.5 bg-slate-900 rounded-xl px-3 py-2">
-                <span
-                  className={`text-2xl font-black leading-none ${aWon ? "text-blue-400" : "text-slate-500"}`}
+              {isFinished ? (
+                <div className="flex items-center gap-1.5 bg-slate-900 rounded-xl px-3 py-2">
+                  <span className={`text-2xl font-black leading-none ${aWon ? "text-blue-400" : "text-slate-500"}`}>
+                    {scoreA}
+                  </span>
+                  <span className="text-slate-600 text-sm">–</span>
+                  <span className={`text-2xl font-black leading-none ${bWon ? "text-blue-400" : "text-slate-500"}`}>
+                    {scoreB}
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-slate-100 rounded-xl px-4 py-2">
+                  <span className="text-sm font-bold text-slate-400 tracking-widest">
+                    VS
+                  </span>
+                </div>
+              )}
+              <span className="text-[10px] text-slate-400 font-medium">
+                {scoreLabel}
+              </span>
+
+              {!isFinished && !isInProgress && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); 
+                    onSwap(match.matchId);
+                  }}
+                  disabled={isSwapping}
+                  className="flex items-center gap-1 text-[10px] text-slate-400
+                             hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed
+                             transition-colors px-2 py-1 rounded-lg border border-slate-200
+                             hover:border-slate-400 bg-white mt-1"
+                  title="Intercambiar posición de los equipos"
                 >
-                  {scoreA}
-                </span>
-                <span className="text-slate-600 text-sm">–</span>
-                <span
-                  className={`text-2xl font-black leading-none ${bWon ? "text-blue-400" : "text-slate-500"}`}
-                >
-                  {scoreB}
-                </span>
-              </div>
-            ) : (
-              <div className="bg-slate-100 rounded-xl px-4 py-2">
-                <span className="text-sm font-bold text-slate-400 tracking-widest">
-                  VS
-                </span>
-              </div>
-            )}
-            <span className="text-[10px] text-slate-400 font-medium">
-              {scoreLabel}
-            </span>
-          </div>
+                  {isSwapping ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <ArrowLeftRight className="h-3 w-3" />
+                  )}
+                  {isSwapping ? "..." : "Swap"}
+                </button>
+              )}
+
+            </div>
 
           {/* Participante B */}
           <div
@@ -609,6 +636,16 @@ export function TableTennisPhaseBlock({ phase }: TableTennisPhaseBlockProps) {
   const [showMatches, setShowMatches] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [matchFilter, setMatchFilter] = useState<MatchFilter>("all");
+  const queryClient = useQueryClient();
+    const swapMutation = useMutation({
+      mutationFn: (matchId: number) => tableTennisApi.swapParticipants(matchId),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["matches", phase.phaseId] });
+      },
+      onError: (error: any) => {
+        console.error("Error swap:", error?.response?.data?.message ?? error.message);
+      },
+    });
 
   const handleToggle = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
@@ -924,6 +961,11 @@ export function TableTennisPhaseBlock({ phase }: TableTennisPhaseBlockProps) {
                                   roundLabel={round}
                                   expandedId={expandedId}
                                   onToggle={handleToggle}
+                                  onSwap={(id) => swapMutation.mutate(id)}
+                                  isSwapping={
+                                    swapMutation.isPending &&
+                                    swapMutation.variables === match.matchId
+                                  }
                                 />
                               ))}
                             </div>

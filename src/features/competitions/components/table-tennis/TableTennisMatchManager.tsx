@@ -9,7 +9,10 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/components/ui/TabsControlled";
-import { Zap, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeftRight, AlertCircle, CheckCircle } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { tableTennisApi } from "../../api/table-tennis.api";
+
 import { Spinner } from "@/components/ui/Spinner";
 import { LineupSelector } from "./LineupSelector";
 import { TableTennisMatchCard } from "./TableTennisMatchCard";
@@ -63,7 +66,19 @@ export function TableTennisMatchManager({
   const finalizeMatchMutation = useFinalizeMatch();
   const reopenMatchMutation = useReopenMatch();
   const advanceWinnerMutation = useAdvanceWinner();
+  const queryClient = useQueryClient();
   const setWalkoverMutation = useSetWalkover();
+  const swapMutation = useMutation({
+    mutationFn: () => tableTennisApi.swapParticipants(match.matchId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["matches", match.phase?.phaseId] });
+      queryClient.invalidateQueries({ queryKey: ["match-lineups", match.matchId] });
+      onMatchUpdate?.();  
+    },
+    onError: (error: any) => {
+      console.error("Error al intercambiar:", error?.response?.data?.message ?? error.message);
+    },
+  });
 
   const hasLineups = lineups.length === 2 && lineups.every((l) => l.hasLineup);
   const hasGames = games.length > 0;
@@ -266,8 +281,27 @@ export function TableTennisMatchManager({
       </Card>
 
       {modality === "team" && lineups.length === 2 ? (
-        <TableTennisMatchCard lineups={lineups} match={match} result={result} />
-      ) : (
+          <>
+            <TableTennisMatchCard lineups={lineups} match={match} result={result} />
+            {match.status === "programado" && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => swapMutation.mutate()}
+                  disabled={swapMutation.isPending}
+                  className="flex items-center gap-1 text-xs text-slate-400
+                            hover:text-slate-700 disabled:opacity-40
+                            transition-colors px-3 py-1.5 rounded-lg border border-slate-200
+                            hover:border-slate-400 bg-white"
+                >
+                  {swapMutation.isPending
+                    ? <span>Intercambiando...</span>
+                    : <><ArrowLeftRight className="h-3.5 w-3.5" /> Intercambiar equipos</>
+                  }
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
         <Card>
           <CardBody className="p-6">
             <div className="flex items-center justify-between gap-4">
@@ -310,6 +344,23 @@ export function TableTennisMatchManager({
                       VS
                     </div>
                     <Badge variant="default">Programado</Badge>
+                    {match.status !== "finalizado" && match.status !== "en_curso" && (
+                      <button
+                        onClick={() => swapMutation.mutate()}
+                        disabled={swapMutation.isPending}
+                        className="mt-2 flex items-center gap-1 mx-auto text-[11px] text-slate-400
+                                  hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed
+                                  transition-colors px-2 py-1 rounded-lg border border-slate-200
+                                  hover:border-slate-400 bg-white"
+                        title="Intercambiar posición de los participantes"
+                      >
+                        {swapMutation.isPending
+                          ? <span className="text-[10px]">...</span>
+                          : <ArrowLeftRight className="h-3.5 w-3.5" />
+                        }
+                        Swap
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

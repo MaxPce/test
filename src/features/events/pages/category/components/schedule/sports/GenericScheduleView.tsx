@@ -43,6 +43,7 @@ import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
 import type { Phase } from "@/features/competitions/types";
 import type { GenericViewProps } from "./types";
+import { useQueryClient } from "@tanstack/react-query";
 
 
 
@@ -97,6 +98,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
   const taekwondoType = getTaekwondoType(selectedPhase);
   const wushuType     = getWushuType();
   const closeGroups = useCloseGroups();
+  const queryClient = useQueryClient();
 
 
 
@@ -1144,7 +1146,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
               {isTableTennis && (
                 <Modal isOpen onClose={() => { closeModal("result"); setSelectedMatch(null); }}
                   title="Gestionar Match - Tenis de Mesa" size="full">
-                  <TableTennisMatchWrapper match={selectedMatch} eventCategory={eventCategory} />
+                  <TableTennisMatchWrapper
+                    match={selectedMatch}
+                    eventCategory={eventCategory}
+                    onMatchUpdate={() => {
+                      queryClient.invalidateQueries({
+                        queryKey: ["matches", selectedPhase.phaseId],
+                      });
+                      queryClient.invalidateQueries({
+                        queryKey: ["match", selectedMatch.matchId],
+                      });
+                    }}
+                  />
                 </Modal>
               )}
               {!sport.isJudo && !sport.isKarate && !sport.isWushu && !sport.isWrestling
