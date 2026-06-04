@@ -76,17 +76,44 @@ export function TableTennisMatchManager({
   const setWalkoverMutation = useSetWalkover();
   const swapMutation = useMutation({
     mutationFn: () => tableTennisApi.swapParticipants(match.matchId),
-    onSuccess: () => {
-      setLocalParticipations((prev) => [prev[1], prev[0]]);
-      queryClient.invalidateQueries({ queryKey: ["matches", match.phase?.phaseId] });
-      queryClient.invalidateQueries({ queryKey: ["match-lineups", match.matchId] });
+    onSuccess: (data) => {
+      if (data?.participants?.length === 2) {
+        setLocalParticipations((prev) =>
+          prev.map((p) => {
+            const updated = data.participants.find(
+              (r: any) => r.participationId === p.participationId
+            );
+            if (!updated) return p;
+            return {
+              ...p,
+              registrationId: updated.registrationId,
+              corner: updated.corner,
+              registration: prev.find(
+                (op) => op.registrationId === updated.registrationId
+              )?.registration ?? p.registration,
+            };
+          })
+        );
+      } else {
+        setLocalParticipations((prev) => [prev[1], prev[0]]);
+      }
+
+      // ✅ queryKey correcta para que useMatchLineups re-fetchee
+      queryClient.invalidateQueries({ 
+        queryKey: ["table-tennis", "lineups", match.matchId] 
+      });
+      // También invalida el query de matches del bracket
+      queryClient.invalidateQueries({ 
+        queryKey: ["matches", match.phase?.phaseId],
+        exact: false 
+      });
       onMatchUpdate?.();
     },
-
     onError: (error: any) => {
       console.error("Error al intercambiar:", error?.response?.data?.message ?? error.message);
     },
   });
+
 
   const hasLineups = lineups.length === 2 && lineups.every((l) => l.hasLineup);
   const hasGames = games.length > 0;
