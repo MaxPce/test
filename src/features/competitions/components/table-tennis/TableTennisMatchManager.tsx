@@ -56,8 +56,8 @@ export function TableTennisMatchManager({
    () => match.participations ?? []
    );
    useEffect(() => {
-    setLocalParticipations(match.participations ?? []);
-    }, [match.matchId, match.participations]);
+      setLocalParticipations(match.participations ?? []);
+    }, [match.matchId]); 
 
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
@@ -98,7 +98,7 @@ export function TableTennisMatchManager({
         setLocalParticipations((prev) => [prev[1], prev[0]]);
       }
 
-      // ✅ queryKey correcta para que useMatchLineups re-fetchee
+      // queryKey correcta para que useMatchLineups re-fetchee
       queryClient.invalidateQueries({ 
         queryKey: ["table-tennis", "lineups", match.matchId] 
       });
@@ -106,6 +106,9 @@ export function TableTennisMatchManager({
       queryClient.invalidateQueries({ 
         queryKey: ["matches", match.phase?.phaseId],
         exact: false 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["match", match.matchId] 
       });
       onMatchUpdate?.();
     },
