@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
@@ -52,6 +52,12 @@ export function TableTennisMatchManager({
 }: TableTennisMatchManagerProps) {
   const modality = detectTableTennisModality(match);
   const requiresLineup = needsLineup(modality);
+  const [localParticipations, setLocalParticipations] = useState(
+   () => match.participations ?? []
+   );
+   useEffect(() => {
+    setLocalParticipations(match.participations ?? []);
+    }, [match.matchId, match.participations]);
 
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
@@ -71,10 +77,12 @@ export function TableTennisMatchManager({
   const swapMutation = useMutation({
     mutationFn: () => tableTennisApi.swapParticipants(match.matchId),
     onSuccess: () => {
+      setLocalParticipations((prev) => [prev[1], prev[0]]);
       queryClient.invalidateQueries({ queryKey: ["matches", match.phase?.phaseId] });
       queryClient.invalidateQueries({ queryKey: ["match-lineups", match.matchId] });
-      onMatchUpdate?.();  
+      onMatchUpdate?.();
     },
+
     onError: (error: any) => {
       console.error("Error al intercambiar:", error?.response?.data?.message ?? error.message);
     },
@@ -85,20 +93,21 @@ export function TableTennisMatchManager({
   const team1 = lineups[0];
   const team2 = lineups[1];
 
-  const participation1 = match.participations?.[0];
-  const participation2 = match.participations?.[1];
+  const participation1 = localParticipations[0];
+  const participation2 = localParticipations[1];
 
   const team1Members =
     lineups[0]?.participation?.registration?.team?.members ||
-    participation1?.registration?.team?.members ||
+     participation1?.registration?.team?.members ||
     [];
   const team2Members =
     lineups[1]?.participation?.registration?.team?.members ||
     participation2?.registration?.team?.members ||
     [];
 
+
   const getParticipantName = (participationIndex: number): string => {
-    const participation = match.participations?.[participationIndex];
+    const participation = localParticipations[participationIndex];
     if (!participation) return `Participante ${participationIndex + 1}`;
 
     if (modality === "individual") {
