@@ -1171,10 +1171,12 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 <Modal isOpen onClose={() => { closeModal("result"); setSelectedMatch(null); }}
                   title="Gestionar Match - Tenis de Mesa" size="full">
                   <TableTennisMatchWrapper
+                    key={`${selectedMatch.matchId}-${(selectedMatch.participations ?? []).map(p => p.corner).join("-")}`}
                     match={selectedMatch}
                     eventCategory={eventCategory}
-                    onMatchUpdate={() => {
-                      queryClient.invalidateQueries({
+                    onMatchUpdate={async () => {
+                      // 1. Invalida todas las queries relevantes
+                      await queryClient.invalidateQueries({
                         queryKey: ["matches", selectedPhase.phaseId],
                       });
                       queryClient.invalidateQueries({
@@ -1186,8 +1188,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                       queryClient.invalidateQueries({
                         queryKey: ["phase", selectedPhase.phaseId],
                       });
-                    }}
 
+                      // 2. Lee el match actualizado desde el cache y actualiza selectedMatch
+                      const updatedMatches = queryClient.getQueryData<any[]>(
+                        ["matches", selectedPhase.phaseId]
+                      );
+                      if (updatedMatches) {
+                        const refreshed = updatedMatches.find(
+                          (m) => m.matchId === selectedMatch.matchId
+                        );
+                        if (refreshed) setSelectedMatch(refreshed);
+                      }
+                    }}
                   />
                 </Modal>
               )}

@@ -53,12 +53,21 @@ export function TableTennisMatchManager({
 }: TableTennisMatchManagerProps) {
   const modality = detectTableTennisModality(match);
   const requiresLineup = needsLineup(modality);
+  const sortByCorner = (parts: any[]) => {
+    return [...parts].sort((a, b) => {
+      const order = (corner?: string) =>
+        corner === 'left' || corner === 'A' || corner === 'top' ? 0 : 1;
+      return order(a.corner) - order(b.corner);
+    });
+  };
+
   const [localParticipations, setLocalParticipations] = useState(
-   () => match.participations ?? []
-   );
-   useEffect(() => {
-  setLocalParticipations(match.participations ?? []);
-}, [match.matchId, match.participations]);
+    () => sortByCorner(match.participations ?? [])
+  );
+
+  useEffect(() => {
+    setLocalParticipations(sortByCorner(match.participations ?? []));
+  }, [match.matchId, match.participations]);
 
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
@@ -86,29 +95,29 @@ export function TableTennisMatchManager({
   const swapMutation = useMutation({
     mutationFn: () => tableTennisApi.swapParticipants(match.matchId),
     onSuccess: (data) => {
-
       setLocalLineups((prev) => {
         if (prev.length === 2) return [prev[1], prev[0]];
         return prev;
       });
-      // ── 1. Actualiza el estado local inmediatamente ──
+
       if (data?.participants?.length === 2) {
-        setLocalParticipations((prev) =>
-          prev.map((p) => {
-            const updated = data.participants.find(
+        setLocalParticipations((prev) => {
+          const updated = prev.map((p) => {
+            const serverVersion = data.participants.find(
               (r: any) => r.participationId === p.participationId
             );
-            if (!updated) return p;
+            if (!serverVersion) return p;
             return {
               ...p,
-              registrationId: updated.registrationId,
-              corner: updated.corner,
+              registrationId: serverVersion.registrationId,
+              corner: serverVersion.corner,
               registration: prev.find(
-                (op) => op.registrationId === updated.registrationId
+                (op) => op.registrationId === serverVersion.registrationId
               )?.registration ?? p.registration,
             };
-          })
-        );
+          });
+          return sortByCorner(updated); // ← AGREGAR ESTE SORT
+        });
       } else {
         setLocalParticipations((prev) => [prev[1], prev[0]]);
       }
