@@ -37,3 +37,15 @@ export function useDeleteMatch() {
     },
   });
 }
+
+export function useSwapParticipants() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (matchId: number) => matchesApi.swapParticipants(matchId),
+    onSuccess: () => {
+      // Invalida todos los matches para que se recarguen con los corners invertidos
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+    },
+  });
+}

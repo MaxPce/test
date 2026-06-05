@@ -62,4 +62,9 @@ export const matchesApi = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/competitions/matches/${id}`);
   },
+
+  swapParticipants: async (matchId: number): Promise<void> => {
+    await apiClient.patch(`/competitions/matches/${matchId}/swap-participants`);
+  },
+
 };

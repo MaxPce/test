@@ -66,6 +66,14 @@ export function TableTennisMatchManager({
   const { data: lineups = [], isLoading: lineupsLoading } = useMatchLineups(
     match.matchId,
   );
+  const [localLineups, setLocalLineups] = useState(() => lineups);
+
+  useEffect(() => {
+    if (lineups.length > 0) {
+      setLocalLineups(lineups);
+    }
+  }, [lineups]);
+
   const { data: games = [] } = useMatchGames(match.matchId);
   const { data: result } = useMatchResult(match.matchId);
 
@@ -78,6 +86,11 @@ export function TableTennisMatchManager({
   const swapMutation = useMutation({
     mutationFn: () => tableTennisApi.swapParticipants(match.matchId),
     onSuccess: (data) => {
+
+      setLocalLineups((prev) => {
+        if (prev.length === 2) return [prev[1], prev[0]];
+        return prev;
+      });
       // ── 1. Actualiza el estado local inmediatamente ──
       if (data?.participants?.length === 2) {
         setLocalParticipations((prev) =>
@@ -154,22 +167,22 @@ export function TableTennisMatchManager({
   });
 
 
-  const hasLineups = lineups.length === 2 && lineups.every((l) => l.hasLineup);
   const hasGames = games.length > 0;
-  const team1 = lineups[0];
-  const team2 = lineups[1];
+  const team1 = localLineups[0];
+  const team2 = localLineups[1];
+  const hasLineups = localLineups.length === 2 && localLineups.every((l) => l.hasLineup);
 
   const participation1 = localParticipations[0];
   const participation2 = localParticipations[1];
 
   const team1Members =
-    lineups[0]?.participation?.registration?.team?.members ||
-     participation1?.registration?.team?.members ||
-    [];
+    localLineups[0]?.participation?.registration?.team?.members ||
+    participation1?.registration?.team?.members || [];
+
   const team2Members =
-    lineups[1]?.participation?.registration?.team?.members ||
-    participation2?.registration?.team?.members ||
-    [];
+    localLineups[1]?.participation?.registration?.team?.members ||
+    participation2?.registration?.team?.members || [];
+
 
 
   const getParticipantName = (participationIndex: number): string => {
@@ -278,8 +291,8 @@ export function TableTennisMatchManager({
   };
 
   const handleLineupSuccess = () => {
-    const team1HasLineup = lineups[0]?.hasLineup;
-    const team2HasLineup = lineups[1]?.hasLineup;
+    const team1HasLineup = localLineups[0]?.hasLineup;
+    const team2HasLineup = localLineups[1]?.hasLineup;
 
     if (team1HasLineup && !team2HasLineup) {
       setActiveTab("lineup-team2");
@@ -355,9 +368,9 @@ export function TableTennisMatchManager({
         </CardBody>
       </Card>
 
-      {modality === "team" && lineups.length === 2 ? (
+      {modality === "team" && localLineups.length === 2 ? (
           <>
-            <TableTennisMatchCard lineups={lineups} match={match} result={result} />
+            <TableTennisMatchCard lineups={localLineups} match={match} result={result} />
             {match.status === "programado" && (
               <div className="flex justify-center">
                 <button
@@ -653,7 +666,7 @@ export function TableTennisMatchManager({
 
           {requiresLineup && hasLineups && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {lineups.map((lineup) => (
+              {localLineups.map((lineup) => (
                 <Card key={lineup.participation.participationId}>
                   <CardBody>
                     <h4 className="font-semibold text-gray-900 mb-3">

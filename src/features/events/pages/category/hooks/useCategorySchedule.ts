@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePhases } from "@/features/competitions/api/phases.queries";
 import { useMatches, useMatch } from "@/features/competitions/api/matches.queries";
 import { useCreatePhase, useDeletePhase } from "@/features/competitions/api/phases.mutations";
-import { useCreateMatch, useUpdateMatch, useDeleteMatch } from "@/features/competitions/api/matches.mutations";
+import { useCreateMatch, useUpdateMatch, useDeleteMatch, useSwapParticipants } from "@/features/competitions/api/matches.mutations";
 import {
   useCreateParticipation,
   useDeleteParticipation,  
@@ -112,6 +112,7 @@ export function useCategorySchedule(eventCategory: EventCategory) {
   const createMatchMutation = useCreateMatch();
   const updateMatchMutation = useUpdateMatch();
   const deleteMatchMutation = useDeleteMatch();
+  const swapParticipantsMutation = useSwapParticipants();
   const createParticipationMutation = useCreateParticipation();
   const deleteParticipationMutation = useDeleteParticipation();
   const advanceWinnerMutation = useAdvanceWinner();
@@ -203,6 +204,10 @@ export function useCategorySchedule(eventCategory: EventCategory) {
         queryKey: ["matches", selectedPhase.phaseId],
       });
     }
+  };
+
+  const handleSwapParticipants = async (matchId: number) => {
+    await swapParticipantsMutation.mutateAsync(matchId);
   };
 
   const handleAssignParticipant = async (data: any) => {
@@ -359,6 +364,7 @@ export function useCategorySchedule(eventCategory: EventCategory) {
       assignSeriesParticipant: handleAssignSeriesParticipant,
       assignClimbingParticipant: handleAssignClimbingParticipant,
       advanceWinner: handleAdvanceWinner,
+      swapParticipants: handleSwapParticipants,
     },
 
     // Mutations (para los flags isPending en las vistas)
@@ -379,6 +385,7 @@ export function useCategorySchedule(eventCategory: EventCategory) {
       assignPhaseRegistration: assignPhaseRegistrationMutation,
       assignClimbing: assignClimbingMutation,
       initializePoomsaeGroup: initializePoomsaeGroupMutation,
+      swapParticipants: swapParticipantsMutation,
     },
   };
 }
