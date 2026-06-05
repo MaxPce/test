@@ -641,6 +641,7 @@ export function TableTennisPhaseBlock({ phase }: TableTennisPhaseBlockProps) {
       mutationFn: (matchId: number) => tableTennisApi.swapParticipants(matchId),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["matches", phase.phaseId] });
+        queryClient.invalidateQueries({ queryKey: ["phases", phase.phaseId] });
       },
       onError: (error: any) => {
         console.error("Error swap:", error?.response?.data?.message ?? error.message);

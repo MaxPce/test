@@ -1156,7 +1156,14 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                       queryClient.invalidateQueries({
                         queryKey: ["match", selectedMatch.matchId],
                       });
+                      queryClient.invalidateQueries({
+                        queryKey: ["phases", eventCategory.eventCategoryId],
+                      });
+                      queryClient.invalidateQueries({
+                        queryKey: ["phase", selectedPhase.phaseId],
+                      });
                     }}
+
                   />
                 </Modal>
               )}

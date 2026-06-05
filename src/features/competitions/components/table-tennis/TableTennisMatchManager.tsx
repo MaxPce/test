@@ -22,6 +22,7 @@ import {
   useMatchGames,
   useMatchResult,
   useGenerateGames,
+  tableTennisKeys,
 } from "../../api/table-tennis.queries";
 import {
   useFinalizeMatch,
@@ -56,8 +57,8 @@ export function TableTennisMatchManager({
    () => match.participations ?? []
    );
    useEffect(() => {
-      setLocalParticipations(match.participations ?? []);
-    }, [match.matchId]); 
+  setLocalParticipations(match.participations ?? []);
+}, [match.matchId, match.participations]);
 
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [showWalkoverDialog, setShowWalkoverDialog] = useState(false);
@@ -77,6 +78,7 @@ export function TableTennisMatchManager({
   const swapMutation = useMutation({
     mutationFn: () => tableTennisApi.swapParticipants(match.matchId),
     onSuccess: (data) => {
+      // ── 1. Actualiza el estado local inmediatamente ──
       if (data?.participants?.length === 2) {
         setLocalParticipations((prev) =>
           prev.map((p) => {
@@ -98,22 +100,56 @@ export function TableTennisMatchManager({
         setLocalParticipations((prev) => [prev[1], prev[0]]);
       }
 
-      // queryKey correcta para que useMatchLineups re-fetchee
-      queryClient.invalidateQueries({ 
-        queryKey: ["table-tennis", "lineups", match.matchId] 
+      // ── 2. Resuelve el phaseId de forma segura ──
+      const phaseId = match.phase?.phaseId ?? phase?.phaseId ?? (match as any).phaseId;
+
+      // ── 3. Invalida queries de tenis de mesa ──
+      queryClient.invalidateQueries({
+        queryKey: ["table-tennis", "lineups", match.matchId],
       });
-      // También invalida el query de matches del bracket
-      queryClient.invalidateQueries({ 
-        queryKey: ["matches", match.phase?.phaseId],
-        exact: false 
+      queryClient.invalidateQueries({
+        queryKey: tableTennisKeys.details(match.matchId),
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ["match", match.matchId] 
+      queryClient.invalidateQueries({
+        queryKey: tableTennisKeys.result(match.matchId),
       });
+
+      // ── 4. Invalida el match individual ──
+      queryClient.invalidateQueries({
+        queryKey: ["match", match.matchId],
+      });
+
+      // ── 5. Invalida la lista de matches de la fase ──
+      if (phaseId) {
+        queryClient.invalidateQueries({
+          queryKey: ["matches", phaseId],
+          exact: false,
+        });
+        // ── 6. Invalida la fase completa (FIX PRINCIPAL para GenericScheduleView) ──
+        queryClient.invalidateQueries({
+          queryKey: ["phase", phaseId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["phases"],
+          exact: false,
+        });
+        // ── 7. Invalida bracket si aplica ──
+        queryClient.invalidateQueries({
+          queryKey: ["bracket", phaseId, "structure"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["bracket", phaseId, "complete"],
+        });
+      }
+
+      // ── 8. Notifica al padre para que refresque selectedMatch ──
       onMatchUpdate?.();
     },
     onError: (error: any) => {
-      console.error("Error al intercambiar:", error?.response?.data?.message ?? error.message);
+      console.error(
+        "Error al intercambiar:",
+        error?.response?.data?.message ?? error.message
+      );
     },
   });
 
