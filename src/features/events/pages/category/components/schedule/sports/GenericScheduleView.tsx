@@ -1,4 +1,4 @@
-import { Trophy, Plus, UserPlus, Calendar, Clock, MapPin, Award, Users } from "lucide-react";
+import { Trophy, Plus, UserPlus, Calendar, Clock, MapPin, Award, Users, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -486,6 +486,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                           </>
                         )}
 
+                        {/* ── Invertir posición de participantes ── */}
+                        {participants.length === 2 && match.status !== "finalizado" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            icon={<ArrowUpDown className="h-4 w-4" />}
+                            onClick={() => handlers.swapParticipants(match.matchId)}
+                          >
+                            Invertir
+                          </Button>
+                        )}
+
                         {canReassign && (
                           <Button
                             variant="outline"
@@ -755,7 +767,19 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                   </>
                 )}
 
-                {/* ── NUEVO: Reasignar participantes ── */}
+                {/* ── Invertir posición de participantes ── */}
+                {participants.length === 2 && match.status !== "finalizado" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={<ArrowUpDown className="h-4 w-4" />}
+                    onClick={() => handlers.swapParticipants(match.matchId)}
+                  >
+                    Invertir
+                  </Button>
+                )}
+
+                {/* ── Reasignar participantes ── */}
                 {canReassign && (
                   <Button
                     variant="outline"
