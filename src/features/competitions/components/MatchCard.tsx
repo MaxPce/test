@@ -12,10 +12,7 @@ interface MatchCardProps {
 
 export function MatchCard({ match, participations, onEdit }: MatchCardProps) {
   const getStatusBadgeVariant = (status: string) => {
-    const variants: Record<
-      string,
-      "success" | "primary" | "default" | "warning"
-    > = {
+    const variants: Record<string, "success" | "primary" | "default" | "warning"> = {
       programado: "default",
       en_curso: "success",
       finalizado: "primary",
@@ -24,13 +21,44 @@ export function MatchCard({ match, participations, onEdit }: MatchCardProps) {
     return variants[status] || "default";
   };
 
-  const getParticipantName = (participantId?: number) => {
-    if (!participantId) return "TBD";
-    const participation = participations.find(
-      (p) => p.participationId === participantId
+  // ── NUEVO: busca participaciones por corner, no por índice ──────────────────
+  const matchParticipantIds = [match.participantA, match.participantB].filter(Boolean);
+
+  const getParticipantByCorner = (corner: 'blue' | 'A' | 'white' | 'B') => {
+    // Primero intenta desde match.participations (tienen el corner del match)
+    const fromMatch = match.participations?.find(
+      (p) => p.corner === corner || p.corner === (corner === 'blue' ? 'A' : 'B')
     );
-    return participation?.athlete?.name || participation?.team?.name || "N/A";
+    if (fromMatch) {
+      // Obtiene el nombre desde el array de participations prop
+      const full = participations.find(
+        (p) => p.participationId === fromMatch.participationId
+      );
+      return {
+        id: fromMatch.participationId,
+        name:
+          full?.athlete?.name ??
+          full?.team?.name ??
+          fromMatch.registration?.athlete?.name ??
+          fromMatch.registration?.team?.name ??
+          "TBD",
+      };
+    }
+    // Fallback: si no hay corner, usa participantA=azul / participantB=blanco
+    const fallbackId = corner === 'blue' || corner === 'A'
+      ? match.participantA
+      : match.participantB;
+    if (!fallbackId) return { id: undefined, name: "TBD" };
+    const full = participations.find((p) => p.participationId === fallbackId);
+    return {
+      id: fallbackId,
+      name: full?.athlete?.name ?? full?.team?.name ?? "N/A",
+    };
   };
+
+  const blue  = getParticipantByCorner('blue');
+  const white = getParticipantByCorner('white');
+  // ───────────────────────────────────────────────────────────────────────────
 
   const isWinner = (participantId?: number) => {
     return match.winnerParticipantId === participantId;
@@ -64,52 +92,36 @@ export function MatchCard({ match, participations, onEdit }: MatchCardProps) {
           </div>
 
           <div className="space-y-2">
-            <div
-              className={`flex items-center justify-between p-2 rounded ${
-                isWinner(match.participantA) ? "bg-green-50" : "bg-gray-50"
-              }`}
-            >
-              <span
-                className={`font-medium ${
-                  isWinner(match.participantA)
-                    ? "text-green-900"
-                    : "text-gray-900"
-                }`}
-              >
-                {getParticipantName(match.participantA)}
-              </span>
-              <span
-                className={`text-xl font-bold ${
-                  isWinner(match.participantA)
-                    ? "text-green-900"
-                    : "text-gray-600"
-                }`}
-              >
+            {/* Azul — siempre arriba */}
+            <div className={`flex items-center justify-between p-2 rounded ${
+              isWinner(blue.id) ? "bg-green-50" : "bg-gray-50"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">
+                  Azul
+                </span>
+                <span className={`font-medium ${isWinner(blue.id) ? "text-green-900" : "text-gray-900"}`}>
+                  {blue.name}
+                </span>
+              </div>
+              <span className={`text-xl font-bold ${isWinner(blue.id) ? "text-green-900" : "text-gray-600"}`}>
                 {match.scoreA ?? "-"}
               </span>
             </div>
 
-            <div
-              className={`flex items-center justify-between p-2 rounded ${
-                isWinner(match.participantB) ? "bg-green-50" : "bg-gray-50"
-              }`}
-            >
-              <span
-                className={`font-medium ${
-                  isWinner(match.participantB)
-                    ? "text-green-900"
-                    : "text-gray-900"
-                }`}
-              >
-                {getParticipantName(match.participantB)}
-              </span>
-              <span
-                className={`text-xl font-bold ${
-                  isWinner(match.participantB)
-                    ? "text-green-900"
-                    : "text-gray-600"
-                }`}
-              >
+            {/* Blanco — siempre abajo */}
+            <div className={`flex items-center justify-between p-2 rounded ${
+              isWinner(white.id) ? "bg-green-50" : "bg-gray-50"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-600 bg-gray-200 px-1.5 py-0.5 rounded">
+                  Blanco
+                </span>
+                <span className={`font-medium ${isWinner(white.id) ? "text-green-900" : "text-gray-900"}`}>
+                  {white.name}
+                </span>
+              </div>
+              <span className={`text-xl font-bold ${isWinner(white.id) ? "text-green-900" : "text-gray-600"}`}>
                 {match.scoreB ?? "-"}
               </span>
             </div>

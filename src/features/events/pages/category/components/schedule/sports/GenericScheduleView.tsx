@@ -464,6 +464,20 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                                   : "Gestionar Match"}
                               </Button>
                             )}
+                            {sport.isTennis && (
+                              <Button
+                                variant="gradient"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedMatch(match);
+                                  openModal("result");
+                                }}
+                              >
+                                {match.status === "finalizado"
+                                  ? "Ver/Editar Match"
+                                  : "Gestionar Match"}
+                              </Button>
+                            )}
                             {!sport.isJudo &&
                               !sport.isKarate &&
                               !sport.isWushu &&
@@ -751,6 +765,12 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                       </Button>
                     )}
                     {isTableTennis && (
+                      <Button variant="gradient" size="sm"
+                        onClick={() => { setSelectedMatch(match); openModal("result"); }}>
+                        {match.status === "finalizado" ? "Ver/Editar Match" : "Gestionar Match"}
+                      </Button>
+                    )}
+                    {sport.isTennis && (
                       <Button variant="gradient" size="sm"
                         onClick={() => { setSelectedMatch(match); openModal("result"); }}>
                         {match.status === "finalizado" ? "Ver/Editar Match" : "Gestionar Match"}
@@ -1167,6 +1187,17 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 <KyoruguiRoundsModal isOpen onClose={() => { closeModal("result"); setSelectedMatch(null); setSelectedMatchId(null); }}
                   match={selectedMatch} />
               )}
+              {sport.isTennis && (
+                <ResultModal
+                  isOpen
+                  onClose={() => { closeModal("result"); setSelectedMatch(null); }}
+                  match={selectedMatch}
+                  onSubmit={handlers.registerResult}
+                  isLoading={selectedPhase.type === "eliminacion"
+                    ? mutations.advanceWinner?.isPending
+                    : mutations.updateMatch?.isPending}
+                />
+              )}
               {isTableTennis && (
                 <Modal isOpen onClose={() => { closeModal("result"); setSelectedMatch(null); }}
                   title="Gestionar Match - Tenis de Mesa" size="full">
@@ -1204,7 +1235,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 </Modal>
               )}
               {!sport.isJudo && !sport.isKarate && !sport.isWushu && !sport.isWrestling
-                && !sport.isCollectiveSport && !taekwondoType && !isTableTennis && (
+                && !sport.isCollectiveSport && !taekwondoType && !isTableTennis && !sport.isTennis && (
                 <ResultModal isOpen onClose={() => { closeModal("result"); setSelectedMatch(null); }}
                   match={selectedMatch} onSubmit={handlers.registerResult}
                   isLoading={selectedPhase.type === "eliminacion" ? mutations.advanceWinner?.isPending : mutations.updateMatch?.isPending}

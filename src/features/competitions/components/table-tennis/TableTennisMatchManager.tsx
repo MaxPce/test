@@ -380,23 +380,7 @@ export function TableTennisMatchManager({
       {modality === "team" && localLineups.length === 2 ? (
           <>
             <TableTennisMatchCard lineups={localLineups} match={match} result={result} />
-            {match.status === "programado" && (
-              <div className="flex justify-center">
-                <button
-                  onClick={() => swapMutation.mutate()}
-                  disabled={swapMutation.isPending}
-                  className="flex items-center gap-1 text-xs text-slate-400
-                            hover:text-slate-700 disabled:opacity-40
-                            transition-colors px-3 py-1.5 rounded-lg border border-slate-200
-                            hover:border-slate-400 bg-white"
-                >
-                  {swapMutation.isPending
-                    ? <span>Intercambiando...</span>
-                    : <><ArrowLeftRight className="h-3.5 w-3.5" /> Intercambiar equipos</>
-                  }
-                </button>
-              </div>
-            )}
+            
           </>
         ) : (
         <Card>

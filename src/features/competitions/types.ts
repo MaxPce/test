@@ -6,6 +6,7 @@ import type { Athlete, Team } from "@/features/institutions/types";
 
 export type PhaseGender = "damas" | "varones" | "mixto";
 export type PhaseLevel  = "noveles" | "avanzados";
+export type Corner = 'blue' | 'white' | 'A' | 'B';
 
 // ─── GroupStanding ─────────────────────────────────────────────────────
 
@@ -135,6 +136,7 @@ export interface Match {
   };
   participations?: Array<{
     participationId: number;
+    corner?: Corner;
     phaseId: number;
     athleteId?: number;
     teamId?: number;
@@ -193,6 +195,7 @@ export interface UpdateMatchData {
 export interface Participation {
   participationId: number;
   phaseId: number;
+  corner?: Corner;
   athleteId?: number;
   teamId?: number;
   registrationId?: number;

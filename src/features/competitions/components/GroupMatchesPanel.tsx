@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, UserPlus, Trophy, Clock, MapPin, Award,
-  ChevronDown, ChevronUp, Loader2,
+  ChevronDown, ChevronUp, Loader2, ArrowUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -72,7 +72,7 @@ export function GroupMatchesPanel({
   const [showMatchForm, setShowMatchForm] = useState(false);
   const [showAssign,    setShowAssign]    = useState(false);
   const [showResult,    setShowResult]    = useState(false);
-
+  const [isDeletingParticipation, setIsDeletingParticipation] = useState(false);
   const {
     isJudo, isKarate, isWushu, isWrestling,
     isCollectiveSport, isTableTennis,
@@ -99,12 +99,12 @@ export function GroupMatchesPanel({
     setShowMatchForm(false);
   };
 
-  const handleAssign = async (matchId: number, registrationId: number, corner: string) => {
-    await apiClient.post("/competitions/participations", { matchId, registrationId, corner });
-    invalidate();
-    setShowAssign(false);
-    setSelectedMatch(null);
-  };
+  const handleAssign = async (data: { matchId: number; registrationId: number; corner: string }) => {
+      await apiClient.post("/competitions/participations", data);
+      invalidate();
+      setShowAssign(false);
+      setSelectedMatch(null);
+    };
 
   const handleResult = async (dto: any) => {
     await apiClient.patch(`/competitions/matches/${selectedMatch!.matchId}`, {
@@ -121,6 +121,19 @@ export function GroupMatchesPanel({
   const handleDelete = async (matchId: number) => {
     if (!confirm("¿Eliminar este partido?")) return;
     await apiClient.delete(`/competitions/matches/${matchId}`);
+    invalidate();
+  };
+
+  // Elimina UNA participación de un match (para reasignar)
+  const handleRemoveParticipant = async (matchId: number, registrationId: number) => {
+    await apiClient.delete(
+      `/competitions/matches/${matchId}/participations/${registrationId}`
+    );
+  };
+
+  // Swap (invertir) los dos participantes de un match
+  const handleSwapParticipants = async (matchId: number) => {
+    await apiClient.patch(`/competitions/matches/${matchId}/swap-participants`);
     invalidate();
   };
 
@@ -207,7 +220,10 @@ export function GroupMatchesPanel({
               {matches.map((match) => {
                 const participants = match.participations ?? [];
                 const statusConfig = getStatusConfig(match.status);
-
+                const canReassign =
+                  participants.length > 0 &&
+                  match.status !== "finalizado" &&
+                  wushuType !== "taolu";
                 return (
                   <div key={match.matchId} className="px-4 py-3 hover:bg-slate-50 transition-colors">
                     <div className="flex items-center justify-between mb-2">
@@ -387,6 +403,53 @@ export function GroupMatchesPanel({
                             </Button>
                           )}
                         </>
+                      )}
+                      {participants.length === 2 && match.status !== "finalizado" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={<ArrowUpDown className="h-3.5 w-3.5" />}
+                          onClick={() => handleSwapParticipants(match.matchId)}
+                        >
+                          Invertir
+                        </Button>
+                      )}
+
+                      {canReassign && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={<UserPlus className="h-3.5 w-3.5" />}
+                          disabled={isDeletingParticipation}
+                          onClick={async () => {
+                            const names = participants
+                              .map((p) =>
+                                p.registration?.athlete?.name ??
+                                p.registration?.team?.name ??
+                                "Participante"
+                              )
+                              .join(" y ");
+
+                            if (!window.confirm(`¿Quitar a ${names} de este partido para reasignarlos?`)) return;
+
+                            setIsDeletingParticipation(true);
+                            try {
+                              for (const p of participants) {
+                                if (p.registrationId) {
+                                  await handleRemoveParticipant(match.matchId, p.registrationId);
+                                }
+                              }
+                              invalidate();
+                              // Abrir modal de asignación automáticamente
+                              setSelectedMatch(match);
+                              setShowAssign(true);
+                            } finally {
+                              setIsDeletingParticipation(false);
+                            }
+                          }}
+                        >
+                          Reasignar
+                        </Button>
                       )}
                     </div>
                   </div>
