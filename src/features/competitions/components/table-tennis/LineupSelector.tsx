@@ -53,38 +53,35 @@ export function LineupSelector({
   }, [existingLineup]);
 
   const handleSubmit = () => {
-    if (!selectedA || !selectedB || !selectedC || !selectedSub) {
-      alert("Debes seleccionar los 3 titulares y 1 suplente");
+    if (!selectedA || !selectedB || !selectedC) {
+      alert("Debes seleccionar los 3 titulares");
       return;
     }
 
-    // Verificar que no haya duplicados
-    const selected = [selectedA, selectedB, selectedC, selectedSub];
+    // Verificar duplicados solo entre los seleccionados
+    const selected = [selectedA, selectedB, selectedC, ...(selectedSub ? [selectedSub] : [])];
     const unique = new Set(selected);
     if (unique.size !== selected.length) {
       alert("No puedes seleccionar el mismo atleta en múltiples posiciones");
       return;
     }
 
+    // Armar lineups — suplente solo si fue seleccionado
+    const lineups = [
+      { athleteId: selectedA, lineupOrder: 1, isSubstitute: false },
+      { athleteId: selectedB, lineupOrder: 2, isSubstitute: false },
+      { athleteId: selectedC, lineupOrder: 3, isSubstitute: false },
+      ...(selectedSub
+        ? [{ athleteId: selectedSub, lineupOrder: 4, isSubstitute: true }]
+        : []),
+    ];
+
     setLineupMutation.mutate(
-      {
-        participationId,
-        data: {
-          lineups: [
-            { athleteId: selectedA, lineupOrder: 1, isSubstitute: false },
-            { athleteId: selectedB, lineupOrder: 2, isSubstitute: false },
-            { athleteId: selectedC, lineupOrder: 3, isSubstitute: false },
-            { athleteId: selectedSub, lineupOrder: 4, isSubstitute: true },
-          ],
-        },
-      },
-      {
-        onSuccess: () => {
-          onSuccess?.();
-        },
-      },
+      { participationId, data: { lineups } },
+      { onSuccess: () => onSuccess?.() },
     );
   };
+
 
   const getAvailableMembers = (currentPosition: number | null) => {
     const selected = [selectedA, selectedB, selectedC, selectedSub].filter(
@@ -183,7 +180,7 @@ export function LineupSelector({
           {/* Suplente */}
           <div className="space-y-4">
             <h4 className="font-medium text-gray-900 border-b pb-2">
-              Jugador Suplente
+              Jugador Suplente <span className="text-xs font-normal text-gray-400">(opcional)</span>
             </h4>
             {renderSelect("Suplente", selectedSub, setSelectedSub, "Suplente")}
           </div>
@@ -208,11 +205,7 @@ export function LineupSelector({
           <Button
             onClick={handleSubmit}
             disabled={
-              !selectedA ||
-              !selectedB ||
-              !selectedC ||
-              !selectedSub ||
-              setLineupMutation.isPending
+              !selectedA || !selectedB || !selectedC || setLineupMutation.isPending
             }
             isLoading={setLineupMutation.isPending}
           >

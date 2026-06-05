@@ -174,7 +174,7 @@ export function TableTennisMatchCard({
             <div className="flex items-center justify-end gap-2">
               {team2Players.map((name, index) => (
                 <Badge key={index} variant="primary" className="text-sm font-bold">
-                  {String.fromCharCode(88 + index)}: {name}
+                  {String.fromCharCode(65 + index)}: {name}
                 </Badge>
               ))}
             </div>

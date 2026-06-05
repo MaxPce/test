@@ -59,7 +59,7 @@ export function TableTennisScorecard({
   };
 
   const getGameLabel = (gameNumber: number) => {
-    const labels = ["A vs X", "B vs Y", "C vs Z", "A vs Y", "B vs X"];
+    const labels = ["A vs A", "B vs B", "C vs C", "A vs B", "B vs A"];
     return labels[gameNumber - 1] || `Juego ${gameNumber}`;
   };
 
