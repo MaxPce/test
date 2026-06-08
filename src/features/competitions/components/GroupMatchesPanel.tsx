@@ -39,7 +39,6 @@ interface SportInfo {
 
 interface Props {
   group: Phase;
-  allRegistrations: Registration[];
   eventCategory: EventCategory;
   sport: SportInfo;
   onGenerateMatches?: (group: Phase) => void;
@@ -218,7 +217,10 @@ export function GroupMatchesPanel({
           {!isLoading && matches.length > 0 && (
             <div className="divide-y divide-slate-100">
               {matches.map((match) => {
-                const participants = match.participations ?? [];
+                const participants = [...(match.participations ?? [])].sort((a, b) => {
+                  const order: Record<string, number> = { blue: 0, A: 0, white: 1, B: 1 };
+                  return (order[a.corner ?? ""] ?? 0) - (order[b.corner ?? ""] ?? 0);
+                });
                 const statusConfig = getStatusConfig(match.status);
                 const canReassign =
                   participants.length > 0 &&
@@ -482,7 +484,6 @@ export function GroupMatchesPanel({
           isOpen={showAssign}
           onClose={() => { setShowAssign(false); setSelectedMatch(null); }}
           match={selectedMatch}
-          registrations={allRegistrations}
           onAssign={handleAssign}
           isLoading={false}
         />

@@ -60,7 +60,7 @@ export function TableTennisMatchWrapper({
     );
   }
 
-  // fetches sus propios lineups y maneja todos los estados internamente
+  
   return (
     <TableTennisMatchManager
       key={`${enrichedMatch.matchId}-${

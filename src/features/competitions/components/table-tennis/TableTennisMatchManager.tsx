@@ -54,12 +54,26 @@ export function TableTennisMatchManager({
   const modality = detectTableTennisModality(match);
   const requiresLineup = needsLineup(modality);
   const sortByCorner = (parts: any[]) => {
-    return [...parts].sort((a, b) => {
-      const order = (corner?: string) =>
-        corner === 'left' || corner === 'A' || corner === 'top' ? 0 : 1;
+    console.log('[sortByCorner] INPUT:', parts.map(p => ({
+      name: p.registration?.athlete?.name ?? p.registration?.team?.name,
+      corner: p.corner,
+      participationId: p.participationId,
+      registrationId: p.registrationId,
+    })));
+
+    const sorted = [...parts].sort((a, b) => {
+      const order = (corner?: string) => {
+        const FIRST = ['left', 'A', 'top', 'blue'];
+        return FIRST.includes(corner ?? '') ? 0 : 1;
+      };
       return order(a.corner) - order(b.corner);
     });
+
+    
+
+    return sorted;
   };
+
 
   const [localParticipations, setLocalParticipations] = useState(
     () => sortByCorner(match.participations ?? [])
@@ -75,11 +89,24 @@ export function TableTennisMatchManager({
   const { data: lineups = [], isLoading: lineupsLoading } = useMatchLineups(
     match.matchId,
   );
-  const [localLineups, setLocalLineups] = useState(() => lineups);
+  const [localLineups, setLocalLineups] = useState(() => {
+    const FIRST = ['left', 'A', 'top', 'blue'];
+    return [...lineups].sort((a, b) => {
+      const orderA = FIRST.includes(a.participation?.corner ?? '') ? 0 : 1;
+      const orderB = FIRST.includes(b.participation?.corner ?? '') ? 0 : 1;
+      return orderA - orderB;
+    });
+  });
 
   useEffect(() => {
     if (lineups.length > 0) {
-      setLocalLineups(lineups);
+      const FIRST = ['left', 'A', 'top', 'blue'];
+      const sorted = [...lineups].sort((a, b) => {
+        const orderA = FIRST.includes(a.participation?.corner ?? '') ? 0 : 1;
+        const orderB = FIRST.includes(b.participation?.corner ?? '') ? 0 : 1;
+        return orderA - orderB;
+      });
+      setLocalLineups(sorted);
     }
   }, [lineups]);
 
@@ -179,10 +206,14 @@ export function TableTennisMatchManager({
   const hasGames = games.length > 0;
   const team1 = localLineups[0];
   const team2 = localLineups[1];
+
+  
   const hasLineups = localLineups.length === 2 && localLineups.every((l) => l.hasLineup);
 
   const participation1 = localParticipations[0];
   const participation2 = localParticipations[1];
+
+  
 
   const team1Members =
     localLineups[0]?.participation?.registration?.team?.members ||

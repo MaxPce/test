@@ -8,13 +8,12 @@ interface TableTennisMatchCardProps {
   lineups: LineupData[];
   match: Match;
   result?: {
-    team1: { wins: number; teamName: string };
-    team2: { wins: number; teamName: string };
+    team1: { wins: number; teamName: string; participation?: any };
+    team2: { wins: number; teamName: string; participation?: any };
     score: string;
     isComplete: boolean;
     winner: any | null;
   } | null;
-  // ── nuevas props para el swap ──
   onSwap?: () => void;
   isSwapping?: boolean;
 }
@@ -27,7 +26,6 @@ export function TableTennisMatchCard({
   isSwapping = false,
 }: TableTennisMatchCardProps) {
 
-  // Solo mostrar swap si: el match está programado, tiene 2 participantes y se pasó el handler
   const canSwap =
     onSwap &&
     match.status === "programado" &&
@@ -39,7 +37,6 @@ export function TableTennisMatchCard({
         <CardBody className="text-center py-8 text-gray-500">
           <Users className="h-12 w-12 mx-auto mb-2 text-gray-400" />
           <p>Este match necesita 2 equipos</p>
-          {/* Swap disponible incluso sin lineups configurados */}
           {canSwap && (
             <button
               onClick={onSwap}
@@ -50,11 +47,7 @@ export function TableTennisMatchCard({
                          hover:border-gray-500"
               title="Intercambiar posición de los equipos en el bracket"
             >
-              {isSwapping ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <ArrowLeftRight className="h-3 w-3" />
-              )}
+              {isSwapping ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowLeftRight className="h-3 w-3" />}
               {isSwapping ? "Intercambiando..." : "Swap equipos"}
             </button>
           )}
@@ -65,6 +58,31 @@ export function TableTennisMatchCard({
 
   const team1 = lineups[0];
   const team2 = lineups[1];
+
+  // ── Normalizar result para que team1/team2 coincidan con el orden de lineups ──
+  const normalizedResult = (() => {
+    if (!result) return null;
+
+    const lineup0RegId = team1.participation?.registration?.registrationId;
+    const resultTeam1RegId = result.team1?.participation?.registration?.registrationId;
+
+    // Si el result viene invertido respecto a lineups, hacer swap
+    const isInverted =
+      lineup0RegId &&
+      resultTeam1RegId &&
+      lineup0RegId !== resultTeam1RegId;
+
+    if (isInverted) {
+      return {
+        ...result,
+        team1: result.team2,
+        team2: result.team1,
+        score: `${result.team2.wins} - ${result.team1.wins}`,
+      };
+    }
+
+    return result;
+  })();
 
   const getLineupLetters = (lineup: LineupData) => {
     const sorted = [...lineup.lineups]
@@ -77,22 +95,17 @@ export function TableTennisMatchCard({
   const team2Players = getLineupLetters(team2);
 
   const isTeam1Winner =
-    result?.winner?.registrationId ===
+    normalizedResult?.winner?.registrationId ===
     team1.participation.registration.registrationId;
   const isTeam2Winner =
-    result?.winner?.registrationId ===
+    normalizedResult?.winner?.registrationId ===
     team2.participation.registration.registrationId;
 
   const getMatchStatusBadge = () => {
-    if (match.status === "finalizado") {
-      return <Badge variant="success">Finalizado</Badge>;
-    }
-    if (match.status === "en_curso") {
-      return <Badge variant="warning">En curso</Badge>;
-    }
-    if (result && result.team1.wins + result.team2.wins > 0) {
+    if (match.status === "finalizado") return <Badge variant="success">Finalizado</Badge>;
+    if (match.status === "en_curso") return <Badge variant="warning">En curso</Badge>;
+    if (normalizedResult && normalizedResult.team1.wins + normalizedResult.team2.wins > 0)
       return <Badge variant="default">En juego</Badge>;
-    }
     return <Badge variant="default">Programado</Badge>;
   };
 
@@ -105,13 +118,9 @@ export function TableTennisMatchCard({
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               {isTeam1Winner && <Trophy className="h-5 w-5 text-yellow-500" />}
-              <h3 className="font-bold text-lg text-gray-900">
-                {team1.teamName}
-              </h3>
+              <h3 className="font-bold text-lg text-gray-900">{team1.teamName}</h3>
             </div>
-            <Badge variant="default" className="mb-2">
-              {team1.institution}
-            </Badge>
+            <Badge variant="default" className="mb-2">{team1.institution}</Badge>
             <div className="flex items-center gap-2">
               {team1Players.map((name, index) => (
                 <Badge key={index} variant="primary" className="text-sm font-bold">
@@ -121,25 +130,21 @@ export function TableTennisMatchCard({
             </div>
           </div>
 
-          {/* Centro: marcador + botón swap */}
+          {/* Centro: marcador + swap */}
           <div className="text-center px-6 flex flex-col items-center gap-2">
-            {result ? (
+            {normalizedResult ? (
               <div>
                 <div className="text-4xl font-bold text-gray-900 mb-1">
-                  {result.team1.wins} - {result.team2.wins}
+                  {normalizedResult.team1.wins} - {normalizedResult.team2.wins}
                 </div>
                 {getMatchStatusBadge()}
               </div>
             ) : (
               <div>
-                <div className="text-2xl font-bold text-gray-400 mb-2">
-                  0 - 0
-                </div>
+                <div className="text-2xl font-bold text-gray-400 mb-2">0 - 0</div>
                 {getMatchStatusBadge()}
               </div>
             )}
-
-            {/* Botón swap — solo si el partido está PROGRAMADO */}
             {canSwap && (
               <button
                 onClick={onSwap}
@@ -150,11 +155,7 @@ export function TableTennisMatchCard({
                            hover:border-gray-400 mt-1"
                 title="Intercambiar posición de los equipos en el bracket"
               >
-                {isSwapping ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <ArrowLeftRight className="h-3 w-3" />
-                )}
+                {isSwapping ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowLeftRight className="h-3 w-3" />}
                 {isSwapping ? "Cambiando..." : "Swap"}
               </button>
             )}
@@ -164,9 +165,7 @@ export function TableTennisMatchCard({
           <div className="flex-1 text-right">
             <div className="flex items-center justify-end gap-2 mb-2">
               {isTeam2Winner && <Trophy className="h-5 w-5 text-yellow-500" />}
-              <h3 className="font-bold text-lg text-gray-900">
-                {team2.teamName}
-              </h3>
+              <h3 className="font-bold text-lg text-gray-900">{team2.teamName}</h3>
             </div>
             <div className="flex justify-end mb-2">
               <Badge variant="default">{team2.institution}</Badge>
