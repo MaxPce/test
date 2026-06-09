@@ -450,21 +450,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                                   : "Registrar Resultado"}
                               </Button>
                             )}
-                            {isTableTennis && (
-                              <Button
-                                variant="gradient"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedMatch(match);
-                                  openModal("result");
-                                }}
-                              >
-                                {match.status === "finalizado"
-                                  ? "Ver/Editar Match"
-                                  : "Gestionar Match"}
-                              </Button>
-                            )}
-                            {sport.isTennis && (
+                            {(isTableTennis || sport.isTennis) && (
                               <Button
                                 variant="gradient"
                                 size="sm"
@@ -484,7 +470,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                               !sport.isWrestling &&
                               !sport.isCollectiveSport &&
                               !taekwondoType &&
-                              !isTableTennis &&
+                              !isTableTennis && !sport.isTennis &&
                               match.status !== "finalizado" && (
                                 <Button
                                   variant="gradient"
@@ -764,20 +750,22 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                         {match.status === "finalizado" ? "Editar Resultado" : "Registrar Resultado"}
                       </Button>
                     )}
-                    {isTableTennis && (
-                      <Button variant="gradient" size="sm"
-                        onClick={() => { setSelectedMatch(match); openModal("result"); }}>
-                        {match.status === "finalizado" ? "Ver/Editar Match" : "Gestionar Match"}
-                      </Button>
-                    )}
-                    {sport.isTennis && (
-                      <Button variant="gradient" size="sm"
-                        onClick={() => { setSelectedMatch(match); openModal("result"); }}>
-                        {match.status === "finalizado" ? "Ver/Editar Match" : "Gestionar Match"}
+                    {(isTableTennis || sport.isTennis) && (
+                      <Button
+                        variant="gradient"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMatch(match);
+                          openModal("result");
+                        }}
+                      >
+                        {match.status === "finalizado"
+                          ? "Ver/Editar Match"
+                          : "Gestionar Match"}
                       </Button>
                     )}
                     {!sport.isJudo && !sport.isKarate && !sport.isWushu && !sport.isWrestling
-                      && !sport.isCollectiveSport && !taekwondoType && !isTableTennis
+                      && !sport.isCollectiveSport && !taekwondoType && !isTableTennis && !sport.isTennis
                       && match.status !== "finalizado" && (
                       <Button variant="gradient" size="sm"
                         onClick={() => { setSelectedMatch(match); openModal("result"); }}>
@@ -904,7 +892,8 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                   Asignar
                 </Button>
               )}
-              {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo && !hasSubPhases
+              {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
+                && (!hasSubPhases || sport.isTennis)
                 && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion" || selectedPhase.type === "repechaje") && (
                 <Button variant="outline" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => openModal("match")}>
                   Nuevo Partido
