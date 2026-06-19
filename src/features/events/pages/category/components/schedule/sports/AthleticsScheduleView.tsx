@@ -208,6 +208,13 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
       .filter(Boolean);
   }, [eventCategory]);
 
+  const isTeamMode = useMemo(() => {
+    const regs = eventCategory.registrations ?? [];
+    if (regs.length === 0) return false;
+    return regs.some((r: any) => r.team != null || r.teamId != null);
+  }, [eventCategory.registrations]);
+
+
   return (
     <div className="space-y-6 animate-in">
       <PageHeader
@@ -297,6 +304,7 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
         allRegistrations={eventCategory.registrations ?? []}
         sismasterEventId={eventCategory.externalEventId ?? undefined}
         sismasterSportId={eventCategory.externalSportId ?? undefined}
+        isTeamMode={isTeamMode}
       />
 
       {/* Modal: Asignar participante */}
