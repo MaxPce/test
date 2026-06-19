@@ -511,7 +511,7 @@ export function GenerateAthleticsSeriesModal({
               <>
                 <p>{validGroups.length} serie(s) a crear</p>
                 <p className="text-slate-500">
-                  {totalAthletes} atleta(s) asignados en total
+                  {totalAthletes} atleta(s) asignadoss en total
                 </p>
               </>
             )}
