@@ -22,11 +22,20 @@ interface NivCatCombo {
   total: number;
 }
 
+interface TeamMemberInfo {
+  name: string;
+  rol: string | null;
+}
+
 interface SeriesAthlete {
   registrationId: number;
   name: string;
   institution?: string | null;
+  members?: TeamMemberInfo[];
+  nivel?: string | null;   
+  genero?: string | null;  
 }
+
 
 interface SeriesGroup {
   key: string;
@@ -273,11 +282,31 @@ export function GenerateAthleticsSeriesModal({
 
     // ── Modo equipos: series fijas + pool sin asignar ──────────────────────
     if (isTeamMode) {
-      const teams: SeriesAthlete[] = allRegistrations.map((reg) => ({
-        registrationId: reg.registrationId,
-        name: reg.team?.name ?? reg.athlete?.name ?? `Equipo ${reg.registrationId}`,
-        institution: reg.team?.institution?.name ?? reg.athlete?.institution?.name ?? null,
-      }));
+      const teams: SeriesAthlete[] = allRegistrations.map((reg) => {
+        const rawMembers: Array<{ rol: string; athlete?: { name: string } }> =
+          reg.team?.members ?? [];
+
+        const members: TeamMemberInfo[] = rawMembers
+          .map((m) => ({
+            name: m.athlete?.name ?? "",
+            rol: m.rol ?? null,
+          }))
+          .filter((m) => m.name.length > 0)
+          // orden: capitan > titular > suplente
+          .sort((a, b) => {
+            const order: Record<string, number> = { capitan: 0, titular: 1, suplente: 2 };
+            return (order[a.rol ?? ""] ?? 3) - (order[b.rol ?? ""] ?? 3);
+          });
+
+        return {
+          registrationId: reg.registrationId,
+          name: reg.team?.name ?? reg.athlete?.name ?? `Equipo ${reg.registrationId}`,
+          institution: reg.team?.institution?.name ?? reg.athlete?.institution?.name ?? null,
+          members,
+          nivel:  reg.team?.category?.name ?? null,   
+          genero: reg.team?.category?.gender ?? null,
+        };
+      });
       hasInitialized.current = true;
       setGroups([
         { key: UNASSIGNED_KEY, seriesName: "Sin asignar", idniv: "", idcat: "", athletes: teams },
@@ -795,26 +824,21 @@ interface TeamCardProps {
 }
 
 /** Tarjeta vertical — pool "Sin asignar" */
-function TeamCard({
-  team,
-  groupKey,
-  isSelected,
-  isDragging,
-  onDragStart,
-  onDragEnd,
-  onClick,
-}: TeamCardProps) {
+function TeamCard({ team, groupKey, isSelected, isDragging, onDragStart, onDragEnd, onClick }: TeamCardProps) {
+  const ROL_STYLES: Record<string, string> = {
+    capitan:  "bg-yellow-100 text-yellow-700",
+    titular:  "bg-indigo-50 text-indigo-600",
+    suplente: "bg-slate-100 text-slate-500",
+  };
+
   return (
     <div
       draggable
       onDragStart={() => onDragStart(team.registrationId, groupKey)}
       onDragEnd={onDragEnd}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick(team.registrationId, groupKey);
-      }}
+      onClick={(e) => { e.stopPropagation(); onClick(team.registrationId, groupKey); }}
       className={[
-        "flex cursor-grab items-center gap-2 rounded-lg border p-2 transition-all active:cursor-grabbing",
+        "flex cursor-grab items-start gap-2 rounded-lg border p-2 transition-all active:cursor-grabbing",
         isDragging
           ? "opacity-40"
           : isSelected
@@ -822,11 +846,32 @@ function TeamCard({
             : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
       ].join(" ")}
     >
-      <GripVertical className="h-3.5 w-3.5 shrink-0 text-slate-300" />
-      <div className="min-w-0">
-        <p className="truncate text-xs font-medium text-slate-800">{team.name}</p>
+      <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-300" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-semibold text-slate-800">{team.name}</p>
         {team.institution && (
           <p className="truncate text-[10px] text-slate-400">{team.institution}</p>
+        )}
+
+        {/* ── NUEVO: lista de atletas ── */}
+        {team.members && team.members.length > 0 && (
+          <div className="mt-1.5 space-y-0.5 border-t border-slate-100 pt-1">
+            {team.members.map((m, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <span className="truncate text-[10px] text-slate-600 leading-tight">
+                  {m.name}
+                </span>
+                {m.rol && (
+                  <span className={[
+                    "shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide",
+                    ROL_STYLES[m.rol] ?? "bg-slate-100 text-slate-500",
+                  ].join(" ")}>
+                    {m.rol === "capitan" ? "CAP" : m.rol === "titular" ? "TIT" : "SUP"}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -845,42 +890,43 @@ interface TeamChipProps {
 }
 
 /** Chip compacto — dentro de cada serie */
-function TeamChip({
-  team,
-  groupKey,
-  isSelected,
-  isDragging,
-  onDragStart,
-  onDragEnd,
-  onClick,
-  onRemove,
-}: TeamChipProps) {
+function TeamChip({ team, groupKey, isSelected, isDragging, onDragStart, onDragEnd, onClick, onRemove }: TeamChipProps) {
+  const membersTooltip = team.members?.map((m) =>
+    `${m.name}${m.rol ? ` (${m.rol})` : ""}`
+  ).join("\n") ?? "";
+
   return (
     <div
       draggable
+      title={membersTooltip || undefined}
       onDragStart={() => onDragStart(team.registrationId, groupKey)}
       onDragEnd={onDragEnd}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick(team.registrationId, groupKey);
-      }}
+      onClick={(e) => { e.stopPropagation(); onClick(team.registrationId, groupKey); }}
       className={[
-        "flex cursor-grab items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-all active:cursor-grabbing",
+        "flex cursor-grab items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-all active:cursor-grabbing",
         isDragging
           ? "opacity-40"
           : isSelected
             ? "border-blue-400 bg-blue-100 text-blue-800"
-            : "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300",
+            : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white",
       ].join(" ")}
     >
       <GripVertical className="h-3 w-3 shrink-0 text-slate-400" />
-      <span className="max-w-[110px] truncate font-medium">{team.name}</span>
+      <div className="flex min-w-0 flex-col">
+        <span className="max-w-[120px] truncate font-semibold leading-tight">{team.name}</span>
+        {team.members && team.members.length > 0 && (
+          <span className="text-[9px] text-slate-400 leading-tight">
+            {team.members.length} atleta{team.members.length !== 1 ? "s" : ""}
+            {" · "}
+            {/* Muestra el primer nombre como preview */}
+            <span className="text-slate-500">{team.members[0].name.split(" ")[0]}</span>
+            {team.members.length > 1 && <span className="text-slate-400"> +{team.members.length - 1}</span>}
+          </span>
+        )}
+      </div>
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(team.registrationId);
-        }}
+        onClick={(e) => { e.stopPropagation(); onRemove(team.registrationId); }}
         className="ml-0.5 rounded-full p-0.5 hover:bg-slate-200"
         title="Devolver a Sin asignar"
       >
