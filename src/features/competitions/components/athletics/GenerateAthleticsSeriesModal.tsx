@@ -25,7 +25,9 @@ interface NivCatCombo {
 interface TeamMemberInfo {
   name: string;
   rol: string | null;
+  gender?: string | null;
 }
+
 
 interface SeriesAthlete {
   registrationId: number;
@@ -73,7 +75,6 @@ export interface GenerateAthleticsSeriesModalProps {
   sismasterEventId?: number;
   sismasterSportId?: number;
   allRegistrations: any[];
-  /** Nuevo: pasar true cuando la categoría es de equipos */
   isTeamMode?: boolean;
 }
 
@@ -84,6 +85,13 @@ function getNivLabel(idniv: string): string {
   if (n.includes("novel")) return "Noveles";
   if (n.includes("avanzad")) return "Avanzado";
   return idniv.charAt(0).toUpperCase() + idniv.slice(1).toLowerCase();
+}
+
+function getNivLabelShort(idniv: string): string {
+  const n = idniv.toLowerCase().trim();
+  if (n.includes("novel"))   return "Nv";
+  if (n.includes("avanzad")) return "Az";
+  return idniv.slice(0, 2);
 }
 
 function getCatLabel(idcat: string): string {
@@ -261,6 +269,8 @@ export function GenerateAthleticsSeriesModal({
   const [dragOverKey, setDragOverKey]         = useState<string | null>(null);
   const [teamSelectedId, setTeamSelectedId]   = useState<number | null>(null);
   const [teamSelectedFrom, setTeamSelectedFrom] = useState<string | null>(null);
+  const [teamSearch, setTeamSearch] = useState("");
+
 
   const hasInitialized = useRef(false);
   const prevOpenRef    = useRef(false);
@@ -275,6 +285,7 @@ export function GenerateAthleticsSeriesModal({
       setSelectedRegId(null);   setSourceGroupKey(null);
       setDraggingId(null);      setDraggingFrom(null);    setDragOverKey(null);
       setTeamSelectedId(null);  setTeamSelectedFrom(null);
+      setTeamSearch("")
     }
 
     prevOpenRef.current = open;
@@ -283,13 +294,14 @@ export function GenerateAthleticsSeriesModal({
     // ── Modo equipos: series fijas + pool sin asignar ──────────────────────
     if (isTeamMode) {
       const teams: SeriesAthlete[] = allRegistrations.map((reg) => {
-        const rawMembers: Array<{ rol: string; athlete?: { name: string } }> =
+        const rawMembers: Array<{ rol: string; athlete?: { name: string; gender?: string } }> =
           reg.team?.members ?? [];
 
         const members: TeamMemberInfo[] = rawMembers
           .map((m) => ({
             name: m.athlete?.name ?? "",
             rol: m.rol ?? null,
+            gender: m.athlete?.gender ?? null,
           }))
           .filter((m) => m.name.length > 0)
           // orden: capitan > titular > suplente
@@ -304,14 +316,20 @@ export function GenerateAthleticsSeriesModal({
           institution: reg.team?.institution?.name ?? reg.athlete?.institution?.name ?? null,
           members,
           nivel:  reg.team?.category?.name ?? null,   
-          genero: reg.team?.category?.gender ?? null,
+          genero: reg.team?.members?.[0]?.athlete?.gender ?? null,
+
         };
       });
       hasInitialized.current = true;
       setGroups([
         { key: UNASSIGNED_KEY, seriesName: "Sin asignar", idniv: "", idcat: "", athletes: teams },
-        ...TEAM_FIXED_SERIES.map((s) => ({ ...s, athletes: [] })),
+        ...TEAM_FIXED_SERIES.map((s) => ({
+          ...s,
+          seriesName: `${getCatLabel(s.idcat)} ${getNivLabelShort(s.idniv)} ${eventName}`,
+          athletes: [],
+        })),
       ]);
+
       return;
     }
 
@@ -449,6 +467,14 @@ export function GenerateAthleticsSeriesModal({
   const teamSeriesGroups = groups.filter((g) => g.key !== UNASSIGNED_KEY);
   const validGroupsTeam  = teamSeriesGroups.filter((g) => g.athletes.length > 0);
   const assignedCount    = teamSeriesGroups.reduce((acc, g) => acc + g.athletes.length, 0);
+
+  const filteredUnassigned = useMemo(() => {
+    if (!teamSearch.trim()) return unassignedGroup?.athletes ?? [];
+    const q = teamSearch.toLowerCase();
+    return (unassignedGroup?.athletes ?? []).filter((team) =>
+      team.members?.some((m) => m.name.toLowerCase().includes(q))
+    );
+  }, [unassignedGroup, teamSearch]);
 
   // Footer usa uno u otro según modo
   const validGroupsForFooter = isTeamMode ? validGroupsTeam : validGroupsIndividual;
@@ -636,21 +662,30 @@ export function GenerateAthleticsSeriesModal({
                     onDrop={(e) => onDrop(e, UNASSIGNED_KEY)}
                     onClick={() => handleClickGroupTeam(UNASSIGNED_KEY)}
                   >
-                    <div className="border-b border-slate-200 px-3 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                        Sin asignar
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {unassignedGroup?.athletes.length ?? 0} equipo(s)
-                      </p>
+                    <div className="border-b border-slate-200 px-3 py-2 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Sin asignar</p>
+                        <p className="text-xs text-slate-400">
+                          {filteredUnassigned.length !== (unassignedGroup?.athletes.length ?? 0)
+                            ? `${filteredUnassigned.length} / ${unassignedGroup?.athletes.length ?? 0}`
+                            : `${unassignedGroup?.athletes.length ?? 0}`}{" "}equipo(s)
+                        </p>
+                      </div>
+                      <input
+                        type="text"
+                        value={teamSearch}
+                        onChange={(e) => setTeamSearch(e.target.value)}
+                        placeholder="Buscar atleta..."
+                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
+                      />
                     </div>
                     <div className="flex-1 space-y-1.5 overflow-y-auto p-2">
                       {unassignedGroup?.athletes.length === 0 ? (
-                        <p className="py-6 text-center text-xs text-slate-400">
-                          ✓ Todos asignados
-                        </p>
+                        <p className="py-6 text-center text-xs text-slate-400">✓ Todos asignados</p>
+                      ) : filteredUnassigned.length === 0 ? (
+                        <p className="py-6 text-center text-xs text-slate-400">Sin resultados para "{teamSearch}"</p>
                       ) : (
-                        unassignedGroup?.athletes.map((team) => (
+                        filteredUnassigned.map((team) => (
                           <TeamCard
                             key={team.registrationId}
                             team={team}
@@ -853,6 +888,38 @@ function TeamCard({ team, groupKey, isSelected, isDragging, onDragStart, onDragE
           <p className="truncate text-[10px] text-slate-400">{team.institution}</p>
         )}
 
+        {/* ── Badges nivel + género ── */}
+        {(team.nivel || team.genero) && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {team.nivel && (
+              <span className={[
+                "rounded-full px-1.5 py-px text-[8px] font-bold uppercase tracking-wide",
+                team.nivel.toLowerCase().includes("avanzad")
+                  ? "bg-purple-100 text-purple-700"
+                  : "bg-teal-100 text-teal-700",
+              ].join(" ")}>
+                {getNivLabel(team.nivel)}
+              </span>
+            )}
+            {(() => {
+              const genders = new Set(team.members?.map((m) => m.gender).filter(Boolean));
+              const isMixed = genders.size > 1;
+              const label   = isMixed ? "Mixta" : getCatLabel(team.genero ?? "");
+              const style   = isMixed
+                ? "bg-purple-100 text-purple-700"
+                : team.genero === "M" || team.genero?.toLowerCase().includes("masc")
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-pink-100 text-pink-700";
+
+              return (team.genero || isMixed) ? (
+                <span className={["rounded-full px-1.5 py-px text-[8px] font-semibold", style].join(" ")}>
+                  {label}
+                </span>
+              ) : null;
+            })()}
+          </div>
+        )}
+
         {/* ── NUEVO: lista de atletas ── */}
         {team.members && team.members.length > 0 && (
           <div className="mt-1.5 space-y-0.5 border-t border-slate-100 pt-1">
@@ -861,12 +928,12 @@ function TeamCard({ team, groupKey, isSelected, isDragging, onDragStart, onDragE
                 <span className="truncate text-[10px] text-slate-600 leading-tight">
                   {m.name}
                 </span>
-                {m.rol && (
+                {m.gender && (
                   <span className={[
                     "shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide",
-                    ROL_STYLES[m.rol] ?? "bg-slate-100 text-slate-500",
+                    m.gender === "F" ? "bg-pink-100 text-pink-700" : "bg-blue-100 text-blue-700",
                   ].join(" ")}>
-                    {m.rol === "capitan" ? "CAP" : m.rol === "titular" ? "TIT" : "SUP"}
+                    {m.gender === "F" ? "Fem" : "Mas"}
                   </span>
                 )}
               </div>
@@ -912,22 +979,61 @@ function TeamChip({ team, groupKey, isSelected, isDragging, onDragStart, onDragE
       ].join(" ")}
     >
       <GripVertical className="h-3 w-3 shrink-0 text-slate-400" />
-      <div className="flex min-w-0 flex-col">
-        <span className="max-w-[120px] truncate font-semibold leading-tight">{team.name}</span>
-        {team.members && team.members.length > 0 && (
-          <span className="text-[9px] text-slate-400 leading-tight">
-            {team.members.length} atleta{team.members.length !== 1 ? "s" : ""}
-            {" · "}
-            {/* Muestra el primer nombre como preview */}
-            <span className="text-slate-500">{team.members[0].name.split(" ")[0]}</span>
-            {team.members.length > 1 && <span className="text-slate-400"> +{team.members.length - 1}</span>}
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="max-w-[140px] truncate font-semibold leading-tight">{team.name}</span>
+
+        {team.institution && (
+          <span className="max-w-[140px] truncate text-[9px] text-slate-400 leading-tight">
+            {team.institution}
           </span>
         )}
+
+        {(team.nivel || team.genero || team.members?.length) && (
+          <div className="flex flex-wrap gap-0.5">
+            {team.nivel && (
+              <span className={[
+                "rounded-full px-1 py-px text-[8px] font-bold uppercase tracking-wide",
+                team.nivel.toLowerCase().includes("avanzad")
+                  ? "bg-purple-100 text-purple-700"
+                  : "bg-teal-100 text-teal-700",
+              ].join(" ")}>
+                {getNivLabel(team.nivel)}
+              </span>
+            )}
+            {(() => {
+              const genders = new Set(team.members?.map((m) => m.gender).filter(Boolean));
+              const isMixed = genders.size > 1;
+              const label   = isMixed ? "Mixta" : getCatLabel(team.genero ?? "");
+              const style   = isMixed
+                ? "bg-purple-100 text-purple-700"
+                : team.genero === "M" || team.genero?.toLowerCase().includes("masc")
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-pink-100 text-pink-700";
+              return (team.genero || isMixed) ? (
+                <span className={["rounded-full px-1 py-px text-[8px] font-semibold", style].join(" ")}>
+                  {label}
+                </span>
+              ) : null;
+            })()}
+          </div>
+        )}
+
+        {team.members && team.members.length > 0 && (() => {
+          const captain = team.members.find((m) => m.rol === "capitan") ?? team.members[0];
+          const preview = captain.name.split(" ").slice(0, 2).join(" ");
+          const extra   = team.members.length - 1;
+          return (
+            <span className="text-[9px] text-slate-400 leading-tight">
+              <span className="text-slate-500">{preview}</span>
+              {extra > 0 && <span> +{extra} atleta{extra !== 1 ? "s" : ""}</span>}
+            </span>
+          );
+        })()}
       </div>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onRemove(team.registrationId); }}
-        className="ml-0.5 rounded-full p-0.5 hover:bg-slate-200"
+        className="ml-auto shrink-0 rounded-full p-0.5 hover:bg-slate-200"
         title="Devolver a Sin asignar"
       >
         <X className="h-2.5 w-2.5 text-slate-500" />
