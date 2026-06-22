@@ -14,12 +14,14 @@ import { ScoreTables } from "../../competitions/components/score-tables/ScoreTab
 import { JudoMedalTable } from "../../competitions/components/judo/JudoMedalTable";
 import { SwimmingMedalTable } from "../../results/components/SwimmingMedalTable";
 import { WrestlingMedalTable } from "../../competitions/components/wrestling/WrestlingMedalTable";
+import { AthleticsMedalTable } from "../../competitions/components/athletics/AthleticsMedalTable";
+
 
 // ─── ID local del deporte Judo en tu tabla `sports` ─────────────────────────
 const JUDO_SPORT_ID = 4; 
 const SWIMMING_SPORT_ID = 9;
 const WRESTLING_SPORT_ID = 6;
-
+const ATHLETICS_SPORT_ID = 7;
 // ─── Tipos de vista ──────────────────────────────────────────────────────────
 type ActiveView = "categories" | "scores" | "medals";
 
@@ -42,6 +44,7 @@ export function EventSportCategoriesPage() {
   const isJudo = sportIdNum === JUDO_SPORT_ID;
   const isSwimming = sportIdNum === SWIMMING_SPORT_ID;
   const isWrestling = sportIdNum === WRESTLING_SPORT_ID;
+  const isAthletics = sportIdNum === ATHLETICS_SPORT_ID;
   const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
     { eventId: eventIdNum },
     { enabled: !isExternalEvent && !!eventIdNum }
@@ -96,7 +99,7 @@ export function EventSportCategoriesPage() {
       label: "Categorías",
       icon: <LayoutGrid className="h-4 w-4" />,
     },
-    isJudo || isSwimming || isWrestling
+    isJudo || isSwimming || isWrestling || isAthletics
       ? {
           key: "medals",
           label: isWrestling ? "Puntajes" : "Medallero",
@@ -286,6 +289,11 @@ export function EventSportCategoriesPage() {
             externalEventId={externalEventIdNum}
             localSportId={sportIdNum}
           />
+        ) : isAthletics ? (                          
+          <AthleticsMedalTable                       
+            externalEventId={externalEventIdNum}     
+            localSportId={sportIdNum}               
+          /> 
         ) : null
       )}
     </div>
