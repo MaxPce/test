@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getAthleticsFieldTable,
   getAthleticsTrackTable,
+  getClassificationStatus,
   getSectionsByPhase,
 } from "./athletics.api";
 
@@ -33,4 +34,15 @@ export const useAthleticsFieldTable = (phaseId: number) =>
     queryKey: FIELD_TABLE_KEY(phaseId),
     queryFn: () => getAthleticsFieldTable(phaseId),
     enabled: !!phaseId,
+  });
+
+  export const CLASSIFICATION_STATUS_KEY = (phaseId: number) =>
+  ["athletics-classification-status", phaseId] as const;
+
+export const useClassificationStatus = (phaseId: number) =>
+  useQuery({
+    queryKey: CLASSIFICATION_STATUS_KEY(phaseId),
+    queryFn: () => getClassificationStatus(phaseId),
+    enabled: !!phaseId,
+    staleTime: 0, // siempre fresco al montar
   });

@@ -4,17 +4,10 @@ import { getImageUrl } from "@/lib/utils/imageUrl";
 
 import { toast } from "sonner";
 import {
-  Plus,
-  Wind,
-  ChevronDown,
-  ChevronUp,
-  Pencil,
-  Trash2,
-  UserPlus,
-  X,
-  Users,
-  Check,
+  Plus, Wind, ChevronDown, ChevronUp, Pencil,
+  Trash2, UserPlus, X, Users, Check, Lock, LockOpen,
 } from "lucide-react";
+
 import type {
   AthleticsRow,
   AthlSection,
@@ -23,16 +16,14 @@ import type {
 import {
   useAthleticsTrackTable,
   useAthleticsSections,
+  useClassificationStatus,
   TRACK_TABLE_KEY,
+  CLASSIFICATION_STATUS_KEY,
 } from "../../api/athletics.queries";
 import {
-  useCreateSection,
-  useUpdateSection,
-  useDeleteSection,
-  useAssignSectionEntries,
-  useUpsertSectionEntry,
-  useMoveEntryToSection,
-  useClassifyPhase 
+  useCreateSection, useUpdateSection, useDeleteSection,
+  useAssignSectionEntries, useUpsertSectionEntry,
+  useMoveEntryToSection, useClassifyPhase, useReopenPhase,
 } from "../../api/athletics.mutations";
 import { updateSection } from "../../api/athletics.api";
 
@@ -341,6 +332,7 @@ interface TimeCellProps {
     entry: SectionEntry,
   ) => Promise<void>;
   isSaving: boolean;
+  readonly?: boolean;
 }
 
 function TimeCell({
@@ -350,11 +342,13 @@ function TimeCell({
   onUpdateEntry,
   onSaveEntry,
   isSaving,
+  readonly = false,
 }: TimeCellProps) {
   const [statusOpen, setStatusOpen] = useState(false);
   const status = parseStatus(entry.notes ?? null);
 
   const handleSetStatus = (s: RaceStatus) => {
+    if (readonly) return;
     setStatusOpen(false);
     onUpdateEntry(phaseRegistrationId, sectionId, {
       notes: s,
@@ -363,8 +357,26 @@ function TimeCell({
   };
 
   const handleClearStatus = () => {
+    if (readonly) return;
     onUpdateEntry(phaseRegistrationId, sectionId, { notes: null });
   };
+
+  if (readonly) {
+    return (
+      <div className="flex items-center gap-1.5">
+        {status ? (
+          <span className={`rounded px-2.5 py-1 text-xs font-bold ${STATUS_CONFIG[status].bg} ${STATUS_CONFIG[status].text}`}>
+            {STATUS_CONFIG[status].label}
+          </span>
+        ) : (
+          <span className="font-mono text-xs text-slate-500">
+            {entry.time ?? "—"}
+          </span>
+        )}
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex items-center gap-1.5">
@@ -488,6 +500,11 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
   const upsertEntryMutation = useUpsertSectionEntry(phaseId);
   const moveEntryMutation = useMoveEntryToSection(phaseId);
   const classifyMutation = useClassifyPhase(phaseId);
+  const reopenMutation = useReopenPhase(phaseId);
+
+  const { data: classificationStatus } = useClassificationStatus(phaseId);
+  const phaseFinalized = classificationStatus?.isFinalized ?? false;
+
 
   // ── Sync rows ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -670,6 +687,23 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
     );
   };
 
+  const handleFinalizePhase = async () => {
+    if (phaseFinalized) return;
+    if (!confirm("¿Finalizar la fase? Los resultados quedarán bloqueados. Podrás reabrirla si necesitas hacer cambios.")) return;
+    try {
+      await classifyMutation.mutateAsync();
+      queryClient.invalidateQueries({ queryKey: CLASSIFICATION_STATUS_KEY(phaseId) });
+    } catch {
+      // El toast de error lo maneja useClassifyPhase.onError
+    }
+  };
+
+  const handleReopenPhase = async () => {
+    if (!confirm("¿Reabrir la fase? Se borrarán las clasificaciones actuales y podrás volver a editar.")) return;
+    await reopenMutation.mutateAsync();
+    toast.success("Fase reabierta — ya puedes editar los resultados");
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (rowsLoading || sectionsLoading) {
@@ -698,40 +732,62 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
 
      
       {/* Nueva sección */}
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={newSectionName}
-          onChange={(e) => setNewSectionName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAddSection()}
-          placeholder='Ej: "Serie 1", "Serie 2", "Finales"'
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
-        />
-        
-        <button
-          type="button"
-          onClick={handleAddSection}
-          disabled={createSectionMutation.isPending}
-          className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
-        >
-          <Plus className="h-4 w-4" />
-          {createSectionMutation.isPending ? "Creando..." : "Nueva Sección"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm('¿Finalizar la fase?.')) {
-              classifyMutation.mutate();
-            }
-          }}
-          disabled={classifyMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
-        >
-          
-          {classifyMutation.isPending ? 'Procesando...' : 'Finalizar Fase'}
-        </button>
+      <div className="flex flex-wrap items-center gap-2">
 
-        {sections.length > 1 && (
+        {/* Input + Nueva Sección — solo si no está finalizada */}
+        {!phaseFinalized && (
+          <>
+            <input
+              type="text"
+              value={newSectionName}
+              onChange={(e) => setNewSectionName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddSection()}
+              placeholder='Ej: "Serie 1", "Serie 2", "Finales"'
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
+            />
+            <button
+              type="button"
+              onClick={handleAddSection}
+              disabled={createSectionMutation.isPending}
+              className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              {createSectionMutation.isPending ? "Creando..." : "Nueva Sección"}
+            </button>
+          </>
+        )}
+
+        {/* Botón Finalizar / Badge + Reabrir */}
+        {!phaseFinalized ? (
+          <button
+            type="button"
+            onClick={handleFinalizePhase}
+            disabled={classifyMutation.isPending}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+          >
+            <Lock className="h-4 w-4" />
+            {classifyMutation.isPending ? "Procesando..." : "Finalizar Fase"}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700">
+              <Lock className="h-4 w-4" />
+              Fase Finalizada
+            </span>
+            <button
+              type="button"
+              onClick={handleReopenPhase}
+              disabled={reopenMutation.isPending}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <LockOpen className="h-4 w-4" />
+              {reopenMutation.isPending ? "Reabriendo..." : "Reabrir Fase"}
+            </button>
+          </div>
+        )}
+
+        {/* Redistribuir — solo si no está finalizada */}
+        {!phaseFinalized && sections.length > 1 && (
           <button
             type="button"
             onClick={() => setRedistributeMode((v) => !v)}
@@ -906,86 +962,83 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                     {sectionRows.length} atleta
                     {sectionRows.length !== 1 ? "s" : ""}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSections((prev) =>
-                        prev.map((s) =>
-                          s.athleticsSectionId === section.athleticsSectionId
-                            ? { ...s, editing: true, editingName: s.name }
-                            : s,
-                        ),
-                      )
-                    }
-                    className="flex-shrink-0 rounded p-1 text-slate-400 hover:bg-orange-100 hover:text-orange-600"
-                    title="Renombrar"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
+                  {!phaseFinalized && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSections((prev) =>
+                          prev.map((s) =>
+                            s.athleticsSectionId === section.athleticsSectionId
+                              ? { ...s, editing: true, editingName: s.name }
+                              : s,
+                          ),
+                        )
+                      }
+                      className="flex-shrink-0 rounded p-1 text-slate-400 hover:bg-orange-100 hover:text-orange-600"
+                      title="Renombrar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               )}
 
               <div className="flex flex-shrink-0 items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Wind className="h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={section.wind ?? ""}
-                    placeholder="0.0"
-                    onChange={(e) =>
-                      handleSectionWind(
-                        section.athleticsSectionId,
-                        e.target.value ? Number(e.target.value) : null,
-                      )
-                    }
-                    className="w-16 rounded border border-slate-300 px-1.5 py-0.5 text-xs focus:border-orange-400 focus:outline-none"
-                  />
-                  <span className="text-xs text-slate-400">m/s</span>
-                </div>
+                {!phaseFinalized && (
+                  <>
+                    {/* viento */}
+                    <div className="flex items-center gap-1">
+                      <Wind className="h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={section.wind ?? ""}
+                        placeholder="0.0"
+                        onChange={(e) =>
+                          handleSectionWind(
+                            section.athleticsSectionId,
+                            e.target.value ? Number(e.target.value) : null,
+                          )
+                        }
+                        className="w-16 rounded border border-slate-300 px-1.5 py-0.5 text-xs focus:border-orange-400 focus:outline-none"
+                      />
+                      <span className="text-xs text-slate-400">m/s</span>
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAssigningToSection({
-                      id: section.athleticsSectionId,
-                      name: section.name,
-                    })
-                  }
-                  className="flex items-center gap-1 rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-50"
-                >
-                  <UserPlus className="h-3.5 w-3.5" /> Atletas
-                </button>
+                    {/* botón Atletas */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAssigningToSection({ id: section.athleticsSectionId, name: section.name })
+                      }
+                      className="flex items-center gap-1 rounded-lg border border-orange-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-orange-600 hover:bg-orange-50"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" /> Atletas
+                    </button>
 
-                {hasDirty && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleSaveSection(
-                        section.athleticsSectionId,
-                        section.name,
-                      )
-                    }
-                    disabled={upsertEntryMutation.isPending}
-                    className="rounded-lg bg-orange-500 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
-                  >
-                    Guardar
-                  </button>
+                    {/* Guardar si hay cambios */}
+                    {hasDirty && (
+                      <button
+                        type="button"
+                        onClick={() => handleSaveSection(section.athleticsSectionId, section.name)}
+                        disabled={upsertEntryMutation.isPending}
+                        className="rounded-lg bg-orange-500 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+                      >
+                        Guardar
+                      </button>
+                    )}
+
+                    {/* Eliminar sección */}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSection(section.athleticsSectionId, section.name)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                      title="Eliminar sección"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleDeleteSection(
-                      section.athleticsSectionId,
-                      section.name,
-                    )
-                  }
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                  title="Eliminar sección"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
               </div>
             </div>
 
@@ -1030,22 +1083,17 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                             <td className="px-4 py-2">
                               <input
                                 type="number"
-                                min={1}
-                                max={12}
+                                min={1} max={12}
                                 value={row.entry.lane ?? ""}
                                 placeholder="—"
-                                onChange={(e) =>
-                                  updateEntry(
-                                    row.phaseRegistrationId,
-                                    section.athleticsSectionId,
-                                    {
-                                      lane: e.target.value
-                                        ? Number(e.target.value)
-                                        : null,
-                                    },
-                                  )
-                                }
-                                className="w-16 rounded border border-slate-300 px-2 py-1 text-xs focus:border-orange-400 focus:outline-none"
+                                readOnly={phaseFinalized}
+                                disabled={phaseFinalized}
+                                onChange={(e) => !phaseFinalized && updateEntry(row.phaseRegistrationId, section.athleticsSectionId, { lane: e.target.value ? Number(e.target.value) : null })}
+                                className={`w-16 rounded border px-2 py-1 text-xs focus:outline-none ${
+                                  phaseFinalized
+                                    ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
+                                    : "border-slate-300 focus:border-orange-400"
+                                }`}
                               />
                             </td>
                             <td className="px-4 py-2">
@@ -1109,22 +1157,22 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
                                 onUpdateEntry={updateEntry}
                                 onSaveEntry={handleSaveEntry}
                                 isSaving={upsertEntryMutation.isPending}
+                                readonly={phaseFinalized}
                               />
                             </td>
-                            <td className="px-4 py-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleRemoveFromSection(
-                                    row.phaseRegistrationId,
-                                    section.athleticsSectionId,
-                                  )
-                                }
-                                className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
-                                title="Quitar de esta sección"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                            <td className="px-4 py-2 text-center">
+                              {!phaseFinalized && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRemoveFromSection(row.phaseRegistrationId, section.athleticsSectionId)
+                                  }
+                                  className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                  title="Quitar de esta sección"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );

@@ -126,3 +126,17 @@ export const classifyPhase = async (phaseId: number) => {
   );
   return res.data;
 };
+
+export const getClassificationStatus = async (phaseId: number): Promise<{
+  isFinalized: boolean;
+  classifiedAt: string | null;
+}> => {
+  const res = await apiClient.get(
+    `/competitions/phases/${phaseId}/classification-status`,
+  );
+  return res.data;
+};
+
+export const reopenPhase = async (phaseId: number): Promise<void> => {
+  await apiClient.delete(`/competitions/phases/${phaseId}/classify`);
+};

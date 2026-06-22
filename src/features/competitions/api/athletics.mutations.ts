@@ -9,8 +9,9 @@ import {
   upsertSectionEntry,
   moveEntryToSection,
   classifyPhase,
+  reopenPhase
 } from "./athletics.api";
-import { TRACK_TABLE_KEY, SECTIONS_KEY } from "./athletics.queries";
+import { TRACK_TABLE_KEY, SECTIONS_KEY, CLASSIFICATION_STATUS_KEY } from "./athletics.queries";
 import type {
   AssignSectionEntriesDto,
   UpsertSectionEntryDto,
@@ -144,5 +145,20 @@ export const useClassifyPhase = (phaseId: number) => {
             : "Error al finalizar la fase",
       );
     },
+  });
+};
+
+export const useReopenPhase = (phaseId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => reopenPhase(phaseId),
+    onSuccess: () => {
+      // Invalida el status Y las clasificaciones
+      queryClient.invalidateQueries({
+        queryKey: CLASSIFICATION_STATUS_KEY(phaseId),
+      });
+      queryClient.invalidateQueries({ queryKey: ["score-tables"] });
+    },
+    onError: () => toast.error("Error al reabrir la fase"),
   });
 };
