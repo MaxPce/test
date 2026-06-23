@@ -11,8 +11,12 @@ import type {
 import { FIELD_EVENT_CONFIG } from "../../types/athletics.types";
 import {
   useAthleticsFieldTable,
+  useClassificationStatus,
   FIELD_TABLE_KEY,
 } from "../../api/athletics.queries";
+
+import FinalizePhaseBar from "./FinalizePhaseBar";
+
 import {
   createAttempt,
   updateAttempt,
@@ -296,6 +300,10 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
   const { data: rawRows = EMPTY_ROWS, isLoading } =
     useAthleticsFieldTable(phaseId);
 
+  const { data: classificationStatus } = useClassificationStatus(phaseId);
+  const phaseFinalized = classificationStatus?.isFinalized ?? false;
+
+
   const [rows, setRows] = useState<FieldRow[]>([]);
 
   useEffect(() => {
@@ -409,99 +417,110 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
   const attemptCols = Array.from({ length: maxAttempts }, (_, i) => i + 1);
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            <th className="px-4 py-2 text-left">Atleta</th>
-            <th className="hidden px-4 py-2 text-left md:table-cell">
-              Institucióz
-            </th>
-            {attemptCols.map((n) => (
-              <th key={n} className="w-24 px-2 py-2 text-center">
-                Int. {n}
+    <div className="space-y-3">
+
+      {/* ← NUEVO: barra de finalizar */}
+      <div className="flex justify-end">
+        <FinalizePhaseBar phaseId={phaseId} />
+      </div>
+
+      <div className={`overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm ${phaseFinalized ? "pointer-events-none opacity-60" : ""}`}>
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-4 py-2 text-left">Atleta</th>
+              <th className="hidden px-4 py-2 text-left md:table-cell">
+                Institución
               </th>
-            ))}
-            <th className="w-24 px-3 py-2 text-center font-bold text-orange-600">
-              Mejor
-            </th>
-            <th className="w-10 px-2 py-2" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => {
-            const best = getBest(row.attempts);
-            return (
-              <tr
-                key={row.phaseRegistrationId}
-                className="transition-colors hover:bg-slate-50"
-              >
-                <td className="px-4 py-2 font-semibold text-slate-900">
-                  {row.athleteName.toUpperCase()}
-                </td>
-                <td className="hidden px-4 py-2 md:table-cell">
-                  <div className="flex items-center gap-2">
-                    {row.institutionLogo && (
-                      <img
-                        src={getImageUrl(row.institutionLogo)}
-                        alt={row.institutionName || ""}
-                        className="h-5 w-5 flex-shrink-0 object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
+              {attemptCols.map((n) => (
+                <th key={n} className="w-24 px-2 py-2 text-center">
+                  Int. {n}
+                </th>
+              ))}
+              <th className="w-24 px-3 py-2 text-center font-bold text-orange-600">
+                Mejor
+              </th>
+              <th className="w-10 px-2 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => {
+              const best = getBest(row.attempts);
+              return (
+                <tr
+                  key={row.phaseRegistrationId}
+                  className="transition-colors hover:bg-slate-50"
+                >
+                  <td className="px-4 py-2 font-semibold text-slate-900">
+                    {row.athleteName.toUpperCase()}
+                  </td>
+                  <td className="hidden px-4 py-2 md:table-cell">
+                    <div className="flex items-center gap-2">
+                      {row.institutionLogo && (
+                        <img
+                          src={getImageUrl(row.institutionLogo)}
+                          alt={row.institutionName || ""}
+                          className="h-5 w-5 flex-shrink-0 object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
+                      <span className="text-slate-500">
+                        {row.institutionName || "—"}
+                      </span>
+                    </div>
+                  </td>
+                  {attemptCols.map((n) => {
+                    const attempt =
+                      row.attempts.find((a) => a.attemptNumber === n) ?? null;
+                    const isBest =
+                      best != null &&
+                      attempt?.distanceValue === best &&
+                      attempt?.isValid;
+                    return (
+                      <td key={n} className="px-1 py-1.5 text-center">
+                        <AttemptCell
+                          attempt={attempt}
+                          hasWind={hasWind}
+                          isBest={!!isBest}
+                          onSave={(dist, valid, wind, notes) =>
+                            handleSaveAttempt(row, n, dist, valid, wind, notes)
+                          }
+                          onSetStatusAll={(status) =>
+                            handleSetStatusAll(row, status)
+                          }
+                        />
+                      </td>
+                    );
+                  })}
+                  <td className="px-3 py-2 text-center font-bold text-orange-600">
+                    {fmtDistance(best)}
+                  </td>
+                  <td className="px-2 py-2 text-center">
+                    {/* ← CAMBIO: ocultar botón quitar cuando está finalizada */}
+                    {!phaseFinalized && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRemoveParticipant(
+                            row.phaseRegistrationId,
+                            row.athleteName,
+                          )
+                        }
+                        title="Quitar de la fase"
+                        className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </button>
                     )}
-                    <span className="text-slate-500">
-                      {row.institutionName || "—"}
-                    </span>
-                  </div>
-                </td>
-                {attemptCols.map((n) => {
-                  const attempt =
-                    row.attempts.find((a) => a.attemptNumber === n) ?? null;
-                  const isBest =
-                    best != null &&
-                    attempt?.distanceValue === best &&
-                    attempt?.isValid;
-                  return (
-                    <td key={n} className="px-1 py-1.5 text-center">
-                      <AttemptCell
-                        attempt={attempt}
-                        hasWind={hasWind}
-                        isBest={!!isBest}
-                        onSave={(dist, valid, wind, notes) =>
-                          handleSaveAttempt(row, n, dist, valid, wind, notes)
-                        }
-                        onSetStatusAll={(status) =>
-                          handleSetStatusAll(row, status)
-                        }
-                      />
-                    </td>
-                  );
-                })}
-                <td className="px-3 py-2 text-center font-bold text-orange-600">
-                  {fmtDistance(best)}
-                </td>
-                <td className="px-2 py-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleRemoveParticipant(
-                        row.phaseRegistrationId,
-                        row.athleteName,
-                      )
-                    }
-                    title="Quitar de la fase"
-                    className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { getImageUrl } from "@/lib/utils/imageUrl";
 import { toast } from "sonner";
 import {
   Plus, Wind, ChevronDown, ChevronUp, Pencil,
-  Trash2, UserPlus, X, Users, Check, Lock, LockOpen,
+  Trash2, UserPlus, X, Users, Check,
 } from "lucide-react";
 
 import type {
@@ -18,14 +18,15 @@ import {
   useAthleticsSections,
   useClassificationStatus,
   TRACK_TABLE_KEY,
-  CLASSIFICATION_STATUS_KEY,
 } from "../../api/athletics.queries";
 import {
   useCreateSection, useUpdateSection, useDeleteSection,
   useAssignSectionEntries, useUpsertSectionEntry,
-  useMoveEntryToSection, useClassifyPhase, useReopenPhase,
+  useMoveEntryToSection,
 } from "../../api/athletics.mutations";
 import { updateSection } from "../../api/athletics.api";
+
+import FinalizePhaseBar from "./FinalizePhaseBar";
 
 // ── Tipos locales ─────────────────────────────────────────────────────────────
 
@@ -499,8 +500,6 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
   const assignEntriesMutation = useAssignSectionEntries(phaseId);
   const upsertEntryMutation = useUpsertSectionEntry(phaseId);
   const moveEntryMutation = useMoveEntryToSection(phaseId);
-  const classifyMutation = useClassifyPhase(phaseId);
-  const reopenMutation = useReopenPhase(phaseId);
 
   const { data: classificationStatus } = useClassificationStatus(phaseId);
   const phaseFinalized = classificationStatus?.isFinalized ?? false;
@@ -687,22 +686,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
     );
   };
 
-  const handleFinalizePhase = async () => {
-    if (phaseFinalized) return;
-    if (!confirm("¿Finalizar la fase? Los resultados quedarán bloqueados. Podrás reabrirla si necesitas hacer cambios.")) return;
-    try {
-      await classifyMutation.mutateAsync();
-      queryClient.invalidateQueries({ queryKey: CLASSIFICATION_STATUS_KEY(phaseId) });
-    } catch {
-      // El toast de error lo maneja useClassifyPhase.onError
-    }
-  };
 
-  const handleReopenPhase = async () => {
-    if (!confirm("¿Reabrir la fase? Se borrarán las clasificaciones actuales y podrás volver a editar.")) return;
-    await reopenMutation.mutateAsync();
-    toast.success("Fase reabierta — ya puedes editar los resultados");
-  };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -758,33 +742,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
         )}
 
         {/* Botón Finalizar / Badge + Reabrir */}
-        {!phaseFinalized ? (
-          <button
-            type="button"
-            onClick={handleFinalizePhase}
-            disabled={classifyMutation.isPending}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-          >
-            <Lock className="h-4 w-4" />
-            {classifyMutation.isPending ? "Procesando..." : "Finalizar Fase"}
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700">
-              <Lock className="h-4 w-4" />
-              Fase Finalizada
-            </span>
-            <button
-              type="button"
-              onClick={handleReopenPhase}
-              disabled={reopenMutation.isPending}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-            >
-              <LockOpen className="h-4 w-4" />
-              {reopenMutation.isPending ? "Reabriendo..." : "Reabrir Fase"}
-            </button>
-          </div>
-        )}
+        <FinalizePhaseBar phaseId={phaseId} />
 
         {/* Redistribuir — solo si no está finalizada */}
         {!phaseFinalized && sections.length > 1 && (

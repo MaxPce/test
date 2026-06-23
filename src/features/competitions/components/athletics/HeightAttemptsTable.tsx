@@ -5,8 +5,11 @@ import { Plus, Trash2, UserMinus, X } from "lucide-react";
 import type { FieldRow, AttemptResult } from "../../types/athletics.types";
 import {
   useAthleticsFieldTable,
+  useClassificationStatus,
   FIELD_TABLE_KEY,
 } from "../../api/athletics.queries";
+
+import FinalizePhaseBar from "./FinalizePhaseBar";
 import {
   createAttempt,
   updateAttempt,
@@ -73,6 +76,7 @@ const resultLabel: Record<HeightResult, string> = {
 
 interface AthleteRowProps {
   row: FieldRow;
+  phaseFinalized: boolean;
   onAddAttempt: (
     phaseRegistrationId: number,
     height: number,
@@ -92,6 +96,7 @@ interface AthleteRowProps {
 
 function AthleteRow({
   row,
+  phaseFinalized,
   onAddAttempt,
   onDeleteAttempt,
   onRemoveParticipant,
@@ -252,15 +257,17 @@ function AthleteRow({
           </div>
 
           {/* Quitar participante */}
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={removing}
-            title="Quitar participante de la fase"
-            className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-40"
-          >
-            <UserMinus className="h-4 w-4" />
-          </button>
+          {!phaseFinalized && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              disabled={removing}
+              title="Quitar participante de la fase"
+              className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-40"
+            >
+              <UserMinus className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -340,7 +347,8 @@ function AthleteRow({
           )}
 
           {/* Formulario agregar salto */}
-          {adding ? (
+          {!phaseFinalized && (
+          adding ? (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 p-2.5">
               <div className="flex items-center gap-1">
                 <label className="text-xs text-slate-500">Altura (m)</label>
@@ -406,7 +414,8 @@ function AthleteRow({
               <Plus className="h-3.5 w-3.5" />
               Agregar salto
             </button>
-          )}
+          )
+        )}
         </>
       )}
     </div>
@@ -419,6 +428,10 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
   const queryClient = useQueryClient();
   const { data: rawRows = EMPTY_ROWS, isLoading } =
     useAthleticsFieldTable(phaseId);
+
+
+  const { data: classificationStatus } = useClassificationStatus(phaseId);
+  const phaseFinalized = classificationStatus?.isFinalized ?? false;
 
   const [rows, setRows] = useState<FieldRow[]>([]);
 
@@ -569,34 +582,43 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
     );
   }
 
-  return (
+    return (
     <div className="space-y-3">
-      {/* Leyenda */}
-      <div className="flex items-center gap-3 text-xs text-slate-500">
-        <span className="flex items-center gap-1">
-          <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-green-100 text-green-700 font-bold">
-            O
-          </span>
-          Pasó
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-red-100 text-red-600 font-bold">
-            X
-          </span>
-          Falló
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-slate-100 text-slate-500 font-bold">
-            -
-          </span>
-          Pasó por alto
-        </span>
+
+      {/* barra de finalizar */}
+      <div className="flex justify-end">
+        <FinalizePhaseBar phaseId={phaseId} />
       </div>
+
+      {/* Leyenda — solo si no está finalizada */}
+      {!phaseFinalized && (
+        <div className="flex items-center gap-3 text-xs text-slate-500">
+          <span className="flex items-center gap-1">
+            <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-green-100 text-green-700 font-bold">
+              O
+            </span>
+            Pasó
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-red-100 text-red-600 font-bold">
+              X
+            </span>
+            Falló
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-slate-100 text-slate-500 font-bold">
+              -
+            </span>
+            Pasó por alto
+          </span>
+        </div>
+      )}
 
       {rows.map((row) => (
         <AthleteRow
           key={row.phaseRegistrationId}
           row={row}
+          phaseFinalized={phaseFinalized}   
           onAddAttempt={handleAddAttempt}
           onDeleteAttempt={handleDeleteAttempt}
           onRemoveParticipant={handleRemoveParticipant}
