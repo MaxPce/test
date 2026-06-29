@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getImageUrl } from "@/lib/utils/imageUrl";
+import CreateSeriesModal from "./CreateSeriesModal";
 
 import { toast } from "sonner";
 import {
   Plus, Wind, ChevronDown, ChevronUp, Pencil,
   Trash2, UserPlus, X, Users, Check,
+  Wand2,
 } from "lucide-react";
 
 import type {
@@ -79,7 +81,12 @@ function AllAthletesPanel({ rows }: { rows: AthleticsRow[] }) {
         <Users className="h-4 w-4 flex-shrink-0 text-slate-400" />
         <span className="flex-1 text-sm text-slate-600">
           <span className="font-semibold">{rows.length}</span> atleta
-          {rows.length !== 1 ? "s" : ""} en esta fas
+          {rows.length !== 1 ? "s" : ""} en esta fase
+          {unassignedCount > 0 && (
+            <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
+              {unassignedCount} sin serie
+            </span>
+          )}
         </span>
         {open ? (
           <ChevronUp className="h-4 w-4 text-slate-400" />
@@ -486,6 +493,7 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
 
   const [redistributeMode, setRedistributeMode] = useState(false);
   const [searchAthletes, setSearchAthletes] = useState("");
+  const [showCreateSeries, setShowCreateSeries] = useState(false);
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: rowsData = EMPTY_ROWS, isLoading: rowsLoading } =
@@ -571,6 +579,14 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
     await createSectionMutation.mutateAsync({ phaseId, name });
     setNewSectionName("");
     toast.success(`"${name}" creada`);
+  };
+
+  const handleCreateSeries = async (names: string[]) => {
+    // Crea todas las secciones secuencialmente
+    for (const name of names) {
+      await createSectionMutation.mutateAsync({ phaseId, name });
+    }
+    toast.success(`${names.length} sección${names.length !== 1 ? "es" : ""} creadas`);
   };
 
   const handleDeleteSection = async (
@@ -737,6 +753,14 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
             >
               <Plus className="h-4 w-4" />
               {createSectionMutation.isPending ? "Creando..." : "Nueva Sección"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateSeries(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-orange-300 bg-white px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50"
+            >
+              <Wand2 className="h-4 w-4" />
+              Generar series
             </button>
           </>
         )}
@@ -1153,6 +1177,14 @@ export default function AthleticsResultsTable({ phaseId }: Props) {
           onConfirm={(toAdd, toRemove) =>
             handleConfirmAssign(assigningToSection.id, toAdd, toRemove)
           }
+        />
+      )}
+      {showCreateSeries && (
+        <CreateSeriesModal
+          isOpen={showCreateSeries}
+          onClose={() => setShowCreateSeries(false)}
+          totalAthletes={rows.length}
+          onConfirm={handleCreateSeries}
         />
       )}
     </div>
