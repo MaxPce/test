@@ -434,6 +434,7 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
   const phaseFinalized = classificationStatus?.isFinalized ?? false;
 
   const [rows, setRows] = useState<FieldRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
     setRows(rawRows);
@@ -566,6 +567,19 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
     toast.success(`"${athleteName}" quitado de la fase`);
   };
 
+  const filteredRows = rows.filter((row) =>
+    row.athleteName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .includes(
+        searchQuery
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+      )
+  );
+
   if (isLoading) {
     return (
       <div className="flex h-32 items-center justify-center">
@@ -583,49 +597,90 @@ export default function HeightAttemptsTable({ phaseId }: Props) {
   }
 
     return (
-    <div className="space-y-3">
+      <div className="space-y-3">
 
-      {/* barra de finalizar */}
-      <div className="flex justify-end">
-        <FinalizePhaseBar phaseId={phaseId} />
-      </div>
+        {/* Barra de finalizar */}
+        <div className="flex justify-end">
+          <FinalizePhaseBar phaseId={phaseId} />
+        </div>
 
-      {/* Leyenda — solo si no está finalizada */}
-      {!phaseFinalized && (
-        <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-green-100 text-green-700 font-bold">
-              O
-            </span>
-            Pasó
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-red-100 text-red-600 font-bold">
-              X
-            </span>
-            Falló
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-slate-100 text-slate-500 font-bold">
-              -
-            </span>
-            Pasó por alto
+        {/* Buscador por atleta */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-xs">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar atleta..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg
+                        bg-white placeholder-slate-400 shadow-sm
+                        focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
+                        transition"
+            />
+          </div>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              Limpiar
+            </button>
+          )}
+          <span className="ml-auto text-xs text-slate-400">
+            {filteredRows.length} atleta{filteredRows.length !== 1 ? "s" : ""}
           </span>
         </div>
-      )}
 
-      {rows.map((row) => (
-        <AthleteRow
-          key={row.phaseRegistrationId}
-          row={row}
-          phaseFinalized={phaseFinalized}   
-          onAddAttempt={handleAddAttempt}
-          onDeleteAttempt={handleDeleteAttempt}
-          onRemoveParticipant={handleRemoveParticipant}
-          onSetStatus={handleSetStatus}
-          onClearStatus={handleClearStatus}
-        />
-      ))}
-    </div>
-  );
+        {/* Leyenda — solo si no está finalizada */}
+        {!phaseFinalized && (
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            <span className="flex items-center gap-1">
+              <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-green-100 text-green-700 font-bold">
+                O
+              </span>
+              Pasó
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-red-100 text-red-600 font-bold">
+                X
+              </span>
+              Falló
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-slate-100 text-slate-500 font-bold">
+                -
+              </span>
+              Pasó por alto
+            </span>
+          </div>
+        )}
+
+        {/* Empty state cuando la búsqueda no da resultados */}
+        {filteredRows.length === 0 && (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-400">
+            No se encontró ningún atleta con &quot;{searchQuery}&quot;
+          </div>
+        )}
+
+        {filteredRows.map((row) => (
+          <AthleteRow
+            key={row.phaseRegistrationId}
+            row={row}
+            phaseFinalized={phaseFinalized}
+            onAddAttempt={handleAddAttempt}
+            onDeleteAttempt={handleDeleteAttempt}
+            onRemoveParticipant={handleRemoveParticipant}
+            onSetStatus={handleSetStatus}
+            onClearStatus={handleClearStatus}
+          />
+        ))}
+      </div>
+    );
 }

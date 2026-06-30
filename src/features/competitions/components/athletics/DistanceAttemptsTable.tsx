@@ -305,6 +305,7 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
 
 
   const [rows, setRows] = useState<FieldRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
     setRows(rawRows);
@@ -398,6 +399,19 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
     toast.success(`"${athleteName}" quitado de la fase`);
   };
 
+  const filteredRows = rows.filter((row) =>
+    row.athleteName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .includes(
+        searchQuery
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+      )
+  );
+
   if (isLoading) {
     return (
       <div className="flex h-32 items-center justify-center">
@@ -419,9 +433,43 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
   return (
     <div className="space-y-3">
 
-      {/* ← NUEVO: barra de finalizar */}
+      {/* Barra de finalizar */}
       <div className="flex justify-end">
         <FinalizePhaseBar phaseId={phaseId} />
+      </div>
+
+      {/* Buscador por atleta */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar atleta..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg
+                      bg-white placeholder-slate-400 shadow-sm
+                      focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent
+                      transition"
+          />
+        </div>
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            Limpiar
+          </button>
+        )}
+        <span className="ml-auto text-xs text-slate-400">
+          {filteredRows.length} atleta{filteredRows.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       <div className={`overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm ${phaseFinalized ? "pointer-events-none opacity-60" : ""}`}>
@@ -444,80 +492,90 @@ export default function DistanceAttemptsTable({ phaseId, eventType }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.map((row) => {
-              const best = getBest(row.attempts);
-              return (
-                <tr
-                  key={row.phaseRegistrationId}
-                  className="transition-colors hover:bg-slate-50"
+            {filteredRows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={3 + maxAttempts}
+                  className="px-4 py-10 text-center text-sm text-slate-400"
                 >
-                  <td className="px-4 py-2 font-semibold text-slate-900">
-                    {row.athleteName.toUpperCase()}
-                  </td>
-                  <td className="hidden px-4 py-2 md:table-cell">
-                    <div className="flex items-center gap-2">
-                      {row.institutionLogo && (
-                        <img
-                          src={getImageUrl(row.institutionLogo)}
-                          alt={row.institutionName || ""}
-                          className="h-5 w-5 flex-shrink-0 object-contain"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
+                  No se encontró ningún atleta con &quot;{searchQuery}&quot;
+                </td>
+              </tr>
+            ) : (
+              filteredRows.map((row) => {
+                const best = getBest(row.attempts);
+                return (
+                  <tr
+                    key={row.phaseRegistrationId}
+                    className="transition-colors hover:bg-slate-50"
+                  >
+                    <td className="px-4 py-2 font-semibold text-slate-900">
+                      {row.athleteName.toUpperCase()}
+                    </td>
+                    <td className="hidden px-4 py-2 md:table-cell">
+                      <div className="flex items-center gap-2">
+                        {row.institutionLogo && (
+                          <img
+                            src={getImageUrl(row.institutionLogo)}
+                            alt={row.institutionName || ""}
+                            className="h-5 w-5 flex-shrink-0 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        )}
+                        <span className="text-slate-500">
+                          {row.institutionName || "—"}
+                        </span>
+                      </div>
+                    </td>
+                    {attemptCols.map((n) => {
+                      const attempt =
+                        row.attempts.find((a) => a.attemptNumber === n) ?? null;
+                      const isBest =
+                        best != null &&
+                        attempt?.distanceValue === best &&
+                        attempt?.isValid;
+                      return (
+                        <td key={n} className="px-1 py-1.5 text-center">
+                          <AttemptCell
+                            attempt={attempt}
+                            hasWind={hasWind}
+                            isBest={!!isBest}
+                            onSave={(dist, valid, wind, notes) =>
+                              handleSaveAttempt(row, n, dist, valid, wind, notes)
+                            }
+                            onSetStatusAll={(status) =>
+                              handleSetStatusAll(row, status)
+                            }
+                          />
+                        </td>
+                      );
+                    })}
+                    <td className="px-3 py-2 text-center font-bold text-orange-600">
+                      {fmtDistance(best)}
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      {!phaseFinalized && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveParticipant(
+                              row.phaseRegistrationId,
+                              row.athleteName,
+                            )
+                          }
+                          title="Quitar de la fase"
+                          className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </button>
                       )}
-                      <span className="text-slate-500">
-                        {row.institutionName || "—"}
-                      </span>
-                    </div>
-                  </td>
-                  {attemptCols.map((n) => {
-                    const attempt =
-                      row.attempts.find((a) => a.attemptNumber === n) ?? null;
-                    const isBest =
-                      best != null &&
-                      attempt?.distanceValue === best &&
-                      attempt?.isValid;
-                    return (
-                      <td key={n} className="px-1 py-1.5 text-center">
-                        <AttemptCell
-                          attempt={attempt}
-                          hasWind={hasWind}
-                          isBest={!!isBest}
-                          onSave={(dist, valid, wind, notes) =>
-                            handleSaveAttempt(row, n, dist, valid, wind, notes)
-                          }
-                          onSetStatusAll={(status) =>
-                            handleSetStatusAll(row, status)
-                          }
-                        />
-                      </td>
-                    );
-                  })}
-                  <td className="px-3 py-2 text-center font-bold text-orange-600">
-                    {fmtDistance(best)}
-                  </td>
-                  <td className="px-2 py-2 text-center">
-                    {/* ← CAMBIO: ocultar botón quitar cuando está finalizada */}
-                    {!phaseFinalized && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleRemoveParticipant(
-                            row.phaseRegistrationId,
-                            row.athleteName,
-                          )
-                        }
-                        title="Quitar de la fase"
-                        className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
