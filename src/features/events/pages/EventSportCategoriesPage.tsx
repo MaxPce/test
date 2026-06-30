@@ -292,7 +292,8 @@ export function EventSportCategoriesPage() {
         ) : isAthletics ? (                          
           <AthleticsMedalTable                       
             externalEventId={externalEventIdNum}     
-            localSportId={sportIdNum}               
+            localSportId={sportIdNum}        
+            eventName={sportName}       
           /> 
         ) : null
       )}
