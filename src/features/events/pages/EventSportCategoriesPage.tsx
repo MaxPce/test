@@ -15,7 +15,7 @@ import { JudoMedalTable } from "../../competitions/components/judo/JudoMedalTabl
 import { SwimmingMedalTable } from "../../results/components/SwimmingMedalTable";
 import { WrestlingMedalTable } from "../../competitions/components/wrestling/WrestlingMedalTable";
 import { AthleticsMedalTable } from "../../competitions/components/athletics/AthleticsMedalTable";
-
+import { AthleticsRankingsTable } from "../../competitions/components/athletics/AthleticsRankingsTable";
 
 // ─── ID local del deporte Judo en tu tabla `sports` ─────────────────────────
 const JUDO_SPORT_ID = 4; 
@@ -23,7 +23,7 @@ const SWIMMING_SPORT_ID = 9;
 const WRESTLING_SPORT_ID = 6;
 const ATHLETICS_SPORT_ID = 7;
 // ─── Tipos de vista ──────────────────────────────────────────────────────────
-type ActiveView = "categories" | "scores" | "medals";
+type ActiveView = "categories" | "scores" | "medals" | "rankings";
 
 // ─── Página principal ────────────────────────────────────────────────────────
 export function EventSportCategoriesPage() {
@@ -110,6 +110,16 @@ export function EventSportCategoriesPage() {
           label: "Puntajes",
           icon: <BarChart2 className="h-4 w-4" />,
         },
+    // ── Tab Rankings solo para atletismo ──
+    ...(isAthletics
+      ? [
+          {
+            key: "rankings" as ActiveView,
+            label: "Rankings",
+            icon: <Trophy className="h-4 w-4" />,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -296,6 +306,14 @@ export function EventSportCategoriesPage() {
             eventName={sportName}       
           /> 
         ) : null
+      )}
+
+      {/* ── Vista: Rankings de puntajes (solo atletismo) ── */}
+      {activeView === "rankings" && isAthletics && externalEventIdNum && (
+        <AthleticsRankingsTable
+          externalEventId={externalEventIdNum}
+          localSportId={sportIdNum}
+        />
       )}
     </div>
   );
