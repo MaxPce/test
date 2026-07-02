@@ -23,6 +23,13 @@ export interface AthleticsCategoryData {
   events: AthleticsEventGroup[];
 }
 
+export interface ParticipatingInstitution {        
+  institutionId: number;                           
+  institutionName: string;                         
+  institutionAbrev: string | null;                 
+  logoUrl: string | null;                          
+}                                                  
+
 export const useAthleticsResultsByEvent = (
   externalEventId: number,
   localSportId: number
@@ -37,3 +44,19 @@ export const useAthleticsResultsByEvent = (
         .then((r) => r.data),
     enabled: !!externalEventId && !!localSportId,
   });
+
+export function useAthleticsParticipatingInstitutions(  
+  externalEventId?: number,                             
+  localSportId?: number,                               
+) {                                                     
+  return useQuery({                                    
+    queryKey: ["athletics-participating-institutions", externalEventId, localSportId], 
+    queryFn: async () => {                              
+      const { data } = await apiClient.get<ParticipatingInstitution[]>(  
+        `/competitions/events/external/${externalEventId}/local-sport/${localSportId}/participating-institutions` 
+      );                                                
+      return data;                                      
+    },                                                  
+    enabled: !!externalEventId && !!localSportId,      
+  });                                                   
+}                                                       

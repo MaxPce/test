@@ -1,7 +1,15 @@
 // src/features/competitions/components/athletics/AthleticsRankingsTable.tsx
+
 import { useMemo } from "react";
-import { useAthleticsResultsByEvent } from "../../api/athletics-results.queries";
-import type { AthleticsCategoryData, AthleticsResultEntry } from "../../api/athletics-results.queries";
+import {
+  useAthleticsResultsByEvent,
+  useAthleticsParticipatingInstitutions,
+} from "../../api/athletics-results.queries";
+import type {
+  AthleticsCategoryData,
+  AthleticsResultEntry,
+  ParticipatingInstitution,
+} from "../../api/athletics-results.queries";
 import { Spinner } from "@/components/ui/Spinner";
 import { Trophy } from "lucide-react";
 
@@ -10,20 +18,13 @@ interface Props {
   localSportId: number;
 }
 
-// ── Tipado de fila de ranking ─────────────────────────────────────────────────
 interface RankRow {
-  rank: number;
+  rank: number | null;
   university: string;
   universityAbrev: string;
   points: number;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Detecta si una categoría pertenece a "noveles" o "avanzados".
- * Ajusta los términos si tus categorías usan nombres distintos.
- */
 function getCategoryLevel(categoryName: string): "noveles" | "avanzados" | null {
   const lower = categoryName.toLowerCase();
   if (lower.includes("novel")) return "noveles";
@@ -31,10 +32,6 @@ function getCategoryLevel(categoryName: string): "noveles" | "avanzados" | null 
   return null;
 }
 
-/**
- * Acumula puntos por universidad a partir de un array de AthleticsResultEntry.
- * Devuelve un Record<university, points>.
- */
 function accumulatePoints(
   entries: AthleticsResultEntry[]
 ): Record<string, { university: string; universityAbrev: string; points: number }> {
@@ -48,9 +45,6 @@ function accumulatePoints(
   return acc;
 }
 
-/**
- * Combina múltiples acumuladores y devuelve el ranking ordenado.
- */
 function mergeAndRank(
   accs: Record<string, { university: string; universityAbrev: string; points: number }>[]
 ): RankRow[] {
@@ -67,8 +61,6 @@ function mergeAndRank(
     .sort((a, b) => b.points - a.points)
     .map((row, i) => ({ rank: i + 1, ...row }));
 }
-
-// ── Sub-componente tabla ──────────────────────────────────────────────────────
 
 function RankingTable({ title, rows, colorClass }: {
   title: string;
@@ -108,11 +100,15 @@ function RankingTable({ title, rows, colorClass }: {
               return (
                 <tr key={row.university} className="hover:bg-slate-50 transition-colors">
                   <td className="px-3 py-2.5 text-center">
-                    <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${medal}`}
-                    >
-                      {row.rank}
-                    </span>
+                    {row.rank !== null ? (
+                      <span
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${medal}`}
+                      >
+                        {row.rank}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-sm">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="font-semibold text-slate-900">{row.university}</div>
@@ -133,16 +129,16 @@ function RankingTable({ title, rows, colorClass }: {
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
-
 export function AthleticsRankingsTable({ externalEventId, localSportId }: Props) {
   const { data = [], isLoading } = useAthleticsResultsByEvent(externalEventId, localSportId);
+  const { data: participatingInstitutions = [] } = useAthleticsParticipatingInstitutions(
+    externalEventId,
+    localSportId,
+  );
 
-  // ── Cómputo del ranking ───────────────────────────────────────────────────
   const rankings = useMemo(() => {
-    if (data.length === 0) return null;
+    if (data.length === 0 && participatingInstitutions.length === 0) return null;
 
-    // Separar datos por nivel y género
     const novelF: AthleticsResultEntry[] = [];
     const novelM: AthleticsResultEntry[] = [];
     const avanzF: AthleticsResultEntry[] = [];
@@ -158,7 +154,6 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
           avanzF.push(...ev.femaleResults);
           avanzM.push(...ev.maleResults);
         } else {
-          // Categoría sin clasificar: aportará solo a totales generales
           novelF.push(...ev.femaleResults);
           novelM.push(...ev.maleResults);
         }
@@ -170,25 +165,30 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
     const accAvanzF = accumulatePoints(avanzF);
     const accAvanzM = accumulatePoints(avanzM);
 
+    const puntaje_general_base = mergeAndRank([accNovelF, accNovelM, accAvanzF, accAvanzM]);
+
+    const scoredNames = new Set(puntaje_general_base.map((r) => r.university));
+    const zeroRows: RankRow[] = participatingInstitutions
+      .filter((p: ParticipatingInstitution) => !scoredNames.has(p.institutionName))
+      .map((p: ParticipatingInstitution) => ({
+        rank: null,
+        university: p.institutionName,
+        universityAbrev: p.institutionAbrev ?? p.institutionName,
+        points: 0,
+      }));
+
     return {
-      // Por nivel × género
-      damas_noveles:      mergeAndRank([accNovelF]),
-      varones_noveles:    mergeAndRank([accNovelM]),
-      damas_avanzadas:    mergeAndRank([accAvanzF]),
-      varones_avanzados:  mergeAndRank([accAvanzM]),
-
-      // Totales por género (todas las categorías)
-      total_damas:        mergeAndRank([accNovelF, accAvanzF]),
-      total_varones:      mergeAndRank([accNovelM, accAvanzM]),
-
-      // Totales por nivel (ambos géneros)
-      total_noveles:      mergeAndRank([accNovelF, accNovelM]),
-      total_avanzados:    mergeAndRank([accAvanzF, accAvanzM]),
-
-      // General absoluto
-      puntaje_general:    mergeAndRank([accNovelF, accNovelM, accAvanzF, accAvanzM]),
+      damas_noveles:     mergeAndRank([accNovelF]),
+      varones_noveles:   mergeAndRank([accNovelM]),
+      damas_avanzadas:   mergeAndRank([accAvanzF]),
+      varones_avanzados: mergeAndRank([accAvanzM]),
+      total_damas:       mergeAndRank([accNovelF, accAvanzF]),
+      total_varones:     mergeAndRank([accNovelM, accAvanzM]),
+      total_noveles:     mergeAndRank([accNovelF, accNovelM]),
+      total_avanzados:   mergeAndRank([accAvanzF, accAvanzM]),
+      puntaje_general:   [...puntaje_general_base, ...zeroRows],
     };
-  }, [data]);
+  }, [data, participatingInstitutions]);
 
   if (isLoading) {
     return (
@@ -210,7 +210,6 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
   return (
     <div className="space-y-8">
 
-      {/* ── NOVELES ──────────────────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-700 border-b border-slate-200 pb-2">
           <span className="inline-block w-3 h-3 rounded-full bg-sky-400" />
@@ -230,7 +229,6 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
         </div>
       </section>
 
-      {/* ── AVANZADOS ────────────────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-700 border-b border-slate-200 pb-2">
           <span className="inline-block w-3 h-3 rounded-full bg-orange-400" />
@@ -250,7 +248,6 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
         </div>
       </section>
 
-      {/* ── TOTALES POR GÉNERO ───────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-700 border-b border-slate-200 pb-2">
           <span className="inline-block w-3 h-3 rounded-full bg-purple-400" />
@@ -270,7 +267,6 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
         </div>
       </section>
 
-      {/* ── TOTALES POR NIVEL ────────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-700 border-b border-slate-200 pb-2">
           <span className="inline-block w-3 h-3 rounded-full bg-emerald-400" />
@@ -290,7 +286,6 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
         </div>
       </section>
 
-      {/* ── PUNTAJE GENERAL ──────────────────────────────────────────────── */}
       <section className="space-y-4">
         <h2 className="flex items-center gap-2 text-base font-bold text-slate-700 border-b border-slate-200 pb-2">
           <span className="inline-block w-3 h-3 rounded-full bg-yellow-400" />

@@ -1,18 +1,20 @@
-// src/features/competitions/components/athletics/AthleticsMedalTable.tsx
 import { useState } from "react";
-import { PDFDownloadLink } from "@react-pdf/renderer";           
-import { FileDown } from "lucide-react";                         
-import { useAthleticsResultsByEvent } from "../../api/athletics-results.queries";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { FileDown } from "lucide-react";
+import {
+  useAthleticsResultsByEvent,
+  useAthleticsParticipatingInstitutions,
+} from "../../api/athletics-results.queries";
 import { Spinner } from "@/components/ui/Spinner";
 import { AthleticsEventTable } from "./AthleticsEventTable";
-import { AthleticsReportPDF } from "./AthleticsReportPDF";        
+import { AthleticsReportPDF } from "./AthleticsReportPDF";
 
 type GenderFilter = "all" | "F" | "M";
 
 interface Props {
   externalEventId: number;
   localSportId: number;
-  eventName?: string;    // 👈 prop opcional para el título del PDF
+  eventName?: string;
 }
 
 export function AthleticsMedalTable({ externalEventId, localSportId, eventName }: Props) {
@@ -22,6 +24,11 @@ export function AthleticsMedalTable({ externalEventId, localSportId, eventName }
   const { data = [], isLoading } = useAthleticsResultsByEvent(
     externalEventId,
     localSportId
+  );
+
+  const { data: participatingInstitutions = [] } = useAthleticsParticipatingInstitutions(
+    externalEventId,
+    localSportId,
   );
 
   if (isLoading)
@@ -43,11 +50,9 @@ export function AthleticsMedalTable({ externalEventId, localSportId, eventName }
 
   return (
     <div className="space-y-5">
-      {/* Filtros + botón PDF */}
-      <div className="flex flex-wrap gap-3 items-center justify-between">   {/* 👈 justify-between */}
+      <div className="flex flex-wrap gap-3 items-center justify-between">
 
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Selector de categoría */}
           {data.length > 1 && (
             <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
               {data.map((d) => (
@@ -67,7 +72,6 @@ export function AthleticsMedalTable({ externalEventId, localSportId, eventName }
             </div>
           )}
 
-          {/* Selector de género */}
           <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
             {(
               [
@@ -92,13 +96,13 @@ export function AthleticsMedalTable({ externalEventId, localSportId, eventName }
           </div>
         </div>
 
-        
         {data.length > 0 && (
           <PDFDownloadLink
             document={
               <AthleticsReportPDF
-                data={data}                
+                data={data}
                 eventName={eventName}
+                participatingInstitutions={participatingInstitutions}
               />
             }
             fileName={`atletismo_${(eventName ?? "reporte").replace(/\s+/g, "_")}_completo.pdf`}
@@ -115,7 +119,6 @@ export function AthleticsMedalTable({ externalEventId, localSportId, eventName }
         )}
       </div>
 
-      {/* Tablas por prueba */}
       {currentData && (
         <div className="space-y-4">
           {currentData.events.map((event) => (

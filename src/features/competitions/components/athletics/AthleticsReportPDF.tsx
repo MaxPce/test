@@ -4,16 +4,15 @@ import type {
   AthleticsCategoryData,
   AthleticsResultEntry,
   AthleticsEventGroup,
+  ParticipatingInstitution,
 } from "../../api/athletics-results.queries";
 
-// ── Tipos internos ─────────────────────────────────────────────────────────────
 interface UniversityRank {
   university: string;
   universityAbrev: string;
   points: number;
 }
 
-// ── Paleta de colores ─────────────────────────────────────────────────────────
 const C = {
   navy:       "#1a2e4a",
   blue:       "#1e4d8c",
@@ -45,10 +44,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: C.white,
-    // SIN orientation landscape → portrait por defecto
   },
-
-  // ── Encabezado principal
   mainHeader: {
     backgroundColor: C.navy,
     borderRadius: 3,
@@ -67,8 +63,6 @@ const s = StyleSheet.create({
     fontSize: 6.5,
     marginTop: 2,
   },
-
-  // ── Badge de categoría
   categoryHeader: {
     backgroundColor: C.lightBlue,
     borderRadius: 3,
@@ -82,8 +76,6 @@ const s = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     letterSpacing: 0.4,
   },
-
-  // ── Sección de prueba
   eventBlock:  { marginBottom: 6 },
   eventHeader: {
     backgroundColor: C.blue,
@@ -97,12 +89,8 @@ const s = StyleSheet.create({
     fontSize: 6.5,
     fontFamily: "Helvetica-Bold",
   },
-
-  // ── Columnas damas/varones
   columnsRow: { flexDirection: "row", gap: 4 },
   column:     { flex: 1 },
-
-  // ── Sub-encabezado Damas / Varones
   colSubHeader: {
     paddingVertical: 1.5,
     paddingHorizontal: 3,
@@ -110,8 +98,6 @@ const s = StyleSheet.create({
     borderRadius: 2,
   },
   colSubText: { fontSize: 6, fontFamily: "Helvetica-Bold" },
-
-  // ── Cabecera de tabla
   tableHead: {
     flexDirection: "row",
     backgroundColor: C.navy,
@@ -119,22 +105,15 @@ const s = StyleSheet.create({
     paddingHorizontal: 3,
   },
   thCell: { color: C.white, fontSize: 5, fontFamily: "Helvetica-Bold" },
-
-  // ── Fila de resultado
   row:     { flexDirection: "row", paddingVertical: 1.5, paddingHorizontal: 3, borderBottomWidth: 0.3, borderBottomColor: C.border },
   rowAlt:  { backgroundColor: C.rowAlt },
   tdText:  { fontSize: 5.5, color: C.body },
   tdMuted: { fontSize: 5, color: C.muted },
-
-  // ── Anchos de columna (resultados) — ajustados para portrait
   cPos:  { width: 18, textAlign: "center" },
   cName: { flex: 1 },
   cMark: { width: 30, textAlign: "right" },
   cPts:  { width: 12, textAlign: "right" },
-
   empty: { color: C.muted, fontSize: 6, textAlign: "center", paddingVertical: 6 },
-
-  // ── Rankings página final
   rankingPageHeader: {
     backgroundColor: C.navy,
     borderRadius: 3,
@@ -153,11 +132,8 @@ const s = StyleSheet.create({
     fontSize: 6,
     marginTop: 2,
   },
-
-  // ── Grid 2 columnas
   rankGrid: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginBottom: 6 },
   rankGridCell: { width: "48.8%" },
-
   rankSectionTitle: {
     paddingVertical: 3,
     paddingHorizontal: 5,
@@ -169,7 +145,6 @@ const s = StyleSheet.create({
     fontSize: 6.5,
     fontFamily: "Helvetica-Bold",
   },
-
   rankTableHead: {
     flexDirection: "row",
     backgroundColor: C.navy,
@@ -178,20 +153,15 @@ const s = StyleSheet.create({
   },
   rankRow:    { flexDirection: "row", paddingVertical: 1.5, paddingHorizontal: 3, borderBottomWidth: 0.3, borderBottomColor: C.border },
   rankRowAlt: { backgroundColor: C.rowAlt },
-
-  // Columnas ranking
   rPos:   { width: 14, textAlign: "center" },
   rAbrev: { width: 26, textAlign: "center" },
   rName:  { flex: 1 },
   rPts:   { width: 18, textAlign: "right" },
-
   divider: {
     height: 0.8,
     backgroundColor: C.border,
     marginVertical: 6,
   },
-
-  // ── Cuadro de fórmula
   formulaBox: {
     marginTop: 8,
     padding: 6,
@@ -226,18 +196,12 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.3,
     borderBottomColor: C.border,
   },
-  fPos:  { flex: 1 },
-    fMed:  { display: "none" },  
-    fPts:  { width: 24, textAlign: "right" },
-
+  fPos: { flex: 1 },
+  fMed: { display: "none" },
+  fPts: { width: 24, textAlign: "right" },
   fhText: { fontSize: 5, color: C.white, fontFamily: "Helvetica-Bold" },
   fdText: { fontSize: 5, color: C.body },
 });
-
-// ── Helpers — SIN emojis (no soportados por react-pdf) ───────────────────────
-const medalLabel = (pos: number): string => {
-  return `${pos}.`;
-};
 
 const posStyle = (pos: number): object => {
   if (pos === 1) return { color: C.gold,   fontFamily: "Helvetica-Bold" };
@@ -246,7 +210,6 @@ const posStyle = (pos: number): object => {
   return {};
 };
 
-// ── Rankings ──────────────────────────────────────────────────────────────────
 function buildUniversityRanking(
   events: AthleticsEventGroup[],
   gender: "female" | "male",
@@ -286,7 +249,6 @@ function mergeRankings(...rankings: UniversityRank[][]): UniversityRank[] {
   return Array.from(map.values()).sort((a, b) => b.points - a.points);
 }
 
-// ── Sub-componentes ───────────────────────────────────────────────────────────
 function ResultColumn({
   results,
   label,
@@ -382,21 +344,21 @@ function RankingTable({
             style={[
               s.rankRow,
               i % 2 === 1 ? s.rankRowAlt : {},
-              i < 3 ? { backgroundColor: bgColor } : {},
+              i < 3 && u.points > 0 ? { backgroundColor: bgColor } : {},
             ]}
             wrap={false}
           >
-            <Text style={[s.rPos, s.tdText, posStyle(i + 1)]}>
-              {`${i + 1}.`}
+            <Text style={[s.rPos, s.tdText, u.points > 0 ? posStyle(i + 1) : {}]}>
+              {u.points > 0 ? `${i + 1}.` : "-"}
             </Text>
-            <Text style={[s.rAbrev, s.tdText, { fontFamily: i < 3 ? "Helvetica-Bold" : "Helvetica" }]}>
+            <Text style={[s.rAbrev, s.tdText, { fontFamily: i < 3 && u.points > 0 ? "Helvetica-Bold" : "Helvetica" }]}>
               {u.universityAbrev}
             </Text>
             <Text style={[s.rName, s.tdText]}>
               {u.university}
             </Text>
-            <Text style={[s.rPts, s.tdText, { color: accentColor, fontFamily: "Helvetica-Bold" }]}>
-              {u.points}
+            <Text style={[s.rPts, s.tdText, { color: u.points > 0 ? accentColor : C.muted, fontFamily: "Helvetica-Bold" }]}>
+              {u.points > 0 ? u.points : "-"}
             </Text>
           </View>
         ))
@@ -405,29 +367,28 @@ function RankingTable({
   );
 }
 
-// ── Cuadro de fórmula ─────────────────────────────────────────────────────────
 const INDIVIDUAL_SCORES = [
-  { pos: "1.",  pts: 10 },
-  { pos: "2.",  pts: 8  },
-  { pos: "3.",  pts: 6  },
-  { pos: "4.",  pts: 5  },
-  { pos: "5.",  pts: 4  },
-  { pos: "6.",  pts: 3  },
-  { pos: "7.",  pts: 2  },
-  { pos: "8.",  pts: 1  },
-  { pos: "9-10.", pts: 0 },
+  { pos: "1.",    pts: 10 },
+  { pos: "2.",    pts: 8  },
+  { pos: "3.",    pts: 6  },
+  { pos: "4.",    pts: 5  },
+  { pos: "5.",    pts: 4  },
+  { pos: "6.",    pts: 3  },
+  { pos: "7.",    pts: 2  },
+  { pos: "8.",    pts: 1  },
+  { pos: "9-10.", pts: 0  },
 ];
 
 const RELAY_SCORES = [
-  { pos: "1.",  pts: 20 },
-  { pos: "2.",  pts: 16 },
-  { pos: "3.",  pts: 12 },
-  { pos: "4.",  pts: 10 },
-  { pos: "5.",  pts: 8  },
-  { pos: "6.",  pts: 6  },
-  { pos: "7.",  pts: 4  },
-  { pos: "8.",  pts: 2  },
-  { pos: "9-10.", pts: 0 },
+  { pos: "1.",    pts: 20 },
+  { pos: "2.",    pts: 16 },
+  { pos: "3.",    pts: 12 },
+  { pos: "4.",    pts: 10 },
+  { pos: "5.",    pts: 8  },
+  { pos: "6.",    pts: 6  },
+  { pos: "7.",    pts: 4  },
+  { pos: "8.",    pts: 2  },
+  { pos: "9-10.", pts: 0  },
 ];
 
 function FormulaTable({ title, rows }: { title: string; rows: { pos: string; pts: number }[] }) {
@@ -450,7 +411,6 @@ function FormulaTable({ title, rows }: { title: string; rows: { pos: string; pts
   );
 }
 
-// ── Bloque por categoría ──────────────────────────────────────────────────────
 function CategoryBlock({
   categoryData,
   isFirst,
@@ -472,21 +432,36 @@ function CategoryBlock({
   );
 }
 
-// ── Página de rankings ────────────────────────────────────────────────────────
-function RankingsPage({ data }: { data: AthleticsCategoryData[] }) {
+function RankingsPage({
+  data,
+  participatingInstitutions = [],
+}: {
+  data: AthleticsCategoryData[];
+  participatingInstitutions?: ParticipatingInstitution[];
+}) {
   const noveles   = data.find((d) => d.category.toLowerCase().includes("novel"))?.events ?? [];
   const avanzados = data.find((d) => d.category.toLowerCase().includes("avanz"))?.events ?? [];
 
-  const rDamasNoveles      = buildUniversityRanking(noveles,   "female");
-  const rVaronesNoveles    = buildUniversityRanking(noveles,   "male");
-  const rDamasAvanzadas    = buildUniversityRanking(avanzados, "female");
-  const rVaronesAvanzados  = buildUniversityRanking(avanzados, "male");
+  const rDamasNoveles     = buildUniversityRanking(noveles,   "female");
+  const rVaronesNoveles   = buildUniversityRanking(noveles,   "male");
+  const rDamasAvanzadas   = buildUniversityRanking(avanzados, "female");
+  const rVaronesAvanzados = buildUniversityRanking(avanzados, "male");
 
   const rTotalDamas     = mergeRankings(rDamasNoveles,   rDamasAvanzadas);
   const rTotalVarones   = mergeRankings(rVaronesNoveles, rVaronesAvanzados);
   const rTotalNoveles   = mergeRankings(rDamasNoveles,   rVaronesNoveles);
   const rTotalAvanzados = mergeRankings(rDamasAvanzadas, rVaronesAvanzados);
-  const rGeneral        = mergeRankings(rTotalDamas,     rTotalVarones);
+  const rGeneralBase    = mergeRankings(rTotalDamas,     rTotalVarones);
+
+  const scoredAbrevs = new Set(rGeneralBase.map((u) => u.universityAbrev));
+  const zeroInstitutions: UniversityRank[] = participatingInstitutions
+    .filter((p) => p.institutionAbrev && !scoredAbrevs.has(p.institutionAbrev ?? ""))
+    .map((p) => ({
+      university:      p.institutionName,
+      universityAbrev: p.institutionAbrev ?? p.institutionName,
+      points:          0,
+    }));
+  const rGeneral = [...rGeneralBase, ...zeroInstitutions];
 
   return (
     <View break>
@@ -497,7 +472,6 @@ function RankingsPage({ data }: { data: AthleticsCategoryData[] }) {
         </Text>
       </View>
 
-      {/* Fila 1: Damas Noveles + Varones Noveles */}
       <View style={s.rankGrid}>
         <View style={s.rankGridCell}>
           <RankingTable title="PUNTAJE DAMAS NOVELES"     ranking={rDamasNoveles}     accentColor={C.femaleHdr} bgColor={C.femaleBg} />
@@ -505,8 +479,6 @@ function RankingsPage({ data }: { data: AthleticsCategoryData[] }) {
         <View style={s.rankGridCell}>
           <RankingTable title="PUNTAJE VARONES NOVELES"   ranking={rVaronesNoveles}   accentColor={C.maleHdr}   bgColor={C.maleBg}   />
         </View>
-
-        {/* Fila 2: Damas Avanzadas + Varones Avanzados */}
         <View style={s.rankGridCell}>
           <RankingTable title="PUNTAJE DAMAS AVANZADAS"   ranking={rDamasAvanzadas}   accentColor={C.femaleHdr} bgColor={C.femaleBg} />
         </View>
@@ -517,27 +489,23 @@ function RankingsPage({ data }: { data: AthleticsCategoryData[] }) {
 
       <View style={s.divider} />
 
-      {/* Fila 3: Total Damas + Total Varones */}
       <View style={s.rankGrid}>
         <View style={s.rankGridCell}>
-          <RankingTable title="PUNTAJE TOTAL DAMAS"       ranking={rTotalDamas}       accentColor={C.femaleHdr}  bgColor={C.femaleBg} />
+          <RankingTable title="PUNTAJE TOTAL DAMAS"     ranking={rTotalDamas}     accentColor={C.femaleHdr} bgColor={C.femaleBg} />
         </View>
         <View style={s.rankGridCell}>
-          <RankingTable title="PUNTAJE TOTAL VARONES"     ranking={rTotalVarones}     accentColor={C.maleHdr}    bgColor={C.maleBg}   />
-        </View>
-
-        {/* Fila 4: Total Noveles + Total Avanzados */}
-        <View style={s.rankGridCell}>
-          <RankingTable title="PUNTAJE TOTAL NOVELES"     ranking={rTotalNoveles}     accentColor={C.lightBlue}  bgColor={C.maleBg}   />
+          <RankingTable title="PUNTAJE TOTAL VARONES"   ranking={rTotalVarones}   accentColor={C.maleHdr}   bgColor={C.maleBg}   />
         </View>
         <View style={s.rankGridCell}>
-          <RankingTable title="PUNTAJE TOTAL AVANZADOS"   ranking={rTotalAvanzados}   accentColor={C.lightBlue}  bgColor={C.maleBg}   />
+          <RankingTable title="PUNTAJE TOTAL NOVELES"   ranking={rTotalNoveles}   accentColor={C.lightBlue} bgColor={C.maleBg}   />
+        </View>
+        <View style={s.rankGridCell}>
+          <RankingTable title="PUNTAJE TOTAL AVANZADOS" ranking={rTotalAvanzados} accentColor={C.lightBlue} bgColor={C.maleBg}   />
         </View>
       </View>
 
       <View style={s.divider} />
 
-      {/* Puntaje General — ancho completo */}
       <View style={{ marginBottom: 8 }}>
         <RankingTable
           title="*** PUNTAJE GENERAL ***"
@@ -547,33 +515,30 @@ function RankingsPage({ data }: { data: AthleticsCategoryData[] }) {
         />
       </View>
 
-      {/* Cuadro de fórmula */}
       <View style={s.formulaBox} wrap={false}>
         <Text style={s.formulaTitle}>CUADRO DE FORMULA DE PUNTAJE</Text>
         <View style={s.formulaRow}>
-          <FormulaTable title="PRUEBAS INDIVIDUALES"          rows={INDIVIDUAL_SCORES} />
-          <FormulaTable title="PRUEBAS COMBINADAS Y RELEVOS"  rows={RELAY_SCORES}      />
+          <FormulaTable title="PRUEBAS INDIVIDUALES"         rows={INDIVIDUAL_SCORES} />
+          <FormulaTable title="PRUEBAS COMBINADAS Y RELEVOS" rows={RELAY_SCORES}      />
         </View>
       </View>
     </View>
   );
 }
 
-// ── Documento principal ───────────────────────────────────────────────────────
 interface Props {
   data: AthleticsCategoryData[];
   eventName?: string;
+  participatingInstitutions?: ParticipatingInstitution[];
 }
 
-export function AthleticsReportPDF({ data, eventName }: Props) {
+export function AthleticsReportPDF({ data, eventName, participatingInstitutions }: Props) {
   return (
     <Document
       title={`Atletismo - ${eventName ?? ""} - Todas las categorias`}
       author="Sistema FEDUP"
     >
-      {/* ✅ Sin orientation="landscape" → A4 portrait */}
       <Page size="A4" style={s.page}>
-
         <View style={s.mainHeader}>
           <Text style={s.mainTitle}>
             RESULTADOS DE ATLETISMO{eventName ? ` - ${eventName.toUpperCase()}` : ""}
@@ -587,8 +552,7 @@ export function AthleticsReportPDF({ data, eventName }: Props) {
           <CategoryBlock key={i} categoryData={categoryData} isFirst={i === 0} />
         ))}
 
-        <RankingsPage data={data} />
-
+        <RankingsPage data={data} participatingInstitutions={participatingInstitutions} />
       </Page>
     </Document>
   );
