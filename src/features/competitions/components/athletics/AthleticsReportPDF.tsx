@@ -5,7 +5,14 @@ import type {
   AthleticsResultEntry,
   AthleticsEventGroup,
   ParticipatingInstitution,
+  CombinedAthleteRow,
 } from "../../api/athletics-results.queries";
+import { calcIaafPoints } from "../../utils/iaaf-points.utils";
+
+
+const COMBINED_RANK_POINTS: Record<number, number> = {
+  1: 20, 2: 16, 3: 12, 4: 10, 5: 8, 6: 6, 7: 4, 8: 2,
+};
 
 interface UniversityRank {
   university: string;
@@ -249,6 +256,42 @@ function mergeRankings(...rankings: UniversityRank[][]): UniversityRank[] {
   return Array.from(map.values()).sort((a, b) => b.points - a.points);
 }
 
+function buildCombinedUniversityRanking(
+  athletes: CombinedAthleteRow[],
+): UniversityRank[] {
+  const map = new Map<string, UniversityRank>();
+  const sorted = [...athletes]
+    .map((a) => ({
+      ...a,
+      _pts:
+        a.totalIaafPoints > 0
+          ? a.totalIaafPoints
+          : a.subResults.reduce(
+              (sum, sub) => sum + calcIaafPoints(sub.mark, sub.subEventName, a.gender),
+              0,
+            ),
+    }))
+    .sort((a, b) => b._pts - a._pts)
+    .map((a, i) => ({ ...a, rank: i + 1 }));
+
+  for (const a of sorted) {
+    const abrev = a.institutionAbrev ?? a.institutionName;
+    const rankPts = COMBINED_RANK_POINTS[a.rank] ?? 0;
+    if (rankPts <= 0) continue;
+    const existing = map.get(abrev);
+    if (existing) {
+      existing.points += rankPts;
+    } else {
+      map.set(abrev, {
+        university:      a.institutionName,
+        universityAbrev: abrev,
+        points:          rankPts,
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 function ResultColumn({
   results,
   label,
@@ -411,6 +454,68 @@ function FormulaTable({ title, rows }: { title: string; rows: { pos: string; pts
   );
 }
 
+function CombinedSection({
+  label,
+  athletes,
+}: {
+  label: string;
+  athletes: CombinedAthleteRow[];
+}) {
+  if (!athletes.length) return null;
+
+  const withPts = athletes
+    .map((a) => ({
+      ...a,
+      _computedPts:
+        a.totalIaafPoints > 0
+          ? a.totalIaafPoints
+          : a.subResults.reduce(
+              (sum, sub) => sum + calcIaafPoints(sub.mark, sub.subEventName, a.gender),
+              0,
+            ),
+    }))
+    .sort((a, b) => b._computedPts - a._computedPts)
+    .map((a, i) => ({ ...a, rank: i + 1 }));
+
+  return (
+    <View style={s.eventBlock} wrap={false}>
+      <View style={[s.eventHeader, { backgroundColor: "#92400e" }]}>
+        <Text style={s.eventTitle}>{label.toUpperCase()}</Text>
+      </View>
+      <View style={s.tableHead}>
+        <Text style={[s.cPos,  s.thCell]}>Pos.</Text>
+        <Text style={[s.cName, s.thCell]}>Atleta / Universidad</Text>
+        <Text style={[s.cMark, s.thCell]}>Pts IAAF</Text>
+        <Text style={[s.cPts,  s.thCell]}>Pts rank.</Text>
+      </View>
+      {withPts.map((a, i) => {
+        const rankPts = COMBINED_RANK_POINTS[a.rank] ?? 0;
+        return (
+          <View key={i} style={[s.row, i % 2 === 1 ? s.rowAlt : {}]} wrap={false}>
+            <Text style={[s.cPos, s.tdText, posStyle(a.rank)]}>
+              {`${a.rank}.`}
+            </Text>
+            <View style={s.cName}>
+              <Text style={[s.tdText, { fontFamily: a.rank <= 3 ? "Helvetica-Bold" : "Helvetica" }]}>
+                {a.athleteName}
+              </Text>
+              <Text style={s.tdMuted}>
+                {a.institutionAbrev ?? a.institutionName}
+              </Text>
+            </View>
+            <Text style={[s.cMark, s.tdText, { fontFamily: "Helvetica-Bold", color: "#b45309" }]}>
+              {a._computedPts > 0 ? a._computedPts.toLocaleString() : "—"}
+            </Text>
+            <Text style={[s.cPts, s.tdText, { color: rankPts > 0 ? C.green : C.muted, fontFamily: "Helvetica-Bold" }]}>
+              {rankPts > 0 ? rankPts : "—"}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function CategoryBlock({
   categoryData,
   isFirst,
@@ -435,9 +540,15 @@ function CategoryBlock({
 function RankingsPage({
   data,
   participatingInstitutions = [],
+  combinedRankings,
 }: {
   data: AthleticsCategoryData[];
   participatingInstitutions?: ParticipatingInstitution[];
+  combinedRankings?: {          
+    heptatlon?: CombinedAthleteRow[];
+    decatlon?: CombinedAthleteRow[];
+  };
+
 }) {
   const noveles   = data.find((d) => d.category.toLowerCase().includes("novel"))?.events ?? [];
   const avanzados = data.find((d) => d.category.toLowerCase().includes("avanz"))?.events ?? [];
@@ -451,7 +562,14 @@ function RankingsPage({
   const rTotalVarones   = mergeRankings(rVaronesNoveles, rVaronesAvanzados);
   const rTotalNoveles   = mergeRankings(rDamasNoveles,   rVaronesNoveles);
   const rTotalAvanzados = mergeRankings(rDamasAvanzadas, rVaronesAvanzados);
-  const rGeneralBase    = mergeRankings(rTotalDamas,     rTotalVarones);
+  const rGeneralBase = mergeRankings(rTotalDamas, rTotalVarones);
+
+  const allCombined = [
+    ...(combinedRankings?.heptatlon ?? []),
+    ...(combinedRankings?.decatlon  ?? []),
+  ];
+  const rCombined = buildCombinedUniversityRanking(allCombined);
+  const rGeneralConCombined = mergeRankings(rGeneralBase, rCombined);
 
   const scoredAbrevs = new Set(rGeneralBase.map((u) => u.universityAbrev));
   const zeroInstitutions: UniversityRank[] = participatingInstitutions
@@ -461,7 +579,8 @@ function RankingsPage({
       universityAbrev: p.institutionAbrev ?? p.institutionName,
       points:          0,
     }));
-  const rGeneral = [...rGeneralBase, ...zeroInstitutions];
+  const rGeneral = [...rGeneralConCombined, ...zeroInstitutions];
+
 
   return (
     <View break>
@@ -530,9 +649,18 @@ interface Props {
   data: AthleticsCategoryData[];
   eventName?: string;
   participatingInstitutions?: ParticipatingInstitution[];
+  combinedRankings?: {          
+    heptatlon?: CombinedAthleteRow[];
+    decatlon?: CombinedAthleteRow[];
+  };
 }
 
-export function AthleticsReportPDF({ data, eventName, participatingInstitutions }: Props) {
+
+export function AthleticsReportPDF({ data, eventName, participatingInstitutions, combinedRankings }: Props) {
+  const heptatlon = combinedRankings?.heptatlon ?? [];
+  const decatlon  = combinedRankings?.decatlon  ?? [];
+  const hasCombined = heptatlon.length > 0 || decatlon.length > 0;
+
   return (
     <Document
       title={`Atletismo - ${eventName ?? ""} - Todas las categorias`}
@@ -552,7 +680,22 @@ export function AthleticsReportPDF({ data, eventName, participatingInstitutions 
           <CategoryBlock key={i} categoryData={categoryData} isFirst={i === 0} />
         ))}
 
-        <RankingsPage data={data} participatingInstitutions={participatingInstitutions} />
+        {/* ── SECCIÓN COMBINADAS (nueva) ───────────────────────── */}
+        {hasCombined && (
+          <View break>
+            <View style={s.categoryHeader}>
+              <Text style={s.categoryTitle}>PRUEBAS COMBINADAS</Text>
+            </View>
+            <CombinedSection label="Heptatlón" athletes={heptatlon} />
+            <CombinedSection label="Decatlón"  athletes={decatlon}  />
+          </View>
+        )}
+
+        <RankingsPage
+            data={data}
+            participatingInstitutions={participatingInstitutions}
+            combinedRankings={combinedRankings}
+          />
       </Page>
     </Document>
   );

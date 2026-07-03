@@ -4,19 +4,30 @@ import { useMemo } from "react";
 import {
   useAthleticsResultsByEvent,
   useAthleticsParticipatingInstitutions,
+  useAthleticsCombinedRanking,
 } from "../../api/athletics-results.queries";
 import type {
   AthleticsCategoryData,
   AthleticsResultEntry,
   ParticipatingInstitution,
+  CombinedAthleteRow,
 } from "../../api/athletics-results.queries";
+import { calcIaafPoints } from "../../utils/iaaf-points.utils";
 import { Spinner } from "@/components/ui/Spinner";
 import { Trophy } from "lucide-react";
+
+
+// ─── Tabla de puntos al ranking por posición en prueba combinada ──────────────
+const COMBINED_RANK_POINTS: Record<number, number> = {
+  1: 20, 2: 16, 3: 12, 4: 10, 5: 8, 6: 6, 7: 4, 8: 2,
+};
+
 
 interface Props {
   externalEventId: number;
   localSportId: number;
 }
+
 
 interface RankRow {
   rank: number | null;
@@ -25,6 +36,7 @@ interface RankRow {
   points: number;
 }
 
+
 function getCategoryLevel(categoryName: string): "noveles" | "avanzados" | null {
   const lower = categoryName.toLowerCase();
   if (lower.includes("novel")) return "noveles";
@@ -32,8 +44,9 @@ function getCategoryLevel(categoryName: string): "noveles" | "avanzados" | null 
   return null;
 }
 
+
 function accumulatePoints(
-  entries: AthleticsResultEntry[]
+  entries: AthleticsResultEntry[],
 ): Record<string, { university: string; universityAbrev: string; points: number }> {
   const acc: Record<string, { university: string; universityAbrev: string; points: number }> = {};
   for (const e of entries) {
@@ -45,8 +58,44 @@ function accumulatePoints(
   return acc;
 }
 
+
+function buildCombinedUniversityPoints(
+  athletes: CombinedAthleteRow[],
+): Record<string, { university: string; universityAbrev: string; points: number }> {
+  const acc: Record<string, { university: string; universityAbrev: string; points: number }> = {};
+  const sorted = [...athletes]
+    .map((a) => ({
+      ...a,
+      _pts:
+        a.totalIaafPoints > 0
+          ? a.totalIaafPoints
+          : a.subResults.reduce(
+              (sum, sub) => sum + calcIaafPoints(sub.mark, sub.subEventName, a.gender),
+              0,
+            ),
+    }))
+    .sort((a, b) => b._pts - a._pts)
+    .map((a, i) => ({ ...a, rank: i + 1 }));
+
+  for (const a of sorted) {
+    const rankPts = COMBINED_RANK_POINTS[a.rank] ?? 0;
+    if (rankPts <= 0) continue;
+    const key = a.institutionName;
+    if (!acc[key]) {
+      acc[key] = {
+        university:      a.institutionName,
+        universityAbrev: a.institutionAbrev ?? a.institutionName,
+        points:          0,
+      };
+    }
+    acc[key].points += rankPts;
+  }
+  return acc;
+}
+
+
 function mergeAndRank(
-  accs: Record<string, { university: string; universityAbrev: string; points: number }>[]
+  accs: Record<string, { university: string; universityAbrev: string; points: number }>[],
 ): RankRow[] {
   const merged: Record<string, { university: string; universityAbrev: string; points: number }> = {};
   for (const acc of accs) {
@@ -61,6 +110,7 @@ function mergeAndRank(
     .sort((a, b) => b.points - a.points)
     .map((row, i) => ({ rank: i + 1, ...row }));
 }
+
 
 function RankingTable({ title, rows, colorClass }: {
   title: string;
@@ -129,12 +179,16 @@ function RankingTable({ title, rows, colorClass }: {
   );
 }
 
+
 export function AthleticsRankingsTable({ externalEventId, localSportId }: Props) {
   const { data = [], isLoading } = useAthleticsResultsByEvent(externalEventId, localSportId);
   const { data: participatingInstitutions = [] } = useAthleticsParticipatingInstitutions(
     externalEventId,
     localSportId,
   );
+  const { data: heptatlonData } = useAthleticsCombinedRanking(externalEventId, localSportId, "heptatlon");
+  const { data: decatlonData  } = useAthleticsCombinedRanking(externalEventId, localSportId, "decatlon");
+
 
   const rankings = useMemo(() => {
     if (data.length === 0 && participatingInstitutions.length === 0) return null;
@@ -164,17 +218,21 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
     const accNovelM = accumulatePoints(novelM);
     const accAvanzF = accumulatePoints(avanzF);
     const accAvanzM = accumulatePoints(avanzM);
+    const accCombined = buildCombinedUniversityPoints([
+      ...(heptatlonData?.athletes ?? []),
+      ...(decatlonData?.athletes  ?? []),
+    ]);
 
-    const puntaje_general_base = mergeAndRank([accNovelF, accNovelM, accAvanzF, accAvanzM]);
+    const puntaje_general_base = mergeAndRank([accNovelF, accNovelM, accAvanzF, accAvanzM, accCombined]);
 
     const scoredNames = new Set(puntaje_general_base.map((r) => r.university));
     const zeroRows: RankRow[] = participatingInstitutions
       .filter((p: ParticipatingInstitution) => !scoredNames.has(p.institutionName))
       .map((p: ParticipatingInstitution) => ({
-        rank: null,
-        university: p.institutionName,
+        rank:            null,
+        university:      p.institutionName,
         universityAbrev: p.institutionAbrev ?? p.institutionName,
-        points: 0,
+        points:          0,
       }));
 
     return {
@@ -188,7 +246,8 @@ export function AthleticsRankingsTable({ externalEventId, localSportId }: Props)
       total_avanzados:   mergeAndRank([accAvanzF, accAvanzM]),
       puntaje_general:   [...puntaje_general_base, ...zeroRows],
     };
-  }, [data, participatingInstitutions]);
+  }, [data, participatingInstitutions, heptatlonData, decatlonData]);
+
 
   if (isLoading) {
     return (
