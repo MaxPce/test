@@ -9,6 +9,7 @@ import {
   type CombinedAthleteRow,
   type CombinedSubEventResult,
 } from "../../api/athletics-results.queries";
+import { calcIaafPoints } from "../../utils/iaaf-points.utils";
 
 type GenderFilter = "all" | "F" | "M";
 
@@ -41,8 +42,19 @@ const ROW_BG: Record<number, string> = {
 };
 
 // ── Chip de marca según tipo de sub-prueba ─────────────────────────────────────
-function MarkChip({ sub }: { sub: CombinedSubEventResult }) {
+function MarkChip({
+  sub,
+  gender,
+}: {
+  sub: CombinedSubEventResult;
+  gender: "M" | "F";
+}) {
   const hasMark = sub.mark !== null;
+  const pts =
+    sub.iaafPoints > 0
+      ? sub.iaafPoints
+      : calcIaafPoints(sub.mark, sub.subEventName, gender);
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-center shadow-sm min-w-[80px]">
       <p className="text-[10px] text-slate-400 font-medium truncate leading-tight">
@@ -51,8 +63,12 @@ function MarkChip({ sub }: { sub: CombinedSubEventResult }) {
       <p className="text-[11px] font-mono text-slate-600 mt-0.5">
         {hasMark ? sub.mark : "—"}
       </p>
-      <p className={`text-xs font-bold mt-0.5 ${sub.iaafPoints > 0 ? "text-orange-600" : "text-slate-300"}`}>
-        {sub.iaafPoints > 0 ? sub.iaafPoints.toLocaleString() : "—"}
+      <p
+        className={`text-xs font-bold mt-0.5 ${
+          pts > 0 ? "text-orange-600" : "text-slate-300"
+        }`}
+      >
+        {pts > 0 ? pts.toLocaleString() : "—"}
         <span className="text-[9px] font-normal text-slate-400 ml-0.5">pts</span>
       </p>
     </div>
@@ -63,10 +79,21 @@ function MarkChip({ sub }: { sub: CombinedSubEventResult }) {
 function AthleteRow({ row }: { row: CombinedAthleteRow }) {
   const [open, setOpen] = useState(false);
 
+  const totalPts =
+    row.totalIaafPoints > 0
+      ? row.totalIaafPoints
+      : row.subResults.reduce(
+          (sum, sub) =>
+            sum + calcIaafPoints(sub.mark, sub.subEventName, row.gender),
+          0,
+        );
+
   return (
     <>
       <tr
-        className={`transition-colors cursor-pointer ${ROW_BG[row.rank] ?? "hover:bg-slate-50"}`}
+        className={`transition-colors cursor-pointer ${
+          ROW_BG[row.rank] ?? "hover:bg-slate-50"
+        }`}
         onClick={() => setOpen((p) => !p)}
       >
         {/* Posición */}
@@ -77,10 +104,11 @@ function AthleteRow({ row }: { row: CombinedAthleteRow }) {
         {/* Atleta */}
         <td className="px-3 py-3">
           <div className="flex items-center gap-1.5">
-            {open
-              ? <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" />
-              : <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />
-            }
+            {open ? (
+              <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" />
+            ) : (
+              <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />
+            )}
             <div>
               <p className="text-xs font-bold text-slate-800 leading-tight">
                 {row.athleteName.toUpperCase()}
@@ -100,7 +128,9 @@ function AthleteRow({ row }: { row: CombinedAthleteRow }) {
                 src={getImageUrl(row.institutionLogo)}
                 alt={row.institutionName}
                 className="h-5 w-5 object-contain shrink-0"
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
               />
             )}
             <span className="text-xs text-slate-600">
@@ -111,11 +141,13 @@ function AthleteRow({ row }: { row: CombinedAthleteRow }) {
 
         {/* Pruebas completadas */}
         <td className="px-3 py-3 text-center">
-          <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-            row.isFinished
-              ? "bg-green-100 text-green-700"
-              : "bg-orange-100 text-orange-700"
-          }`}>
+          <span
+            className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+              row.isFinished
+                ? "bg-green-100 text-green-700"
+                : "bg-orange-100 text-orange-700"
+            }`}
+          >
             {row.completedEvents}/{row.totalEvents}
             {row.isFinished ? " ✓" : " …"}
           </span>
@@ -123,10 +155,12 @@ function AthleteRow({ row }: { row: CombinedAthleteRow }) {
 
         {/* Total IAAF */}
         <td className="px-3 py-3 text-center">
-          <span className={`text-sm font-bold tabular-nums ${
-            row.rank <= 3 ? "text-orange-600" : "text-orange-500"
-          }`}>
-            {row.totalIaafPoints.toLocaleString()}
+          <span
+            className={`text-sm font-bold tabular-nums ${
+              row.rank <= 3 ? "text-orange-600" : "text-orange-500"
+            }`}
+          >
+            {totalPts.toLocaleString()}
           </span>
           <span className="text-[10px] text-slate-400 ml-0.5">pts</span>
         </td>
@@ -143,7 +177,11 @@ function AthleteRow({ row }: { row: CombinedAthleteRow }) {
               {[...row.subResults]
                 .sort((a, b) => a.order - b.order)
                 .map((sub) => (
-                  <MarkChip key={sub.subEventName} sub={sub} />
+                  <MarkChip
+                    key={sub.subEventName}
+                    sub={sub}
+                    gender={row.gender}
+                  />
                 ))}
             </div>
           </td>
@@ -182,9 +220,23 @@ export function AthleticsCombinedRanking({
       </div>
     );
 
-  const athletes = (data?.athletes ?? []).filter(
-    (a) => genderFilter === "all" || a.gender === genderFilter,
-  );
+  const athletes = (data?.athletes ?? [])
+    .filter((a) => genderFilter === "all" || a.gender === genderFilter)
+    .map((a) => ({
+        ...a,
+        // Recalcular totalPts en frontend por si el backend trae 0
+        _computedPts:
+        a.totalIaafPoints > 0
+            ? a.totalIaafPoints
+            : a.subResults.reduce(
+                (sum, sub) => sum + calcIaafPoints(sub.mark, sub.subEventName, a.gender),
+                0,
+            ),
+    }))
+    .sort((a, b) => b._computedPts - a._computedPts)
+    // Reasignar rank según orden real
+    .map((a, i) => ({ ...a, rank: i + 1, totalIaafPoints: a._computedPts }));
+
 
   if (athletes.length === 0)
     return (
@@ -205,10 +257,18 @@ export function AthleticsCombinedRanking({
         <table className="w-full text-sm">
           <thead className="bg-slate-800 text-white">
             <tr>
-              <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide w-16">Pos.</th>
-              <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide">Atleta</th>
-              <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide">Institución</th>
-              <th className="px-3 py-2.5 text-center text-xs font-bold uppercase tracking-wide">Pruebas</th>
+              <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide w-16">
+                Pos.
+              </th>
+              <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide">
+                Atleta
+              </th>
+              <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wide">
+                Institución
+              </th>
+              <th className="px-3 py-2.5 text-center text-xs font-bold uppercase tracking-wide">
+                Pruebas
+              </th>
               <th className="px-3 py-2.5 text-center text-xs font-bold text-orange-300 uppercase tracking-wide">
                 Pts IAAF
               </th>

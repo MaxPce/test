@@ -132,7 +132,10 @@ export const useClassifyPhase = (phaseId: number) => {
       toast.success(
         `Fase finalizada — ${eligible.length} atleta${eligible.length !== 1 ? "s" : ""} clasificado${eligible.length !== 1 ? "s" : ""}`,
       );
-      // Invalida score-tables para que el componente de puntajes se refresque
+      // ✅ Invalida el status para que el botón cambie a "Reabrir"
+      queryClient.invalidateQueries({
+        queryKey: CLASSIFICATION_STATUS_KEY(phaseId),
+      });
       queryClient.invalidateQueries({ queryKey: ["score-tables"] });
     },
     onError: (error: any) => {
@@ -147,6 +150,7 @@ export const useClassifyPhase = (phaseId: number) => {
     },
   });
 };
+
 
 export const useReopenPhase = (phaseId: number) => {
   const queryClient = useQueryClient();
