@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PhaseForm } from "@/features/competitions/components/PhaseForm";
 import { WeightliftingAttemptsTable } from "@/features/competitions/components/weightlifting/WeightliftingAttemptsTable";
 import { GenerateWeightliftingModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingModal";
+import { GenerateWeightliftingPhasesModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingPhasesModal"; // 👈 NUEVO
 import { PhaseGrid } from "../PhaseGrid";
 import { PhaseDetailPanel } from "../PhaseDetailPanel";
 import type { Phase } from "@/features/competitions/types";
@@ -36,13 +37,25 @@ export function WeightliftingScheduleView({ eventCategory, schedule }: SportView
       <PageHeader
         title="Levantamiento de Pesas"
         actions={
-          <Button onClick={() => openModal("phase")} variant="gradient" size="lg"
-            icon={<Plus className="h-5 w-5" />}>
-            Nueva Fase
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* 👈 NUEVO botón */}
+            <Button
+              onClick={() => openModal("generateWeightliftingPhases")}
+              variant="outline"
+              size="lg"
+            >
+              Generar Fases
+            </Button>
+
+            <Button onClick={() => openModal("phase")} variant="gradient" size="lg"
+              icon={<Plus className="h-5 w-5" />}>
+              Nueva Fase
+            </Button>
+          </div>
         }
       />
 
+      {/* PhaseGrid, PhaseDetailPanel, modals phase y generateWeightlifting — SIN CAMBIOS */}
       {phasesLoading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full" />
@@ -60,7 +73,6 @@ export function WeightliftingScheduleView({ eventCategory, schedule }: SportView
             toggleSelection
             gap="gap-4"
           />
-
           {selectedPhase && (
             <PhaseDetailPanel
               phase={selectedPhase}
@@ -101,6 +113,19 @@ export function WeightliftingScheduleView({ eventCategory, schedule }: SportView
           registrations={eventCategory.registrations ?? []}
           onGenerate={handlers.generateWeightlifting}
           isLoading={mutations.initializeWeightlifting.isPending}
+        />
+      )}
+
+      {/* 👈 NUEVO modal — fuera de selectedPhase porque crea las fases él mismo */}
+      {modals.generateWeightliftingPhases && (
+        <GenerateWeightliftingPhasesModal
+          open={modals.generateWeightliftingPhases}
+          onClose={() => closeModal("generateWeightliftingPhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Levantamiento de Pesas"}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
+          allRegistrations={eventCategory.registrations ?? []}
         />
       )}
     </div>

@@ -49,7 +49,8 @@ export type ModalName =
   | "generateWushuTaoluPhases"
   | "assignTaolu"
   | "setupGroupStage"
-  | "generateTennisPhases";
+  | "generateTennisPhases"
+  | "generateWeightliftingPhases";
 
 const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   phase: false,
@@ -74,6 +75,7 @@ const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   assignTaolu: false,
   setupGroupStage: false,
   generateTennisPhases: false,
+  generateWeightliftingPhases: false,
 };
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
