@@ -6,10 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiClient } from '@/lib/api/client';
 import { AlertCircle, CheckSquare, Square } from 'lucide-react';
-// 👇 Reutiliza la misma mutation de generación de fases de Kumite
-import { useGenerateKumitePhases } from '../../api/judo-phases.mutations';
-
-// ─── Tipos (iguales a GenerateKumitePhasesModal) ─────────────────────────────
+import { useGenerateWeightliftingPhases } from '../../api/weightlifting-phases.mutations';
 
 interface NivCatCombo { idniv: string; idcat: string; total: number; }
 
@@ -17,7 +14,7 @@ interface WeightliftingAthlete {
   registrationId: number;
   name: string;
   institution?: string | null;
-  weightClass: string; // 👈 extra vs KumiteAthlete
+  weightClass: string;
 }
 
 interface WeightliftingGroup {
@@ -28,15 +25,6 @@ interface WeightliftingGroup {
   athletes: WeightliftingAthlete[];
 }
 
-// ─── Helpers (idénticos a GenerateKumitePhasesModal) ─────────────────────────
-
-function getNivLabel(idniv: string) {
-  const n = idniv.toLowerCase();
-  if (n.includes('novel')) return 'Nv';
-  if (n.includes('avanzad')) return 'Az';
-  return idniv.toUpperCase();
-}
-
 function getCatLabel(idcat: string) {
   const c = idcat.toLowerCase();
   if (c === 'm' || c.includes('mascul') || c.includes('varon')) return 'Varones';
@@ -45,10 +33,13 @@ function getCatLabel(idcat: string) {
 }
 
 function buildPhaseName(idniv: string, idcat: string, categoryName: string) {
-  return `${getCatLabel(idcat)} ${getNivLabel(idniv)} ${categoryName}`;
+  return `${getCatLabel(idcat)} ${idniv} ${categoryName}`;
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+function extractWeightFromCategoryName(name: string): string {
+  const match = name.match(/(\d+(?:[.,]\d+)?)\s*[Kk]g/);
+  return match ? match[1] : name;
+}
 
 export interface GenerateWeightliftingPhasesModalProps {
   open: boolean;
@@ -60,20 +51,15 @@ export interface GenerateWeightliftingPhasesModalProps {
   allRegistrations: any[];
 }
 
-// ─── Componente ───────────────────────────────────────────────────────────────
-
 export function GenerateWeightliftingPhasesModal({
   open, onClose, eventCategoryId, categoryName,
   sismasterEventId, sismasterSportId, allRegistrations,
 }: GenerateWeightliftingPhasesModalProps) {
 
-  // Reutiliza la misma mutation — el backend ya sabe crear fases por grupo
-  const mutation = useGenerateKumitePhases();
+  const mutation = useGenerateWeightliftingPhases();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
 
-  // ── Queries Sismaster (idénticas a GenerateKumitePhasesModal) ─────────────
-
-  const { data: combosData, isLoading: loadingCombos, error: combosError } =
+  const { data: combosData, isLoading: loadingCombos } =
     useQuery<{ combos: NivCatCombo[] }>({
       queryKey: ['sismaster-niv-cat-options', sismasterEventId, sismasterSportId, eventCategoryId],
       queryFn: async () => {
@@ -107,31 +93,31 @@ export function GenerateWeightliftingPhasesModal({
   const loadingCombosData = comboQueries.some((q) => q.isLoading);
   const allQueriesDone = combos.length > 0 && comboQueries.every((q) => q.isSuccess);
 
-  // ── Mapa de registrations con weightClass ─────────────────────────────────
-
   const regMap = useMemo(() => {
-    const map = new Map<number, WeightliftingAthlete>();
+    const map = new Map<number, Omit<WeightliftingAthlete, 'weightClass'>>();
     for (const reg of allRegistrations) {
       map.set(reg.registrationId, {
         registrationId: reg.registrationId,
         name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
         institution: reg.athlete?.institution?.name ?? null,
-        weightClass: reg.weightClass ?? '', // 👈 viene del registration
       });
     }
     return map;
   }, [allRegistrations]);
 
-  // ── Construir grupos iniciales ────────────────────────────────────────────
-
   const initialGroups = useMemo((): WeightliftingGroup[] => {
     if (!allQueriesDone) return [];
     const seenIds = new Set<number>();
+    const defaultWeight = extractWeightFromCategoryName(categoryName);
     return combos
       .map((combo, idx) => {
         const ids = comboQueries[idx].data?.registrationIds ?? [];
         const athletes = ids
-          .map((id) => regMap.get(id))
+          .map((id) => {
+            const base = regMap.get(id);
+            if (!base) return undefined;
+            return { ...base, weightClass: defaultWeight };
+          })
           .filter((a): a is WeightliftingAthlete => {
             if (!a || seenIds.has(a.registrationId)) return false;
             seenIds.add(a.registrationId);
@@ -147,8 +133,6 @@ export function GenerateWeightliftingPhasesModal({
       })
       .filter((g) => g.athletes.length > 0);
   }, [allQueriesDone, combos, comboQueries, regMap, categoryName]);
-
-  // ── State ─────────────────────────────────────────────────────────────────
 
   const [groups, setGroups] = useState<WeightliftingGroup[]>([]);
   const [selectedGroupKeys, setSelectedGroupKeys] = useState<Set<string>>(new Set());
@@ -170,8 +154,6 @@ export function GenerateWeightliftingPhasesModal({
     }
   }, [open, allQueriesDone, hasSismaster, initialGroups]);
 
-  // ── Editar weightClass inline ─────────────────────────────────────────────
-
   const setAthleteWeightClass = (groupKey: string, registrationId: number, value: string) => {
     setGroups((prev) =>
       prev.map((g) =>
@@ -184,8 +166,6 @@ export function GenerateWeightliftingPhasesModal({
       )
     );
   };
-
-  // ── Selección de grupos ───────────────────────────────────────────────────
 
   const toggleGroupSelection = (key: string) => {
     setSelectedGroupKeys((prev) => {
@@ -201,8 +181,6 @@ export function GenerateWeightliftingPhasesModal({
       ? setSelectedGroupKeys(new Set())
       : setSelectedGroupKeys(new Set(groups.map((g) => g.key)));
 
-  // ── Generar ───────────────────────────────────────────────────────────────
-
   const handleGenerate = async () => {
     const validGroups = groups.filter((g) => g.athletes.length > 0 && selectedGroupKeys.has(g.key));
     if (!validGroups.length) return;
@@ -211,10 +189,11 @@ export function GenerateWeightliftingPhasesModal({
         eventCategoryId,
         groups: validGroups.map((g) => ({
           name: g.phaseName,
-          format: 'round_robin' as const, // pesas siempre es ranking, no bracket
           registrationIds: g.athletes.map((a) => a.registrationId),
-          // Si tu backend soporta weightClasses por entrada, pasarlas aquí
-          // entries: g.athletes.map((a) => ({ registrationId: a.registrationId, weightClass: a.weightClass || null }))
+          entries: g.athletes.map((a) => ({
+            registrationId: a.registrationId,
+            weightClass: a.weightClass || null,
+          })),
         })),
       });
       onClose();
@@ -247,7 +226,6 @@ export function GenerateWeightliftingPhasesModal({
 
         {!isLoading && groups.length > 0 && (
           <>
-            {/* Barra seleccionar todas */}
             <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <span className="text-xs font-medium text-slate-600">
                 {selectedGroupKeys.size} de {groups.length} fase(s) seleccionada(s)
@@ -269,7 +247,6 @@ export function GenerateWeightliftingPhasesModal({
                       isGroupSelected ? 'border-slate-200 bg-white' : 'border-slate-200 bg-slate-50 opacity-60',
                     ].join(' ')}
                   >
-                    {/* Header grupo */}
                     <div className="mb-3 flex items-start gap-2">
                       <button type="button"
                         onClick={() => toggleGroupSelection(group.key)}
@@ -284,9 +261,7 @@ export function GenerateWeightliftingPhasesModal({
                       </div>
                     </div>
 
-                    {/* Tabla atletas + división */}
                     <div className="space-y-1.5">
-                      {/* Sub-header columnas */}
                       <div className="grid grid-cols-[1fr_72px] gap-2 px-1 text-[10px] font-semibold uppercase text-slate-400">
                         <span>Atleta</span>
                         <span className="text-center">División</span>
@@ -301,7 +276,6 @@ export function GenerateWeightliftingPhasesModal({
                               <p className="truncate text-xs text-slate-500">{athlete.institution}</p>
                             )}
                           </div>
-                          {/* 👈 Input división editable inline */}
                           <input
                             type="text"
                             placeholder="ej: 89"
@@ -325,11 +299,10 @@ export function GenerateWeightliftingPhasesModal({
           </>
         )}
 
-        {/* Footer */}
         <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-slate-600">
             {validGroups.length > 0
-              ? <><p>{validGroups.length} fase(s) · {totalAthletes} atleta(s)</p></>
+              ? <p>{validGroups.length} fase(s) · {totalAthletes} atleta(s)</p>
               : <p>Ninguna fase seleccionada</p>}
           </div>
           <div className="flex justify-end gap-2">
