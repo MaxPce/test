@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, Trophy, Users, LayoutGrid, BarChart2, Medal } from "lucide-react";
+import { Plus, Trophy, Users, LayoutGrid, BarChart2, Medal, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
@@ -16,6 +16,8 @@ import { SwimmingMedalTable } from "../../results/components/SwimmingMedalTable"
 import { WrestlingMedalTable } from "../../competitions/components/wrestling/WrestlingMedalTable";
 import { AthleticsMedalTable } from "../../competitions/components/athletics/AthleticsMedalTable";
 import { AthleticsRankingsTable } from "../../competitions/components/athletics/AthleticsRankingsTable";
+import { SwimmingPhaseResults } from "../../results/components/SwimmingPhaseResults";
+
 
 // ─── ID local del deporte Judo en tu tabla `sports` ─────────────────────────
 const JUDO_SPORT_ID = 4; 
@@ -23,7 +25,7 @@ const SWIMMING_SPORT_ID = 9;
 const WRESTLING_SPORT_ID = 6;
 const ATHLETICS_SPORT_ID = 7;
 // ─── Tipos de vista ──────────────────────────────────────────────────────────
-type ActiveView = "categories" | "scores" | "medals" | "rankings";
+type ActiveView = "categories" | "scores" | "medals" | "results" | "rankings";
 
 // ─── Página principal ────────────────────────────────────────────────────────
 export function EventSportCategoriesPage() {
@@ -110,6 +112,16 @@ export function EventSportCategoriesPage() {
           label: "Puntajes",
           icon: <BarChart2 className="h-4 w-4" />,
         },
+    // ── Tab Resultados solo para natación ──
+    ...(isSwimming
+      ? [
+          {
+            key: "results" as ActiveView,
+            label: "Resultados",
+            icon: <ClipboardList className="h-4 w-4" />,
+          },
+        ]
+      : []),
     // ── Tab Rankings solo para atletismo ──
     ...(isAthletics
       ? [
@@ -313,6 +325,14 @@ export function EventSportCategoriesPage() {
         <AthleticsRankingsTable
           externalEventId={externalEventIdNum}
           localSportId={sportIdNum}
+        />
+      )}
+      {/* ── Vista: Resultados por prueba (solo natación) ── */}
+      {activeView === "results" && isSwimming && externalEventIdNum && (
+        <SwimmingPhaseResults
+          externalEventId={externalEventIdNum}
+          localSportId={sportIdNum}
+          eventName={sportName}
         />
       )}
     </div>
