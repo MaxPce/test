@@ -60,3 +60,21 @@ export function useInitializeWeightliftingPhase() {
     },
   });
 }
+
+export function useRemoveWeightliftingAthlete(phaseId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (registrationId: number) =>
+      weightliftingApi.removeAthleteFromPhase(phaseId, registrationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: weightliftingKeys.phaseResults(phaseId), 
+      });
+      toast.success("Atleta removido de la fase");
+    },
+    onError: () => {
+      toast.error("Error al remover el atleta");
+    },
+  });
+}

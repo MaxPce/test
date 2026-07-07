@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Minus, Save } from "lucide-react";
+import { CheckCircle, XCircle, Minus, LogOut, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
@@ -7,7 +7,7 @@ import { useWeightliftingAttempts } from "../../api/weightlifting.queries";
 import { useUpsertWeightliftingAttempt } from "../../api/weightlifting.mutations";
 import type { WeightliftingAttempt } from "../../api/weightlifting.api";
 
-type AttemptResult = "valid" | "invalid" | "not_attempted";
+type AttemptResult = "valid" | "invalid" | "not_attempted" | "retired";
 
 interface Props {
   participationId: number;
@@ -41,6 +41,11 @@ const resultConfig: Record<
     label: "Sin intentar",
     color: "bg-gray-100 text-gray-500 border-gray-200",
   },
+  retired: {
+    icon: <LogOut className="h-4 w-4" />,
+    label: "RT",
+    color: "bg-amber-100 text-amber-800 border-amber-300",
+  },
 };
 
 type AttemptKey = `${(typeof LIFT_TYPES)[number]["key"]}_${1 | 2 | 3}`;
@@ -63,7 +68,8 @@ export function WeightliftingScoreModal({
   const [drafts, setDrafts] = useState<Record<AttemptKey, AttemptDraft>>(
     {} as any,
   );
-  const [saving, setSaving] = useState<AttemptKey | null>(null);
+  // ← ahora es boolean global en lugar de AttemptKey | null
+  const [isSavingAll, setIsSavingAll] = useState(false);
 
   useEffect(() => {
     const initial: Record<string, AttemptDraft> = {};
@@ -81,27 +87,38 @@ export function WeightliftingScoreModal({
     setDrafts(initial as any);
   }, [attempts]);
 
-  const handleSaveAttempt = async (
-    liftType: "snatch" | "clean_and_jerk",
-    attemptNumber: 1 | 2 | 3,
-  ) => {
-    const key: AttemptKey = `${liftType}_${attemptNumber}`;
-    const draft = drafts[key];
-    if (!draft) return;
-
-    setSaving(key);
+  // ── Guardar todos los intentos no propagados en secuencia ────────────────
+  const handleSaveAll = async () => {
+    setIsSavingAll(true);
     try {
-      await upsertMutation.mutateAsync({
-        participationId,
-        attemptData: {
-          liftType,
-          attemptNumber,
-          weightKg: draft.weightKg ? parseFloat(draft.weightKg) : null,
-          result: draft.result,
-        },
-      });
+      for (const { key: liftType } of LIFT_TYPES) {
+        for (const num of ATTEMPT_NUMBERS) {
+          const draftKey: AttemptKey = `${liftType}_${num}`;
+          const draft = drafts[draftKey];
+          if (!draft) continue;
+
+          // Saltar intentos propagados por RT
+          const prevKey: AttemptKey | null =
+            num > 1 ? `${liftType}_${(num - 1) as 1 | 2}` : null;
+          const isPropagatedRT =
+            draft.result === "retired" &&
+            prevKey !== null &&
+            drafts[prevKey]?.result === "retired";
+          if (isPropagatedRT) continue;
+
+          await upsertMutation.mutateAsync({
+            participationId,
+            attemptData: {
+              liftType,
+              attemptNumber: num,
+              weightKg: draft.weightKg ? parseFloat(draft.weightKg) : null,
+              result: draft.result,
+            },
+          });
+        }
+      }
     } finally {
-      setSaving(null);
+      setIsSavingAll(false);
     }
   };
 
@@ -169,15 +186,28 @@ export function WeightliftingScoreModal({
                   weightKg: "",
                   result: "not_attempted" as AttemptResult,
                 };
-                const isSaving = saving === draftKey;
+
+                const prevKey: AttemptKey | null =
+                  num > 1 ? `${key}_${(num - 1) as 1 | 2}` : null;
+                const isPropagatedRT =
+                  draft.result === "retired" &&
+                  prevKey !== null &&
+                  drafts[prevKey]?.result === "retired";
 
                 return (
                   <div
                     key={num}
-                    className="border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50"
+                    className={`border rounded-lg p-3 space-y-2 transition-all ${
+                      isPropagatedRT
+                        ? "border-amber-200 bg-amber-50 opacity-60"
+                        : "border-gray-200 bg-gray-50"
+                    }`}
                   >
                     <p className="text-xs font-medium text-gray-500 text-center">
                       Intento {num}
+                      {isPropagatedRT && (
+                        <span className="ml-1 text-amber-600 font-bold">RT</span>
+                      )}
                     </p>
 
                     {/* Peso */}
@@ -188,6 +218,7 @@ export function WeightliftingScoreModal({
                         min="0"
                         step="0.5"
                         value={draft.weightKg}
+                        disabled={isPropagatedRT || isSavingAll}
                         onChange={(e) =>
                           setDrafts((prev) => ({
                             ...prev,
@@ -197,7 +228,7 @@ export function WeightliftingScoreModal({
                             },
                           }))
                         }
-                        className="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
                         placeholder="0.0"
                       />
                     </div>
@@ -212,6 +243,7 @@ export function WeightliftingScoreModal({
                             return (
                               <button
                                 key={res}
+                                disabled={isPropagatedRT || isSavingAll}
                                 onClick={() =>
                                   setDrafts((prev) => ({
                                     ...prev,
@@ -222,11 +254,12 @@ export function WeightliftingScoreModal({
                                   }))
                                 }
                                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs border transition-all
-                                ${
-                                  draft.result === res
-                                    ? cfg.color + " font-semibold"
-                                    : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
-                                }`}
+                                  ${
+                                    draft.result === res
+                                      ? cfg.color + " font-semibold"
+                                      : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                                  }
+                                  disabled:opacity-40 disabled:cursor-not-allowed`}
                               >
                                 {cfg.icon}
                                 {cfg.label}
@@ -236,19 +269,7 @@ export function WeightliftingScoreModal({
                         )}
                       </div>
                     </div>
-
-                    {/* Guardar intento */}
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onClick={() => handleSaveAttempt(key, num)}
-                      isLoading={isSaving}
-                      disabled={isSaving}
-                      className="w-full"
-                    >
-                      
-                      Guardar
-                    </Button>
+                    {/* ← botones individuales eliminados */}
                   </div>
                 );
               })}
@@ -257,9 +278,19 @@ export function WeightliftingScoreModal({
         );
       })}
 
-      <div className="flex justify-end pt-4 border-t border-gray-200">
-        <Button variant="ghost" onClick={onClose}>
+      {/* Footer — un solo botón Guardar todo */}
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+        <Button variant="ghost" onClick={onClose} disabled={isSavingAll}>
           Cerrar
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSaveAll}
+          isLoading={isSavingAll}
+          disabled={isSavingAll}
+          className="flex items-center gap-2"
+        >
+          Guardar
         </Button>
       </div>
     </div>

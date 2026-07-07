@@ -12,7 +12,10 @@ export interface AthleticsResultEntry {
   mark: string;
   windSpeed: string | null;
   points: number;
+  isRelay?: boolean;       
+  teamMembers?: string[];  
 }
+
 
 export interface AthleticsEventGroup {
   eventName: string;

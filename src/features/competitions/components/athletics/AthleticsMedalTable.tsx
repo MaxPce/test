@@ -1,7 +1,7 @@
 // src/features/competitions/components/athletics/AthleticsMedalTable.tsx
 import { useMemo, useState } from "react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
-import { FileDown } from "lucide-react";
+import { FileDown, Search, X } from "lucide-react";
 import {
   useAthleticsResultsByEvent,
   useAthleticsParticipatingInstitutions,
@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { AthleticsEventTable } from "./AthleticsEventTable";
 import { AthleticsReportPDF } from "./AthleticsReportPDF";
 import { AthleticsCombinedRanking } from "./AthleticsCombinedRanking";
-
+import { InstitutionMedalsDrawer } from "./InstitutionMedalsDrawer";
 
 type GenderFilter = "all" | "F" | "M";
 type ViewMode = "results" | "heptatlon" | "decatlon" | "medals";
@@ -51,11 +51,17 @@ function buildMedalTable(data: AthleticsCategoryData[]): MedalRow[] {
             gold: 0, silver: 0, bronze: 0, total: 0,
           });
         }
+        const medalCount =
+          r.isRelay && r.teamMembers && r.teamMembers.length > 0
+            ? r.teamMembers.length
+            : 1;
+
         const row = map.get(key)!;
-        if (r.position === 1) row.gold++;
-        if (r.position === 2) row.silver++;
-        if (r.position === 3) row.bronze++;
-        row.total++;
+        if (r.position === 1) row.gold   += medalCount;
+        if (r.position === 2) row.silver += medalCount;
+        if (r.position === 3) row.bronze += medalCount;
+        row.total += medalCount;
+
       }
     }
   }
@@ -112,7 +118,12 @@ export function AthleticsMedalTable({
   const [category, setCategory] = useState<string | null>(null);
   const [gender, setGender] = useState<GenderFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("results");
+  const [selectedInstitution, setSelectedInstitution] = useState<{
+    universityAbrev: string;
+    universityName: string;
+  } | null>(null);
 
+  const [medalSearch, setMedalSearch] = useState("");
 
   const { data = [], isLoading } = useAthleticsResultsByEvent(
     externalEventId,
@@ -135,6 +146,16 @@ export function AthleticsMedalTable({
 
   // ── Tabla de medallas (memorizada) ───────────────────────────────────────
   const medalRows = useMemo(() => buildMedalTable(data), [data]);
+
+  const filteredMedalRows = useMemo(() => {
+    const q = medalSearch.toLowerCase().trim();
+    if (!q) return medalRows;
+    return medalRows.filter(
+      (r) =>
+        r.university.toLowerCase().includes(q) ||
+        r.universityAbrev.toLowerCase().includes(q),
+    );
+  }, [medalRows, medalSearch]);
 
 
   // ─── Estados de carga / vacío ─────────────────────────────────────────────
@@ -190,14 +211,34 @@ export function AthleticsMedalTable({
       {/* ── Tab: Medallero ────────────────────────────────────────────────── */}
       {viewMode === "medals" && (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-yellow-500 to-amber-600 px-4 py-3">
+          <div className="bg-gradient-to-r from-yellow-500 to-amber-600 px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
             <h3 className="font-bold text-white text-sm tracking-wide uppercase">
               🥇 Medallero — Todas las categorías
             </h3>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-yellow-200 pointer-events-none" />
+              <input
+                type="text"
+                value={medalSearch}
+                onChange={(e) => setMedalSearch(e.target.value)}
+                placeholder="Buscar institución…"
+                className="pl-8 pr-8 py-1.5 text-xs rounded-lg bg-white/20 border border-white/30 text-white placeholder-yellow-100 focus:outline-none focus:ring-2 focus:ring-white/50 w-52"
+              />
+              {medalSearch && (
+                <button
+                  onClick={() => setMedalSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-yellow-200 hover:text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           </div>
-          {medalRows.length === 0 ? (
+          {filteredMedalRows.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-400 italic">
-              Sin medallas registradas aún.
+              {medalSearch
+                ? `Sin resultados para "${medalSearch}".`
+                : "Sin medallas registradas aún."}
             </p>
           ) : (
             <table className="min-w-full text-sm">
@@ -212,7 +253,7 @@ export function AthleticsMedalTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {medalRows.map((row, i) => {
+                {filteredMedalRows.map((row, i) => {
                   const posBadge =
                     i === 0
                       ? "bg-yellow-400 text-yellow-900"
@@ -223,7 +264,17 @@ export function AthleticsMedalTable({
                       : "bg-slate-100 text-slate-500";
 
                   return (
-                    <tr key={row.universityAbrev} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={row.universityAbrev}
+                      onClick={() =>
+                        setSelectedInstitution({
+                          universityAbrev: row.universityAbrev || row.university,
+                          universityName:  row.university,
+                        })
+                      }
+                      className="hover:bg-amber-50 cursor-pointer transition-colors group"
+                      title={`Ver medallas de ${row.university}`}
+                    >
                       <td className="px-3 py-2.5 text-center">
                         <span
                           className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${posBadge}`}
@@ -232,7 +283,9 @@ export function AthleticsMedalTable({
                         </span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <div className="font-semibold text-slate-900">{row.university}</div>
+                        <div className="font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+                          {row.university}
+                        </div>
                         {row.universityAbrev && row.universityAbrev !== row.university && (
                           <div className="text-xs text-slate-400">{row.universityAbrev}</div>
                         )}
@@ -358,6 +411,14 @@ export function AthleticsMedalTable({
             </div>
           )}
         </>
+      )}
+    {selectedInstitution && (
+        <InstitutionMedalsDrawer
+          universityAbrev={selectedInstitution.universityAbrev}
+          universityName={selectedInstitution.universityName}
+          data={data}
+          onClose={() => setSelectedInstitution(null)}
+        />
       )}
     </div>
   );

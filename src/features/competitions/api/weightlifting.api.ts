@@ -4,7 +4,7 @@ export interface WeightliftingAttemptData {
   liftType: "snatch" | "clean_and_jerk";
   attemptNumber: 1 | 2 | 3;
   weightKg: number | null;
-  result: "valid" | "invalid" | "not_attempted";
+  result: "valid" | "invalid" | "not_attempted" | "retired"; 
 }
 
 export interface WeightliftingAttempt {
@@ -13,7 +13,7 @@ export interface WeightliftingAttempt {
   liftType: "snatch" | "clean_and_jerk";
   attemptNumber: 1 | 2 | 3;
   weightKg: number | null;
-  result: "valid" | "invalid" | "not_attempted";
+  result: "valid" | "invalid" | "not_attempted" | "retired";
   createdAt: string;
   updatedAt: string;
 }
@@ -21,8 +21,10 @@ export interface WeightliftingAttempt {
 export interface WeightliftingAthleteResult {
   participation: {
     participationId: number;
+    registrationId?: number | null;
     registration?: {
-      weightClass?: string | null; 
+      registrationId: number;
+      weightClass?: string | null;
       seedNumber?: number | null;
       athlete?: {
         athleteId: number;
@@ -95,4 +97,14 @@ export const weightliftingApi = {
     );
     return data;
   },
+  removeAthleteFromPhase: async (
+    phaseId: number,
+    registrationId: number,
+  ): Promise<{ message: string }> => {
+    const { data } = await apiClient.delete(
+      `/competitions/weightlifting/phases/${phaseId}/athletes/${registrationId}`,
+    );
+    return data;
+  },
+
 };

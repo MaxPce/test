@@ -29,7 +29,7 @@ export function GenerateWeightliftingModal({
       Object.fromEntries(
         registrations.map((r) => [
           r.registrationId,
-          { selected: true, weightClass: r.weightClass ?? '' },
+          { selected: false, weightClass: r.weightClass ?? '' },
         ]),
       ),
   );
