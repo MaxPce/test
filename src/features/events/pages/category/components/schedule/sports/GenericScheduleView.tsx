@@ -31,6 +31,7 @@ import { TiroDeportivoResultsTable } from "@/features/competitions/components/sh
 import { GenerateTableTennisPhasesModal } from "@/features/events/components/GenerateTableTennisPhasesModal";
 import { GenerateTennisPhasesModal } from "@/features/events/components/GenerateTennisPhasesModal";
 import { GenerateKumitePhasesModal } from "@/features/competitions/components/judo/GenerateKumitePhasesModal";
+import { GeneratePoomsaePhasesModal } from '@/features/competitions/components/taekwondo/GeneratePoomsaePhasesModal';
 import { AssignPhaseParticipantModal } from "@/features/competitions/components/AssignPhaseParticipantModal";
 import { GenerateWushuTaoluPhasesModal } from "@/features/competitions/components/wushu/GenerateWushuTaoluPhasesModal";
 import { AssignTaoluParticipantsModal } from "@/features/competitions/components/wushu/AssignTaoluParticipantsModal";
@@ -115,10 +116,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
       hoverTextClass: "group-hover:text-blue-600",
       icon:           <Trophy className="h-6 w-6 text-white" />,
       badgeLabel:     PHASE_TYPE_LABELS[phase.type] ?? phase.type,
-      stats: [
-        { label: "Partidos",    value: matchesCount,  bgClass: "bg-blue-50",    textClass: "text-blue-900",    labelClass: "text-blue-700"    },
-        { label: "Finalizados", value: finishedCount, bgClass: "bg-emerald-50", textClass: "text-emerald-900", labelClass: "text-emerald-700" },
-      ],
+      
     };
   };
 
@@ -922,6 +920,13 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 Generar Fases
               </Button>
             )}
+
+            {taekwondoType === "poomsae" && (
+              <Button onClick={() => openModal("generatePoomsaePhases")} variant="outline" size="lg">
+                Generar Fases
+              </Button>
+            )}
+            
             {sport.isWrestling && (
               <Button onClick={() => openModal("generateWrestlingPhases")} variant="outline" size="lg">
                 Generar Fases
@@ -1279,6 +1284,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           onClose={() => closeModal("generateWushuTaoluPhases")}
           eventCategoryId={eventCategory.eventCategoryId}
           categoryName={eventCategory.category?.name ?? "Taolu"}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
+          allRegistrations={eventCategory.registrations ?? []}
+        />
+      )}
+
+      {modals.generatePoomsaePhases && taekwondoType === "poomsae" && (
+        <GeneratePoomsaePhasesModal
+          open={modals.generatePoomsaePhases}
+          onClose={() => closeModal("generatePoomsaePhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Poomsae"}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}
