@@ -51,7 +51,8 @@ export type ModalName =
   | "setupGroupStage"
   | "generateTennisPhases"
   | "generateWeightliftingPhases"
-  | "generatePoomsaePhases";
+  | "generatePoomsaePhases"
+  | "generateKyoruguiPhases";
 
 const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   phase: false,
@@ -78,6 +79,7 @@ const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   generateTennisPhases: false,
   generateWeightliftingPhases: false,
   generatePoomsaePhases: false,
+  generateKyoruguiPhases: false,
 };
 
 // ─── Hook ────────────────────────────────────────────────────────────────────

@@ -926,6 +926,12 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                 Generar Fases
               </Button>
             )}
+
+            {taekwondoType === 'kyorugui' && (
+              <Button onClick={() => openModal('generateKyoruguiPhases')} variant="outline" size="lg">
+                Generar Fases
+              </Button>
+            )}
             
             {sport.isWrestling && (
               <Button onClick={() => openModal("generateWrestlingPhases")} variant="outline" size="lg">
@@ -1296,6 +1302,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           onClose={() => closeModal("generatePoomsaePhases")}
           eventCategoryId={eventCategory.eventCategoryId}
           categoryName={eventCategory.category?.name ?? "Poomsae"}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
+          allRegistrations={eventCategory.registrations ?? []}
+        />
+      )}
+
+      {modals.generateKyoruguiPhases && taekwondoType === 'kyorugui' && (
+        <GenerateKumitePhasesModal
+          open={modals.generateKyoruguiPhases}
+          onClose={() => closeModal('generateKyoruguiPhases')}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? 'Kyourugui'}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}

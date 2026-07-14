@@ -9,6 +9,7 @@ import { Search, Filter, X, AlertCircle, Tag } from "lucide-react";
 import {
   useSportCategoriesByEvent,
   useAthletesByCategory,
+  useAccreditedAthletes,       
   type SportCategoryParam,
 } from "@/features/institutions/api/sismaster.queries";
 import { useBulkRegistrationFromSismaster } from "../api/registrations.mutations";
@@ -62,6 +63,7 @@ export function BulkRegistrationModal({
 
   // idparam seleccionado manualmente (override del auto-match)
   const [manualIdparam, setManualIdparam] = useState<number | null>(null);
+  const [mode, setMode] = useState<"byCategory" | "accredited">("byCategory");
 
   const localSportId = eventCategory.category?.sport?.sportId;
   const categoryName  = eventCategory.category?.name ?? "";
@@ -77,6 +79,8 @@ export function BulkRegistrationModal({
     isOpen && !!localSportId,
   );
 
+  
+
   // ── 2. Auto-match por nombre cuando llegan las categorías ───────────────
   const autoMatchedParam = useMemo(
     () => findMatchingParam(sismasterCategories, categoryName),
@@ -85,8 +89,12 @@ export function BulkRegistrationModal({
 
   // Resetear override manual si cambia la categoría o el modal se abre
   useEffect(() => {
-    if (isOpen) setManualIdparam(null);
+    if (isOpen) {
+      setManualIdparam(null);
+      setMode("byCategory"); 
+    }
   }, [isOpen, eventCategory.eventCategoryId]);
+
 
   // El idparam efectivo: manual > auto-match
   const activeParam: SportCategoryParam | undefined = useMemo(() => {
@@ -110,7 +118,24 @@ export function BulkRegistrationModal({
     isOpen && !!localSportId && !!activeParam,
   );
 
-  const isLoading = isLoadingCategories || isLoadingAthletes;
+  const {
+      data: accreditedAthletes = [],
+      isLoading: isLoadingAccredited,
+      error: errorAccredited,
+    } = useAccreditedAthletes(
+      { idevent: eventId, localSportId },
+      isOpen && mode === "accredited" && !!localSportId,
+    );
+
+
+  const activeAthletes = mode === "byCategory" ? athletesFromSismaster : accreditedAthletes;
+  const activeError    = mode === "byCategory" ? error : errorAccredited;
+  const isLoading =
+    mode === "byCategory"
+      ? isLoadingCategories || isLoadingAthletes
+      : isLoadingAccredited;
+
+
 
   const bulkMutation = useBulkRegistrationFromSismaster();
 
@@ -122,15 +147,17 @@ export function BulkRegistrationModal({
   // ── 4. Instituciones para el filtro ────────────────────────────────────
   const institutions = useMemo(() => {
     return Array.from(
-      new Set(athletesFromSismaster.map((a) => a.institutionName).filter(Boolean)),
+      new Set(activeAthletes.map((a) => a.institutionName).filter(Boolean)),
     ).sort();
-  }, [athletesFromSismaster]);
+  }, [activeAthletes]);
+
 
   // ── 5. Filtrado local ───────────────────────────────────────────────────
   const filteredAthletes = useMemo(() => {
-    let filtered = athletesFromSismaster.filter(
+    let filtered = activeAthletes.filter(
       (a) => !registeredAthleteIds.includes(a.idperson),
     );
+
 
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
@@ -149,7 +176,7 @@ export function BulkRegistrationModal({
     }
 
     return filtered;
-  }, [athletesFromSismaster, registeredAthleteIds, searchTerm, selectedInstitution]);
+  }, [activeAthletes, registeredAthleteIds, searchTerm, selectedInstitution]);
 
   // ── Handlers ────────────────────────────────────────────────────────────
   const handleToggleAthlete = (athleteId: number) =>
@@ -187,9 +214,11 @@ export function BulkRegistrationModal({
   const handleClose = () => {
     setSelectedAthletes([]);
     setManualIdparam(null);
+    setMode("byCategory"); 
     handleClearFilters();
     onClose();
   };
+
 
   const hasActiveFilters = searchTerm.trim() !== "" || selectedInstitution !== "all";
 
@@ -210,7 +239,7 @@ export function BulkRegistrationModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Inscripción Masiva de Atletas"
+      title="Inscripción de Atletas"
       size="lg"
     >
       <div className="space-y-4">
@@ -235,54 +264,79 @@ export function BulkRegistrationModal({
           </div>
         </div>
 
-        {/* Selector de categoría Sismaster */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-gray-700">
-            Categoría Sismaster
-          </label>
-
-          {isLoadingCategories ? (
-            <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
-              <Spinner size="sm" />
-              <span>Cargando categorías...</span>
-            </div>
-          ) : sismasterCategories.length === 0 ? (
-            <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>No se encontraron categorías para este deporte y evento.</span>
-            </div>
-          ) : (
-            <>
-              <Select
-                value={String(activeParam?.idparam ?? "")}
-                onChange={(e) =>
-                  setManualIdparam(e.target.value ? Number(e.target.value) : null)
-                }
-                options={categoryOptions}
-              />
-
-              
-
-              {/* Advertencia si no hubo auto-match */}
-              {!activeParam && !isLoadingCategories && (
-                <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                  <span>
-                    No se encontró coincidencia automática para <strong>"{categoryName}"</strong>.
-                    Selecciona la categoría manualmente.
-                  </span>
-                </div>
-              )}
-            </>
-          )}
+        {/* Toggle de modo */}
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+          <button
+            onClick={() => { setMode("byCategory"); setSelectedAthletes([]); }}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              mode === "byCategory"
+                ? "bg-white shadow text-blue-700"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Por categoría
+          </button>
+          <button
+            onClick={() => { setMode("accredited"); setSelectedAthletes([]); }}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              mode === "accredited"
+                ? "bg-white shadow text-blue-700"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Acreditados (sin categoría)
+          </button>
         </div>
 
+        {/* Selector de categoría Sismaster */}
+        {mode === "byCategory" && (
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-gray-700">
+              Categoría Sismaster
+            </label>
+
+            {isLoadingCategories ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                <Spinner size="sm" />
+                <span>Cargando categorías...</span>
+              </div>
+            ) : sismasterCategories.length === 0 ? (
+              <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>No se encontraron categorías para este deporte y evento.</span>
+              </div>
+            ) : (
+              <>
+                <Select
+                  value={String(activeParam?.idparam ?? "")}
+                  onChange={(e) =>
+                    setManualIdparam(e.target.value ? Number(e.target.value) : null)
+                  }
+                  options={categoryOptions}
+                />
+
+                
+
+                {/* Advertencia si no hubo auto-match */}
+                {!activeParam && !isLoadingCategories && (
+                  <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>
+                      No se encontró coincidencia automática para <strong>"{categoryName}"</strong>.
+                      Selecciona la categoría manualmente.
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
         {/* Estado de carga o error de atletas */}
-        {!activeParam ? null : isLoading ? (
+        {(mode === "byCategory" && !activeParam) ? null : isLoading ? (
           <div className="flex justify-center py-8">
             <Spinner size="lg" label="Cargando atletas de la categoría..." />
           </div>
-        ) : error ? (
+        ) : activeError ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -341,7 +395,7 @@ export function BulkRegistrationModal({
 
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                 <p className="text-sm text-green-800">
-                  <strong>{athletesFromSismaster.length}</strong> atletas 
+                  <strong>{activeAthletes.length}</strong> atletas
                   {registeredAthleteIds.length > 0 && (
                     <span className="text-green-700">
                       {" "}· <strong>{registeredAthleteIds.length}</strong> ya inscritos
@@ -442,7 +496,7 @@ export function BulkRegistrationModal({
             <Button
               onClick={handleSubmit}
               isLoading={bulkMutation.isPending}
-              disabled={selectedAthletes.length === 0 || !activeParam}
+              disabled={selectedAthletes.length === 0 || (mode === "byCategory" && !activeParam)}
               variant="gradient"
             >
               Inscribir {selectedAthletes.length || ""} atleta(s)
