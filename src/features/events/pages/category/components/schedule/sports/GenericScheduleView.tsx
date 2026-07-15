@@ -45,6 +45,9 @@ import { PhaseDetailPanel } from "../PhaseDetailPanel";
 import type { Phase } from "@/features/competitions/types";
 import type { GenericViewProps } from "./types";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMedallero } from "@/features/competitions/hooks/useMedallero";
+import { MedalleroPanel } from "@/features/competitions/components/MedalleroPanel";
+
 
 
 
@@ -100,6 +103,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
   const wushuType     = getWushuType();
   const closeGroups = useCloseGroups();
   const queryClient = useQueryClient();
+
+  const medals = useMedallero({
+    phases,
+    matches,
+    taekwondoType,
+    wushuType,
+    isJudo:        sport.isJudo,
+    isKarate:      sport.isKarate,
+    isTennis:      sport.isTennis,
+    isTableTennis,
+    isWrestling:   sport.isWrestling,
+  });
 
 
 
@@ -990,16 +1005,23 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
       )}
 
       {selectedPhase && (
-        <PhaseDetailPanel
-          phase={selectedPhase}
-          onClose={() => setSelectedPhase(null)}
-          variant="card"
-          headerIcon={<Trophy className="h-7 w-7 text-white" />}
-          bodyNoPadding
-          actions={renderPanelActions()}
-        >
-          {renderPhaseContent()}
-        </PhaseDetailPanel>
+        <>
+          {/* ── MEDALLERO: visible solo cuando hay ganadores determinados ── */}
+          {medals.length > 0 && !isTiroDeportivo && (
+            <MedalleroPanel medals={medals} />
+          )}
+
+          <PhaseDetailPanel
+            phase={selectedPhase}
+            onClose={() => setSelectedPhase(null)}
+            variant="card"
+            headerIcon={<Trophy className="h-7 w-7 text-white" />}
+            bodyNoPadding
+            actions={renderPanelActions()}
+          >
+            {renderPhaseContent()}
+          </PhaseDetailPanel>
+        </>
       )}
 
       {/* ── Modal nueva fase ── */}

@@ -17,13 +17,24 @@ import { WrestlingMedalTable } from "../../competitions/components/wrestling/Wre
 import { AthleticsMedalTable } from "../../competitions/components/athletics/AthleticsMedalTable";
 import { AthleticsRankingsTable } from "../../competitions/components/athletics/AthleticsRankingsTable";
 import { SwimmingPhaseResults } from "../../results/components/SwimmingPhaseResults";
+import { TaekwondoKyoruguiMedalTable } from "../../competitions/components/taekwondo/TaekwondoKyoruguiMedalTable";
+import { KarateMedalTable }            from "../../competitions/components/karate/KarateMedalTable";
+import { WushuMedalTable }             from "../../competitions/components/wushu/WushuMedalTable";
+import { WeightliftingMedalTable }     from "../../competitions/components/weightlifting/WeightliftingMedalTable";
+import { TennisMedalTable }            from "../../competitions/components/table-tennis/TennisMedalTable";
 
+// ─── IDs locales de deporte ──────────────────────────────────────────────────
+const KARATE_SPORT_ID        = 1;
+const TAEKWONDO_SPORT_ID     = 3;
+const JUDO_SPORT_ID          = 4;
+const WUSHU_SPORT_ID         = 5;
+const WRESTLING_SPORT_ID     = 6;
+const ATHLETICS_SPORT_ID     = 7;
+const SWIMMING_SPORT_ID      = 9;
+const TABLE_TENNIS_SPORT_ID  = 10;  // TENIS DE MESA
+const TENNIS_SPORT_ID        = 11;  // TENIS DE CAMPO
+const WEIGHTLIFTING_SPORT_ID = 13;
 
-// ─── ID local del deporte Judo en tu tabla `sports` ─────────────────────────
-const JUDO_SPORT_ID = 4; 
-const SWIMMING_SPORT_ID = 9;
-const WRESTLING_SPORT_ID = 6;
-const ATHLETICS_SPORT_ID = 7;
 // ─── Tipos de vista ──────────────────────────────────────────────────────────
 type ActiveView = "categories" | "scores" | "medals" | "results" | "rankings";
 
@@ -38,15 +49,25 @@ export function EventSportCategoriesPage() {
 
   const [activeView, setActiveView] = useState<ActiveView>("categories");
 
-  const eventIdNum          = eventId         ? Number(eventId)         : undefined;
-  const externalEventIdNum  = externalEventId ? Number(externalEventId) : undefined;
-  const sportIdNum          = Number(sportId);
-  const isExternalEvent     = !!externalEventId;
+  const eventIdNum         = eventId         ? Number(eventId)         : undefined;
+  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
+  const sportIdNum         = Number(sportId);
+  const isExternalEvent    = !!externalEventId;
 
-  const isJudo = sportIdNum === JUDO_SPORT_ID;
-  const isSwimming = sportIdNum === SWIMMING_SPORT_ID;
-  const isWrestling = sportIdNum === WRESTLING_SPORT_ID;
-  const isAthletics = sportIdNum === ATHLETICS_SPORT_ID;
+  const isJudo          = sportIdNum === JUDO_SPORT_ID;
+  const isSwimming      = sportIdNum === SWIMMING_SPORT_ID;
+  const isWrestling     = sportIdNum === WRESTLING_SPORT_ID;
+  const isAthletics     = sportIdNum === ATHLETICS_SPORT_ID;
+  const isTaekwondo     = sportIdNum === TAEKWONDO_SPORT_ID;
+  const isKarate        = sportIdNum === KARATE_SPORT_ID;
+  const isWushu         = sportIdNum === WUSHU_SPORT_ID;
+  const isWeightlifting = sportIdNum === WEIGHTLIFTING_SPORT_ID;
+  const isTennis        = sportIdNum === TENNIS_SPORT_ID || sportIdNum === TABLE_TENNIS_SPORT_ID;
+
+  // Deportes que tienen tab "Medallero" en lugar de "Puntajes"
+  const hasMedalTab = isJudo || isSwimming || isWrestling || isAthletics
+                   || isTaekwondo || isKarate || isWushu || isWeightlifting || isTennis;
+
   const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
     { eventId: eventIdNum },
     { enabled: !isExternalEvent && !!eventIdNum }
@@ -92,16 +113,14 @@ export function EventSportCategoriesPage() {
     ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/add`
     : `/admin/events/${eventId}/sports/${sportId}/categories/add`;
 
-  // ── Tabs dinámicos según deporte ────────────────────────────────────────────
-  // El tab de resultados cambia su label/icono/key según el deporte
-  // ── Tabs dinámicos según deporte ────────────────────────────────────────────
+  // ── Tabs dinámicos según deporte ─────────────────────────────────────────
   const VIEW_TABS: { key: ActiveView; label: string; icon: React.ReactNode }[] = [
     {
       key: "categories",
       label: "Categorías",
       icon: <LayoutGrid className="h-4 w-4" />,
     },
-    isJudo || isSwimming || isWrestling || isAthletics
+    hasMedalTab
       ? {
           key: "medals",
           label: isWrestling ? "Puntajes" : "Medallero",
@@ -112,25 +131,11 @@ export function EventSportCategoriesPage() {
           label: "Puntajes",
           icon: <BarChart2 className="h-4 w-4" />,
         },
-    // ── Tab Resultados solo para natación ──
     ...(isSwimming
-      ? [
-          {
-            key: "results" as ActiveView,
-            label: "Resultados",
-            icon: <ClipboardList className="h-4 w-4" />,
-          },
-        ]
+      ? [{ key: "results" as ActiveView, label: "Resultados", icon: <ClipboardList className="h-4 w-4" /> }]
       : []),
-    // ── Tab Rankings solo para atletismo ──
     ...(isAthletics
-      ? [
-          {
-            key: "rankings" as ActiveView,
-            label: "Rankings",
-            icon: <Trophy className="h-4 w-4" />,
-          },
-        ]
+      ? [{ key: "rankings" as ActiveView, label: "Rankings", icon: <Trophy className="h-4 w-4" /> }]
       : []),
   ];
 
@@ -214,7 +219,7 @@ export function EventSportCategoriesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {sportCategories.map((eventCategory) => {
-                const isTeam           = eventCategory.category?.type === "equipo";
+                const isTeam            = eventCategory.category?.type === "equipo";
                 const participantsCount = eventCategory.registrations?.length || 0;
 
                 return (
@@ -285,7 +290,7 @@ export function EventSportCategoriesPage() {
         </>
       )}
 
-      {/* ── Vista: Puntajes (atletismo y otros deportes con score_table) ── */}
+      {/* ── Vista: Puntajes (otros deportes con score_table) ── */}
       {activeView === "scores" && externalEventIdNum && sportId && (
         <ScoreTables
           externalEventId={externalEventIdNum}
@@ -293,40 +298,28 @@ export function EventSportCategoriesPage() {
         />
       )}
 
-      {/* ── Vista: Medallero / Puntajes (judo / natación / lucha) ── */}
-      {activeView === "medals" && externalEventIdNum && sportId && (
-        isJudo ? (
-          <JudoMedalTable
-            externalEventId={externalEventIdNum}
-            localSportId={sportIdNum}
-            eventName={sportName}
-          />
-        ) : isSwimming ? (
-          <SwimmingMedalTable
-            externalEventId={externalEventIdNum}
-            localSportId={sportIdNum}
-          />
-        ) : isWrestling ? (
-          <WrestlingMedalTable
-            externalEventId={externalEventIdNum}
-            localSportId={sportIdNum}
-          />
-        ) : isAthletics ? (                          
-          <AthleticsMedalTable                       
-            externalEventId={externalEventIdNum}     
-            localSportId={sportIdNum}        
-            eventName={sportName}       
-          /> 
-        ) : null
+      {/* ── Vista: Medallero — todos los deportes con hasMedalTab ── */}
+      {activeView === "medals" && externalEventIdNum && (
+        isJudo          ? <JudoMedalTable              externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
+        : isSwimming    ? <SwimmingMedalTable           externalEventId={externalEventIdNum} localSportId={sportIdNum} />
+        : isWrestling   ? <WrestlingMedalTable          externalEventId={externalEventIdNum} localSportId={sportIdNum} />
+        : isAthletics   ? <AthleticsMedalTable          externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
+        : isTaekwondo   ? <TaekwondoKyoruguiMedalTable  externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
+        : isKarate      ? <KarateMedalTable             externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
+        : isWushu       ? <WushuMedalTable              externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
+        : isWeightlifting ? <WeightliftingMedalTable    externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
+        : isTennis      ? <TennisMedalTable             externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
+        : null
       )}
 
-      {/* ── Vista: Rankings de puntajes (solo atletismo) ── */}
+      {/* ── Vista: Rankings (solo atletismo) ── */}
       {activeView === "rankings" && isAthletics && externalEventIdNum && (
         <AthleticsRankingsTable
           externalEventId={externalEventIdNum}
           localSportId={sportIdNum}
         />
       )}
+
       {/* ── Vista: Resultados por prueba (solo natación) ── */}
       {activeView === "results" && isSwimming && externalEventIdNum && (
         <SwimmingPhaseResults
