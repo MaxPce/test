@@ -30,3 +30,13 @@ export const initializeShootingGroupPhase = async (
   );
   return response.data;
 };
+export const generateShootingPhases = async (
+  eventCategoryId: number,
+  phases: { name: string; registrationIds: number[] }[],
+) => {
+  const response = await apiClient.post(
+    `/competitions/shooting/event-categories/${eventCategoryId}/generate-phases`,
+    { phases },
+  );
+  return response.data;
+};

@@ -47,6 +47,7 @@ import type { GenericViewProps } from "./types";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMedallero } from "@/features/competitions/hooks/useMedallero";
 import { MedalleroPanel } from "@/features/competitions/components/MedalleroPanel";
+import { GenerateShootingPhasesModal } from "@/features/competitions/components/shooting/GenerateShootingPhasesModal";
 
 
 
@@ -936,6 +937,12 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
               </Button>
             )}
 
+            {isTiroDeportivo && (
+              <Button onClick={() => openModal("generateShootingPhases")} variant="outline" size="lg">
+                Generar Fases
+              </Button>
+            )}
+
             {taekwondoType === "poomsae" && (
               <Button onClick={() => openModal("generatePoomsaePhases")} variant="outline" size="lg">
                 Generar Fases
@@ -1327,6 +1334,18 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}
+        />
+      )}
+
+      {modals.generateShootingPhases && isTiroDeportivo && (
+        <GenerateShootingPhasesModal
+          open={modals.generateShootingPhases}
+          onClose={() => closeModal("generateShootingPhases")}
+          eventCategoryId={eventCategory.eventCategoryId}
+          categoryName={eventCategory.category?.name ?? "Tiro Deportivo"}
+          allRegistrations={eventCategory.registrations ?? []}
+          sismasterEventId={eventCategory.externalEventId ?? undefined}
+          sismasterSportId={eventCategory.externalSportId ?? undefined}
         />
       )}
 

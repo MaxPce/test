@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { updateShootingScore, setShootingDns, initializeShootingGroupPhase } from './shooting.api';
+import { updateShootingScore, setShootingDns, initializeShootingGroupPhase, generateShootingPhases  } from './shooting.api';
 import { toast } from 'sonner';
 
 
@@ -53,6 +53,27 @@ export const useInitializeShootingGroupPhase = () => {
       toast.error(
         error.response?.data?.message || 'Error al inicializar fase',
       );
+    },
+  });
+};
+
+export const useGenerateShootingPhases = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      eventCategoryId,
+      phases,
+    }: {
+      eventCategoryId: number;
+      phases: { name: string; registrationIds: number[] }[];
+    }) => generateShootingPhases(eventCategoryId, phases),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['phases'] });
+      queryClient.invalidateQueries({ queryKey: ['shooting-scores'] });
+      toast.success('Fases de Tiro Deportivo generadas correctamente');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error al generar fases');
     },
   });
 };

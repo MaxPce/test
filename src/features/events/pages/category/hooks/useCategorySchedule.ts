@@ -52,7 +52,8 @@ export type ModalName =
   | "generateTennisPhases"
   | "generateWeightliftingPhases"
   | "generatePoomsaePhases"
-  | "generateKyoruguiPhases";
+  | "generateKyoruguiPhases"
+  | "generateShootingPhases"; 
 
 const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   phase: false,
@@ -80,6 +81,7 @@ const INITIAL_MODAL_STATE: Record<ModalName, boolean> = {
   generateWeightliftingPhases: false,
   generatePoomsaePhases: false,
   generateKyoruguiPhases: false,
+  generateShootingPhases: false,
 };
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
