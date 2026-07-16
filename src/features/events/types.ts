@@ -16,6 +16,7 @@ export interface Event {
   createdAt: string;
   updatedAt: string;
   eventCategories?: EventCategory[];
+  source?: 'sismaster' | 'haymaster';
 }
 
 export interface CreateEventData {

@@ -33,6 +33,7 @@ export function adaptSismasterEventToLocal(
     createdAt: sismasterEvent.created_at || "",
     updatedAt: sismasterEvent.updated_at || "",
     eventCategories: [],
+    source: 'sismaster',
   };
 }
 

@@ -155,9 +155,10 @@ export function EventCard({
             size="md"
             variant="gradient"
             className="w-full"
-            onClick={() =>
-              navigate(`/admin/sismaster-events/${event.eventId}/sports`)
-            }
+            onClick={() => {
+              const prefix = event.source === "haymaster" ? "haymaster-events" : "sismaster-events";
+              navigate(`/admin/${prefix}/${event.eventId}/sports`);
+            }}
           >
             Gestionar Deportes
           </Button>

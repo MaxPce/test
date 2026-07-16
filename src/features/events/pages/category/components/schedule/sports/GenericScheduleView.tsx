@@ -1123,17 +1123,41 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          {modals.generateBracket && (
-            <GenerateBracketModal
-              isOpen={modals.generateBracket}
-              onClose={() => closeModal("generateBracket")}
-              phase={selectedPhase}
-              availableRegistrations={availableRegistrations}
-              sismasterEventId={eventCategory.externalEventId ?? undefined}
-              sismasterSportId={eventCategory.externalSportId ?? undefined}
-              eventCategoryId={eventCategory.eventCategoryId}
-            />
-          )}
+          {modals.generateBracket && (() => {
+            // Extraer IDs de participantes asignados directamente a esta fase
+            // Para fase "eliminacion": se sacan de las participations de sus matches
+            // Para fase "grupo": se sacan de los groupStandings
+            const phaseRegistrationIds = new Set<number>([
+              // Desde matches directos de la fase (eliminacion sin subPhases)
+              ...(selectedPhase.matches ?? [])
+                .flatMap((m) => m.participations ?? [])
+                .map((p) => p.registrationId)
+                .filter((id): id is number => id != null),
+              // Desde groupStandings (si los tuviera como fase padre)
+              ...(selectedPhase.groupStandings ?? [])
+                .map((gs) => gs.registrationId),
+            ]);
+
+            // Si no hay ninguno asignado aún → mostrar todos (fallback seguro)
+            const bracketRegistrations =
+              phaseRegistrationIds.size > 0
+                ? availableRegistrations.filter((r) =>
+                    phaseRegistrationIds.has(r.registrationId)
+                  )
+                : availableRegistrations;
+
+            return (
+              <GenerateBracketModal
+                isOpen={modals.generateBracket}
+                onClose={() => closeModal("generateBracket")}
+                phase={selectedPhase}
+                availableRegistrations={bracketRegistrations}
+                sismasterEventId={eventCategory.externalEventId ?? undefined}
+                sismasterSportId={eventCategory.externalSportId ?? undefined}
+                eventCategoryId={eventCategory.eventCategoryId}
+              />
+            );
+          })()}
 
           {modals.generateBestOf3 && (
             <GenerateBestOf3Modal

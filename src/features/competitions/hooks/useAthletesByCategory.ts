@@ -1,18 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { sismasterApi } from '../../../services/sismasterApi';
+import { haymasterApi } from '../../../services/haymasterApi';
 
 export function useAthletesByCategory(
   sismasterEventId: number | null,
   localSportId:     number | null,
   idparam:          number | null,
+  source:           'sismaster' | 'haymaster' = 'sismaster',  // ← nuevo parámetro
 ) {
+  const api = source === 'haymaster' ? haymasterApi : sismasterApi;
+
   return useQuery({
     queryKey: [
-      'sismaster', 'athletes-by-category',
+      source, 'athletes-by-category',
       sismasterEventId, localSportId, idparam,
     ],
     queryFn: () =>
-      sismasterApi.getAthletesByCategory(
+      api.getAthletesByCategory(
         sismasterEventId!,
         localSportId!,
         idparam!,

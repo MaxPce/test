@@ -35,7 +35,9 @@ import {
   useUploadCompanyLogo,
 } from "../api/companies.mutations";
 import { useSismasterEvents } from "@/features/institutions/api/sismaster.queries";
+import { useHaymasterEvents } from "@/features/institutions/api/haymaster.queries";
 import { adaptSismasterEventsToLocal } from "@/features/events/utils/sismasterAdapter";
+import { adaptHaymasterEventsToLocal } from "@/features/events/utils/haymasterAdapter";
 import { EventCard } from "@/features/events/components/EventCard";
 import type { Company, CreateCompanyData } from "../types";
 import type { Event } from "@/features/events/types";
@@ -88,13 +90,21 @@ export default function CompaniesPage() {
   
 
   // ── Sismaster events (sin filtro de company) ──
-  const { data: rawSismasterEvents = [], isLoading: isLoadingEvents } =
-    useSismasterEvents();
+  const { data: rawSismasterEvents = [], isLoading: isLoadingSismaster } =
+  useSismasterEvents();
+  const { data: rawHaymasterEvents = [], isLoading: isLoadingHaymaster } =
+    useHaymasterEvents();
+
+  const isLoadingEvents = isLoadingSismaster || isLoadingHaymaster;
 
   const allEvents: Event[] = useMemo(
-    () => adaptSismasterEventsToLocal(rawSismasterEvents),
-    [rawSismasterEvents],
+    () => [
+      ...adaptSismasterEventsToLocal(rawSismasterEvents),
+      ...adaptHaymasterEventsToLocal(rawHaymasterEvents),
+    ],
+    [rawSismasterEvents, rawHaymasterEvents],
   );
+
 
   const filteredEvents = useMemo(() => {
     return allEvents.filter((event) => {
@@ -462,7 +472,7 @@ export default function CompaniesPage() {
                   <p className="text-sm text-slate-500 mt-1">
                     {eventsSearch || eventsStatus
                       ? "No se encontraron eventos con los filtros aplicados."
-                      : "No hay eventos registrados en Sismaster."}
+                      : "No hay eventos registrados."}
                   </p>
                 </div>
                 {(eventsSearch || eventsStatus) && (
