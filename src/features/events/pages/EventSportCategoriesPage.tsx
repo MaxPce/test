@@ -1,14 +1,16 @@
-// src/pages/events/EventSportCategoriesPage.tsx
-
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Plus, Trophy, Users, LayoutGrid, BarChart2, Medal, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
-import { useEventCategories, useSismasterEventCategories } from "../api/eventCategories.queries";
+import {
+  useEventCategories,
+  useSismasterEventCategories,
+  useHaymasterEventCategories,
+} from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { ScoreTables } from "../../competitions/components/score-tables/ScoreTables";
 import { JudoMedalTable } from "../../competitions/components/judo/JudoMedalTable";
@@ -23,7 +25,7 @@ import { WushuMedalTable }             from "../../competitions/components/wushu
 import { WeightliftingMedalTable }     from "../../competitions/components/weightlifting/WeightliftingMedalTable";
 import { TennisMedalTable }            from "../../competitions/components/table-tennis/TennisMedalTable";
 
-// ─── IDs locales de deporte ──────────────────────────────────────────────────
+// ─── IDs locales de deporte ───────────────────────────────────────────────────
 const KARATE_SPORT_ID        = 1;
 const TAEKWONDO_SPORT_ID     = 3;
 const JUDO_SPORT_ID          = 4;
@@ -31,14 +33,12 @@ const WUSHU_SPORT_ID         = 5;
 const WRESTLING_SPORT_ID     = 6;
 const ATHLETICS_SPORT_ID     = 7;
 const SWIMMING_SPORT_ID      = 9;
-const TABLE_TENNIS_SPORT_ID  = 10;  // TENIS DE MESA
-const TENNIS_SPORT_ID        = 11;  // TENIS DE CAMPO
+const TABLE_TENNIS_SPORT_ID  = 10;
+const TENNIS_SPORT_ID        = 11;
 const WEIGHTLIFTING_SPORT_ID = 13;
 
-// ─── Tipos de vista ──────────────────────────────────────────────────────────
 type ActiveView = "categories" | "scores" | "medals" | "results" | "rankings";
 
-// ─── Página principal ────────────────────────────────────────────────────────
 export function EventSportCategoriesPage() {
   const { eventId, externalEventId, sportId } = useParams<{
     eventId?: string;
@@ -46,14 +46,42 @@ export function EventSportCategoriesPage() {
     sportId: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [activeView, setActiveView] = useState<ActiveView>("categories");
 
   const eventIdNum         = eventId         ? Number(eventId)         : undefined;
   const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
   const sportIdNum         = Number(sportId);
-  const isExternalEvent    = !!externalEventId;
 
+  const isExternalEvent  = !!externalEventId;
+  const isHaymasterEvent = location.pathname.includes("/haymaster-events/");
+  const isSismasterEvent = isExternalEvent && !isHaymasterEvent;
+
+  // ── Queries ────────────────────────────────────────────────────────────────
+  const { data: localEventCategories = [], isLoading: localLoading } =
+    useEventCategories(
+      { eventId: eventIdNum },
+      { enabled: !isExternalEvent && !!eventIdNum },
+    );
+
+  const { data: sismasterEventCategories = [], isLoading: sismasterLoading } =
+    useSismasterEventCategories(isSismasterEvent ? externalEventIdNum : undefined);
+
+  const { data: haymasterEventCategories = [], isLoading: haymasterLoading } =
+    useHaymasterEventCategories(isHaymasterEvent ? externalEventIdNum : undefined);
+
+  const eventCategories =
+    isHaymasterEvent ? haymasterEventCategories :
+    isSismasterEvent ? sismasterEventCategories :
+    localEventCategories;
+
+  const isLoading =
+    isHaymasterEvent ? haymasterLoading :
+    isSismasterEvent ? sismasterLoading :
+    localLoading;
+
+  // ── Flags de deporte ───────────────────────────────────────────────────────
   const isJudo          = sportIdNum === JUDO_SPORT_ID;
   const isSwimming      = sportIdNum === SWIMMING_SPORT_ID;
   const isWrestling     = sportIdNum === WRESTLING_SPORT_ID;
@@ -64,20 +92,8 @@ export function EventSportCategoriesPage() {
   const isWeightlifting = sportIdNum === WEIGHTLIFTING_SPORT_ID;
   const isTennis        = sportIdNum === TENNIS_SPORT_ID || sportIdNum === TABLE_TENNIS_SPORT_ID;
 
-  // Deportes que tienen tab "Medallero" en lugar de "Puntajes"
   const hasMedalTab = isJudo || isSwimming || isWrestling || isAthletics
                    || isTaekwondo || isKarate || isWushu || isWeightlifting || isTennis;
-
-  const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
-    { eventId: eventIdNum },
-    { enabled: !isExternalEvent && !!eventIdNum }
-  );
-
-  const { data: externalEventCategories = [], isLoading: externalLoading } =
-    useSismasterEventCategories(externalEventIdNum);
-
-  const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
-  const isLoading       = isExternalEvent ? externalLoading : localLoading;
 
   if (isLoading) {
     return (
@@ -88,7 +104,7 @@ export function EventSportCategoriesPage() {
   }
 
   const sportCategories = eventCategories.filter(
-    (ec) => ec.category?.sport?.sportId === sportIdNum
+    (ec) => ec.category?.sport?.sportId === sportIdNum,
   );
 
   const sportName    = sportCategories[0]?.category?.sport?.name || "Deporte";
@@ -97,23 +113,33 @@ export function EventSportCategoriesPage() {
 
   const totalParticipants = sportCategories.reduce(
     (sum, ec) => sum + (ec.registrations?.length || 0),
-    0
+    0,
   );
 
-  const backPath = isExternalEvent
-    ? `/admin/sismaster-events/${externalEventId}/sports`
-    : `/admin/events/${eventId}/sports`;
+  // ── Rutas dinámicas para los 3 tipos ──────────────────────────────────────
+  const backPath =
+    isHaymasterEvent ? `/admin/haymaster-events/${externalEventId}/sports` :
+    isSismasterEvent ? `/admin/sismaster-events/${externalEventId}/sports` :
+                       `/admin/events/${eventId}/sports`;
 
-  const getCategoryDetailPath = (eventCategoryId: number) =>
-    isExternalEvent
-      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/${eventCategoryId}`
-      : `/admin/events/${eventId}/sports/${sportId}/categories/${eventCategoryId}`;
+  const getCategoryDetailPath = (eventCategoryId: number) => {
+    if (isHaymasterEvent) return `/admin/haymaster-events/${externalEventId}/sports/${sportId}/categories/${eventCategoryId}`;
+    if (isSismasterEvent) return `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/${eventCategoryId}`;
+    return `/admin/events/${eventId}/sports/${sportId}/categories/${eventCategoryId}`;
+  };
 
-  const addCategoryPath = isExternalEvent
-    ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/add`
-    : `/admin/events/${eventId}/sports/${sportId}/categories/add`;
+  const addCategoryPath =
+    isHaymasterEvent ? `/admin/haymaster-events/${externalEventId}/sports/${sportId}/categories/add` :
+    isSismasterEvent ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/add` :
+                       `/admin/events/${eventId}/sports/${sportId}/categories/add`;
 
-  // ── Tabs dinámicos según deporte ─────────────────────────────────────────
+  // ── Label del header ───────────────────────────────────────────────────────
+  const sourceLabel =
+    isHaymasterEvent ? " (Haymaster)" :
+    isSismasterEvent ? " (Sisdeu)"    :
+    "";
+
+  // ── Tabs dinámicos según deporte ──────────────────────────────────────────
   const VIEW_TABS: { key: ActiveView; label: string; icon: React.ReactNode }[] = [
     {
       key: "categories",
@@ -141,9 +167,8 @@ export function EventSportCategoriesPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Header */}
       <PageHeader
-        title={`Categorías de ${sportName}${isExternalEvent ? " (Sisdeu)" : ""}`}
+        title={`Categorías de ${sportName}${sourceLabel}`}
         showBack
         onBack={() => navigate(backPath)}
       />
@@ -175,7 +200,7 @@ export function EventSportCategoriesPage() {
         </div>
       </Card>
 
-      {/* ── Switcher de vista ── */}
+      {/* Switcher de vista */}
       <div
         role="tablist"
         aria-label="Cambiar vista"
@@ -203,7 +228,7 @@ export function EventSportCategoriesPage() {
         })}
       </div>
 
-      {/* ── Vista: Categorías ── */}
+      {/* Vista: Categorías */}
       {activeView === "categories" && (
         <>
           {sportCategories.length === 0 ? (
@@ -290,7 +315,7 @@ export function EventSportCategoriesPage() {
         </>
       )}
 
-      {/* ── Vista: Puntajes (otros deportes con score_table) ── */}
+      {/* Vista: Puntajes */}
       {activeView === "scores" && externalEventIdNum && sportId && (
         <ScoreTables
           externalEventId={externalEventIdNum}
@@ -298,7 +323,7 @@ export function EventSportCategoriesPage() {
         />
       )}
 
-      {/* ── Vista: Medallero — todos los deportes con hasMedalTab ── */}
+      {/* Vista: Medallero */}
       {activeView === "medals" && externalEventIdNum && (
         isJudo          ? <JudoMedalTable              externalEventId={externalEventIdNum} localSportId={sportIdNum} eventName={sportName} />
         : isSwimming    ? <SwimmingMedalTable           externalEventId={externalEventIdNum} localSportId={sportIdNum} />
@@ -312,7 +337,7 @@ export function EventSportCategoriesPage() {
         : null
       )}
 
-      {/* ── Vista: Rankings (solo atletismo) ── */}
+      {/* Vista: Rankings (solo atletismo) */}
       {activeView === "rankings" && isAthletics && externalEventIdNum && (
         <AthleticsRankingsTable
           externalEventId={externalEventIdNum}
@@ -320,7 +345,7 @@ export function EventSportCategoriesPage() {
         />
       )}
 
-      {/* ── Vista: Resultados por prueba (solo natación) ── */}
+      {/* Vista: Resultados por prueba (solo natación) */}
       {activeView === "results" && isSwimming && externalEventIdNum && (
         <SwimmingPhaseResults
           externalEventId={externalEventIdNum}

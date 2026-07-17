@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { Plus, Trophy, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -9,57 +8,90 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "react-hot-toast";
-import { 
-  useEventCategories, 
+import {
+  useEventCategories,
   useSismasterEventCategories,
+  useHaymasterEventCategories,
   useRegisterEventCategories,
+  useRegisterHaymasterEventCategories,
 } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import { useAuthStore } from "@/app/store/useAuthStore";
 
 export function EventSportsPage() {
   const { eventId, externalEventId } = useParams<{ eventId?: string; externalEventId?: string }>();
-  const navigate = useNavigate();
-  
-  const eventIdNum = eventId ? Number(eventId) : undefined;
+  const navigate  = useNavigate();
+  const location  = useLocation();
+
+  const eventIdNum         = eventId         ? Number(eventId)         : undefined;
   const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
-  const isExternalEvent = !!externalEventId;
+
+  const isExternalEvent  = !!externalEventId;
+  const isHaymasterEvent = location.pathname.includes("/haymaster-events/");
+  const isSismasterEvent = isExternalEvent && !isHaymasterEvent;
+
   const canAccessSport = useAuthStore((s) => s.canAccessSport);
-  const isOperator = useAuthStore((s) => s.isOperator);
+  const isOperator     = useAuthStore((s) => s.isOperator);
 
-  const { data: localEventCategories = [], isLoading: localLoading } = useEventCategories(
-    { eventId: eventIdNum },
-    { enabled: !isExternalEvent && !!eventIdNum }
-  );
-  
-  const { data: externalEventCategories = [], isLoading: externalLoading } = useSismasterEventCategories(
-    externalEventIdNum
-  );
+  // ── Queries ────────────────────────────────────────────────────────────────
+  const { data: localEventCategories = [], isLoading: localLoading } =
+    useEventCategories(
+      { eventId: eventIdNum },
+      { enabled: !isExternalEvent && !!eventIdNum },
+    );
 
-  const { mutate: registerCategories, isPending: isRegistering } =
+  const { data: sismasterEventCategories = [], isLoading: sismasterLoading } =
+    useSismasterEventCategories(
+      isSismasterEvent ? externalEventIdNum : undefined,
+    );
+
+  const { data: haymasterEventCategories = [], isLoading: haymasterLoading } =
+    useHaymasterEventCategories(
+      isHaymasterEvent ? externalEventIdNum : undefined,
+    );
+
+  // ── Mutations ──────────────────────────────────────────────────────────────
+  const { mutate: registerSismasterCategories, isPending: isRegisteringSismaster } =
     useRegisterEventCategories();
+
+  const { mutate: registerHaymasterCategories, isPending: isRegisteringHaymaster } =
+    useRegisterHaymasterEventCategories();
+
+  const isRegistering = isRegisteringSismaster || isRegisteringHaymaster;
 
   const handleRegisterCategories = () => {
     if (!externalEventIdNum) return;
 
-    registerCategories(externalEventIdNum, {
-      onSuccess: (data) => {
-        if (data.created === 0 && data.alreadyExists > 0) {
-          toast.success(`Todas las categorías ya estaban registradas (${data.alreadyExists})`);
-        } else {
-          toast.success(
-            `${data.created} categorías registradas` +
-            (data.alreadyExists > 0 ? ` · ${data.alreadyExists} ya existían` : "") +
-            (data.skipped > 0 ? ` · ${data.skipped} sin mapeo local` : "")
-          );
-        }
-      },
-      onError: () => toast.error("Error al registrar las categorías"),
-    });
+    const onSuccess = (data: any) => {
+      if (data.created === 0 && data.alreadyExists > 0) {
+        toast.success(`Todas las categorías ya estaban registradas (${data.alreadyExists})`);
+      } else {
+        toast.success(
+          `${data.created} categorías registradas` +
+          (data.alreadyExists > 0 ? ` · ${data.alreadyExists} ya existían` : "") +
+          (data.skipped      > 0 ? ` · ${data.skipped} sin mapeo local`    : ""),
+        );
+      }
+    };
+    const onError = () => toast.error("Error al registrar las categorías");
+
+    if (isHaymasterEvent) {
+      registerHaymasterCategories(externalEventIdNum, { onSuccess, onError });
+    } else {
+      registerSismasterCategories(externalEventIdNum, { onSuccess, onError });
+    }
   };
 
-  const eventCategories = isExternalEvent ? externalEventCategories : localEventCategories;
-  const isLoading = isExternalEvent ? externalLoading : localLoading;
+  // ── Datos activos según tipo ────────────────────────────────────────────────
+  const eventCategories =
+    isHaymasterEvent ? haymasterEventCategories :
+    isSismasterEvent ? sismasterEventCategories :
+    localEventCategories;
+
+  const isLoading =
+    isHaymasterEvent ? haymasterLoading :
+    isSismasterEvent ? sismasterLoading :
+    localLoading;
 
   if (isLoading) {
     return (
@@ -69,16 +101,13 @@ export function EventSportsPage() {
     );
   }
 
-  // FIX: Agrupar categorías por deporte (incluye Sismaster)
+  // ── Agrupar categorías por deporte ─────────────────────────────────────────
   const sportGroups = eventCategories.reduce(
     (acc, eventCategory) => {
       const sport = eventCategory.category?.sport;
-      if (sport && sport.sportId) {  // ← VERIFICACIÓN CLAVE
+      if (sport && sport.sportId) {
         if (!acc[sport.sportId]) {
-          acc[sport.sportId] = {
-            sport,
-            categories: [],
-          };
+          acc[sport.sportId] = { sport, categories: [] };
         }
         acc[sport.sportId].categories.push(eventCategory);
       }
@@ -92,27 +121,32 @@ export function EventSportsPage() {
   const filterEventId = isExternalEvent ? externalEventIdNum : eventIdNum;
 
   const visibleSports = isOperator()
-    ? sports.filter(({ sport }) =>
-        canAccessSport(sport.sportId, filterEventId)
-      )
+    ? sports.filter(({ sport }) => canAccessSport(sport.sportId, filterEventId))
     : sports;
 
-  // Rutas dinámicas SISMASTER/LOCAL
-  const addSportPath = isExternalEvent
-    ? `/admin/sismaster-events/${externalEventId}/add-sport`
-    : `/admin/events/${eventId}/sports/add`;
+  // ── Rutas dinámicas para los 3 tipos ───────────────────────────────────────
+  const addSportPath =
+    isHaymasterEvent ? `/admin/haymaster-events/${externalEventId}/add-sport` :
+    isSismasterEvent ? `/admin/sismaster-events/${externalEventId}/add-sport` :
+                       `/admin/events/${eventId}/sports/add`;
 
   const getSportDetailPath = (sportId: number) => {
-    return isExternalEvent
-      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`  
-      : `/admin/events/${eventId}/sports/${sportId}`;
+    if (isHaymasterEvent) return `/admin/haymaster-events/${externalEventId}/sports/${sportId}`;
+    if (isSismasterEvent) return `/admin/sismaster-events/${externalEventId}/sports/${sportId}`;
+    return `/admin/events/${eventId}/sports/${sportId}`;
   };
 
+  // ── Badge label ────────────────────────────────────────────────────────────
+  const eventSourceLabel =
+    isHaymasterEvent ? "(Haymaster)" :
+    isSismasterEvent ? "(Sisdeu)"    :
+    "";
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-in">
-      {/* Header con badge Sismaster */}
       <PageHeader
-        title={`Deportes del Evento ${isExternalEvent ? '(Sisdeu)' : ''}`}
+        title={`Deportes del Evento ${eventSourceLabel}`}
         showBack
         actions={
           <div className="flex items-center gap-3">
@@ -123,16 +157,14 @@ export function EventSportsPage() {
                 variant="outline"
                 size="lg"
                 icon={
-                  isRegistering
-                    ? <RefreshCw className="h-4 w-4 animate-spin" />
-                    : <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className={`h-4 w-4 ${isRegistering ? "animate-spin" : ""}`} />
                 }
               >
                 {isRegistering ? "Registrando..." : "Registrar Categorías"}
               </Button>
             )}
 
-            {!isOperator() && (  // ← operadores no pueden agregar deportes
+            {!isOperator() && (
               <Button
                 onClick={() => navigate(addSportPath)}
                 variant="gradient"
@@ -146,14 +178,13 @@ export function EventSportsPage() {
         }
       />
 
-      {/* Grid de Deportes - TU DISEÑO EXACTO */}
       {visibleSports.length === 0 ? (
         <EmptyState
           icon={Trophy}
           title="No hay deportes asociados"
           description={
             isExternalEvent
-              ? "Este evento Sismaster no tiene deportes con categorías disponibles"
+              ? "Este evento externo no tiene deportes con categorías disponibles"
               : "Agrega el primer deporte a este evento para comenzar con las inscripciones"
           }
           action={{
@@ -172,7 +203,7 @@ export function EventSportsPage() {
                 (sum, cat) => sum + (cat.registrations?.length || 0),
                 0,
               )}
-              isSismaster={isExternalEvent}  // ← PASAR PROP
+              eventSourceLabel={isHaymasterEvent ? "Haymaster" : isSismasterEvent ? "Sisdeu" : undefined}
               onClick={() => navigate(getSportDetailPath(sport.sportId))}
             />
           ))}
@@ -182,18 +213,18 @@ export function EventSportsPage() {
   );
 }
 
-// TU DISEÑO EXACTO + Badge Sismaster
+// ── SportEventCard ─────────────────────────────────────────────────────────────
 function SportEventCard({
   sport,
   categoriesCount,
   athletesCount,
-  isSismaster = false,
+  eventSourceLabel,
   onClick,
 }: {
   sport: any;
   categoriesCount: number;
   athletesCount: number;
-  isSismaster?: boolean;
+  eventSourceLabel?: string;  // "Sisdeu" | "Haymaster" | undefined
   onClick: () => void;
 }) {
   const sportImageUrl = sport.iconUrl ? getImageUrl(sport.iconUrl) : null;
@@ -206,7 +237,6 @@ function SportEventCard({
       onClick={onClick}
       className="group cursor-pointer overflow-hidden"
     >
-      {/* Header con imagen - TU DISEÑO EXACTO */}
       <div className="relative h-48 bg-slate-200 overflow-hidden">
         {sportImageUrl ? (
           <>
@@ -214,11 +244,8 @@ function SportEventCard({
               src={sportImageUrl}
               alt={sport.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
-            {/* Overlay oscuro sutil solo en la parte inferior */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </>
         ) : (
@@ -227,23 +254,22 @@ function SportEventCard({
           </div>
         )}
 
-        {/* Badge Sismaster - NUEVO */}
-        {isSismaster && (
+        {/* Badge dinámico: "Sisdeu" o "Haymaster" según origen */}
+        {eventSourceLabel && (
           <div className="absolute top-3 right-3">
-            <Badge  size="sm" className="backdrop-blur-sm">
-              Sisdeu
+            <Badge size="sm" className="backdrop-blur-sm">
+              {eventSourceLabel}
             </Badge>
           </div>
         )}
 
-        {/* Nombre del deporte sobre la imagen - TU DISEÑO */}
         <div className="absolute bottom-4 left-4 right-4">
           <h3 className="text-2xl font-bold text-white drop-shadow-lg line-clamp-2">
             {sport.name}
           </h3>
         </div>
 
-        {/* Indicador de hover - TU DISEÑO */}
+        {/* Indicador de hover */}
         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
             <ChevronRight className="h-5 w-5 text-slate-900" />
@@ -251,7 +277,6 @@ function SportEventCard({
         </div>
       </div>
 
-      {/* Bottom accent con animación - TU DISEÑO EXACTO */}
       <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </Card>
   );

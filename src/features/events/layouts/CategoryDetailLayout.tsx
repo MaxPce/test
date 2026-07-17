@@ -1,26 +1,23 @@
-import { Outlet, useParams, useNavigate } from "react-router-dom";
+import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   UserPlus,
   Calendar,
   BarChart3,
-  Building2,
-  Timer,
   Trophy,
   Users,
-  
 } from "lucide-react";
+import { Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { Tabs } from "@/components/ui/Tabs";
 import { PageHeader } from "@/components/PageHeader";
 import {
   useEventCategories,
   useSismasterEventCategories,
+  useHaymasterEventCategories,
 } from "../api/eventCategories.queries";
 import { getImageUrl } from "@/lib/utils/imageUrl";
-import { Star } from "lucide-react";
 
 export function CategoryDetailLayout() {
   const { eventId, externalEventId, sportId, categoryId } = useParams<{
@@ -29,32 +26,52 @@ export function CategoryDetailLayout() {
     sportId: string;
     categoryId: string;
   }>();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
 
-  const eventIdNum = eventId ? Number(eventId) : undefined;
-  const externalEventIdNum = externalEventId
-    ? Number(externalEventId)
-    : undefined;
-  const isExternalEvent = !!externalEventId;
+  const eventIdNum         = eventId         ? Number(eventId)         : undefined;
+  const externalEventIdNum = externalEventId ? Number(externalEventId) : undefined;
 
+  const isExternalEvent  = !!externalEventId;
+  const isHaymasterEvent = location.pathname.includes("/haymaster-events/");
+  const isSismasterEvent = isExternalEvent && !isHaymasterEvent;
+
+  // ── Queries ────────────────────────────────────────────────────────────────
   const { data: localEventCategories = [], isLoading: localLoading } =
     useEventCategories(
       { eventId: eventIdNum },
       { enabled: !isExternalEvent && !!eventIdNum },
     );
 
-  const { data: externalEventCategories = [], isLoading: externalLoading } =
-    useSismasterEventCategories(externalEventIdNum);
+  const { data: sismasterEventCategories = [], isLoading: sismasterLoading } =
+    useSismasterEventCategories(isSismasterEvent ? externalEventIdNum : undefined);
 
-  const eventCategories = isExternalEvent
-    ? externalEventCategories
-    : localEventCategories;
-  const isLoading = isExternalEvent ? externalLoading : localLoading;
+  const { data: haymasterEventCategories = [], isLoading: haymasterLoading } =
+    useHaymasterEventCategories(isHaymasterEvent ? externalEventIdNum : undefined);
+
+  const eventCategories =
+    isHaymasterEvent ? haymasterEventCategories :
+    isSismasterEvent ? sismasterEventCategories :
+    localEventCategories;
+
+  const isLoading =
+    isHaymasterEvent ? haymasterLoading :
+    isSismasterEvent ? sismasterLoading :
+    localLoading;
 
   const eventCategory = eventCategories.find(
     (ec) => ec.eventCategoryId === Number(categoryId),
   );
 
+  // ── Rutas dinámicas ────────────────────────────────────────────────────────
+  const backPath =
+    isHaymasterEvent
+      ? `/admin/haymaster-events/${externalEventId}/sports/${sportId}`
+    : isSismasterEvent
+      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`
+    : `/admin/events/${eventId}/sports/${sportId}`;
+
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -63,6 +80,7 @@ export function CategoryDetailLayout() {
     );
   }
 
+  // ── Not found ──────────────────────────────────────────────────────────────
   if (!eventCategory) {
     return (
       <div className="text-center py-12">
@@ -76,12 +94,7 @@ export function CategoryDetailLayout() {
           La categoría que buscas no existe o ha sido eliminada
         </p>
         <Button
-          onClick={() => {
-            const backPath = isExternalEvent
-              ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`
-              : `/admin/events/${eventId}/sports/${sportId}`;
-            navigate(backPath);
-          }}
+          onClick={() => navigate(backPath)}
           variant="gradient"
         >
           Volver a Categorías
@@ -90,28 +103,29 @@ export function CategoryDetailLayout() {
     );
   }
 
-  
-
-  
-
+  // ── Derived state ──────────────────────────────────────────────────────────
   const sportName = eventCategory.category?.sport?.name?.toLowerCase() || "";
   const isTimedSport =
     sportName.includes("natación") ||
     sportName.includes("atletismo") ||
     sportName.includes("ciclismo");
 
-  const isTeam = eventCategory.category?.type === "equipo";
+  const isTeam            = eventCategory.category?.type === "equipo";
   const participantsCount = eventCategory.registrations?.length || 0;
-  const sportIconUrl = eventCategory.category?.sport?.iconUrl;
-  const sportImage = sportIconUrl ? getImageUrl(sportIconUrl) : null;
+  const sportIconUrl      = eventCategory.category?.sport?.iconUrl;
+  const sportImage        = sportIconUrl ? getImageUrl(sportIconUrl) : null;
 
-  const baseUrl = isExternalEvent
-    ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/${categoryId}`
+  const sourceLabel =
+    isHaymasterEvent ? " (Haymaster)" :
+    isSismasterEvent ? " (Sisdeu)"    :
+    "";
+
+  const baseUrl =
+    isHaymasterEvent
+      ? `/admin/haymaster-events/${externalEventId}/sports/${sportId}/categories/${categoryId}`
+    : isSismasterEvent
+      ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}/categories/${categoryId}`
     : `/admin/events/${eventId}/sports/${sportId}/categories/${categoryId}`;
-
-  const backPath = isExternalEvent
-    ? `/admin/sismaster-events/${externalEventId}/sports/${sportId}`
-    : `/admin/events/${eventId}/sports/${sportId}`;
 
   const tabs = [
     {
@@ -130,28 +144,20 @@ export function CategoryDetailLayout() {
       icon: <BarChart3 className="h-4 w-4" />,
     },
     {
-      label: "Destacados",             
+      label: "Destacados",
       to: `${baseUrl}/featured`,
       icon: <Star className="h-4 w-4" />,
     },
     // ...(isTeam
-    //   ? [
-    //       {
-    //         label: "Equipos",
-    //         to: `${baseUrl}/institutions`,
-    //         icon: <Users className="h-4 w-4" />,
-    //       },
-    //     ]
+    //   ? [{ label: "Equipos", to: `${baseUrl}/institutions`, icon: <Users className="h-4 w-4" /> }]
     //   : []),
   ];
 
-
-
   return (
     <div className="space-y-6 animate-in">
-      {/* PageHeader con botón de volver */}
+      {/* PageHeader */}
       <PageHeader
-        title={`${eventCategory.category?.name || "Categoría"} ${isExternalEvent ? "(Sisdeu)" : ""}`}
+        title={`${eventCategory.category?.name || "Categoría"}${sourceLabel}`}
         showBack
         onBack={() => navigate(backPath)}
       />
@@ -171,8 +177,7 @@ export function CategoryDetailLayout() {
                   if (parent) {
                     e.currentTarget.style.display = "none";
                     const placeholder = document.createElement("div");
-                    placeholder.className =
-                      "flex items-center justify-center w-full h-full";
+                    placeholder.className = "flex items-center justify-center w-full h-full";
                     placeholder.innerHTML = `<svg class="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>`;
                     parent.appendChild(placeholder);
                   }
@@ -185,9 +190,6 @@ export function CategoryDetailLayout() {
 
           {/* Información */}
           <div className="flex-1">
-            
-
-            {/* Metadata */}
             <div className="flex flex-wrap items-center gap-4 text-sm">
               <div className="flex items-center gap-2 text-slate-600">
                 <Trophy className="h-4 w-4 text-blue-600" />
@@ -196,17 +198,10 @@ export function CategoryDetailLayout() {
                 </span>
               </div>
               <div className="flex items-center gap-2 text-slate-600">
-                {isTeam ? (
-                  <>
-                    <Users className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium">Equipo</span>
-                  </>
-                ) : (
-                  <>
-                    <Users className="h-4 w-4 text-purple-600" />
-                    <span className="font-medium">Individual</span>
-                  </>
-                )}
+                <Users className="h-4 w-4 text-purple-600" />
+                <span className="font-medium">
+                  {isTeam ? "Equipo" : "Individual"}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-slate-600">
                 <UserPlus className="h-4 w-4 text-emerald-600" />
@@ -217,7 +212,6 @@ export function CategoryDetailLayout() {
               </div>
             </div>
 
-            {/* Descripción si existe */}
             {eventCategory.category?.description && (
               <p className="text-sm text-slate-600 mt-3 max-w-2xl">
                 {eventCategory.category.description}

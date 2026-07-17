@@ -29,7 +29,6 @@ import { FeaturedAthletesPage }     from "@/features/events/pages/FeaturedAthlet
 import { AddSportToEventPage }      from "@/features/events/pages/AddSportToEventPage";
 import { SismasterSportDetailPage } from "@/features/events/pages/SismasterSportDetailPage";
 
-
 // Sports (Gestión Global)
 import { SportTypesPage } from "@/features/sports/pages/SportTypesPage";
 import { SportsPage }     from "@/features/sports/pages/SportsPage";
@@ -51,10 +50,7 @@ export function AppRoutes() {
       <Route path="/"      element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
 
-      {/* ======================== RUTAS PROTEGIDAS ========================
-          operator añadido al wrapper principal — puede entrar al AdminLayout.
-          Las secciones de gestión global tienen su propio ProtectedOutlet.
-      =================================================================== */}
+      {/* ======================== RUTAS PROTEGIDAS ======================== */}
       <Route
         path="/admin"
         element={
@@ -65,10 +61,7 @@ export function AppRoutes() {
       >
         <Route index element={<AdminDashboard />} />
 
-        {/* ==================== EVENTOS LOCALES ====================
-            ✅ operator accede — filtra por sus permisos en el componente
-            ⛔ "sports/add" restringido a admin/moderador
-        ========================================================== */}
+        {/* ==================== EVENTOS LOCALES ==================== */}
         <Route path="events">
           <Route index element={<EventsPage />} />
 
@@ -77,7 +70,6 @@ export function AppRoutes() {
             <Route path="sports"        element={<EventSportsPage />} />
             <Route path="sports/:sportId" element={<EventSportCategoriesPage />} />
 
-            {/* ⛔ Añadir deporte: solo admin/moderador */}
             <Route
               path="sports/add"
               element={
@@ -91,25 +83,21 @@ export function AppRoutes() {
               path="sports/:sportId/categories/:categoryId"
               element={<CategoryDetailLayout />}
             >
-              <Route index              element={<CategoryInscriptionsPage />} />
-              <Route path="schedule"    element={<CategorySchedulePage />} />
-              <Route path="standings"   element={<CategoryStandingsPage />} />
+              <Route index               element={<CategoryInscriptionsPage />} />
+              <Route path="schedule"     element={<CategorySchedulePage />} />
+              <Route path="standings"    element={<CategoryStandingsPage />} />
               <Route path="institutions" element={<CategoryInstitutionsPage />} />
-              <Route path="results"     element={<SwimmingResultsPage />} />
-              <Route path="featured"    element={<FeaturedAthletesPage />} />
+              <Route path="results"      element={<SwimmingResultsPage />} />
+              <Route path="featured"     element={<FeaturedAthletesPage />} />
             </Route>
           </Route>
         </Route>
 
-        {/* ==================== EVENTOS DE SISMASTER ====================
-            ✅ operator accede — misma lógica de filtrado
-            ⛔ "add-sport" restringido a admin/moderador
-        ============================================================== */}
+        {/* ==================== EVENTOS DE SISMASTER ==================== */}
         <Route path="sismaster-events">
-          <Route path=":externalEventId/sports"           element={<EventSportsPage />} />
-          <Route path=":externalEventId/sports/:sportId"  element={<EventSportCategoriesPage />} />
+          <Route path=":externalEventId/sports"          element={<EventSportsPage />} />
+          <Route path=":externalEventId/sports/:sportId" element={<EventSportCategoriesPage />} />
 
-          {/* ⛔ Añadir deporte: solo admin/moderador */}
           <Route
             path=":externalEventId/add-sport"
             element={
@@ -123,48 +111,72 @@ export function AppRoutes() {
             path=":externalEventId/sports/:sportId/categories/:categoryId"
             element={<CategoryDetailLayout />}
           >
-            <Route index              element={<CategoryInscriptionsPage />} />
-            <Route path="schedule"    element={<CategorySchedulePage />} />
-            <Route path="standings"   element={<CategoryStandingsPage />} />
+            <Route index               element={<CategoryInscriptionsPage />} />
+            <Route path="schedule"     element={<CategorySchedulePage />} />
+            <Route path="standings"    element={<CategoryStandingsPage />} />
             <Route path="institutions" element={<CategoryInstitutionsPage />} />
-            <Route path="results"     element={<SwimmingResultsPage />} />
-            <Route path="featured"    element={<FeaturedAthletesPage />} />
+            <Route path="results"      element={<SwimmingResultsPage />} />
+            <Route path="featured"     element={<FeaturedAthletesPage />} />
           </Route>
         </Route>
 
-        {/* ==================== DEPORTES (Gestión Global) ====================
-            ⛔ operator NO puede — es configuración global del sistema
-        =================================================================== */}
+        {/* ==================== EVENTOS DE HAYMASTER ====================  ← NUEVO BLOQUE
+            ✅ operator accede — misma lógica de filtrado
+            ⛔ "add-sport" restringido a admin/moderador
+        ============================================================== */}
+        <Route path="haymaster-events">
+          <Route path=":externalEventId/sports"          element={<EventSportsPage />} />
+          <Route path=":externalEventId/sports/:sportId" element={<EventSportCategoriesPage />} />
+
+          <Route
+            path=":externalEventId/add-sport"
+            element={
+              <ProtectedOutlet requiredRoles={["admin", "moderator"]} />
+            }
+          >
+            <Route index element={<AddSportToEventPage />} />
+          </Route>
+
+          <Route
+            path=":externalEventId/sports/:sportId/categories/:categoryId"
+            element={<CategoryDetailLayout />}
+          >
+            <Route index               element={<CategoryInscriptionsPage />} />
+            <Route path="schedule"     element={<CategorySchedulePage />} />
+            <Route path="standings"    element={<CategoryStandingsPage />} />
+            <Route path="institutions" element={<CategoryInstitutionsPage />} />
+            <Route path="results"      element={<SwimmingResultsPage />} />
+            <Route path="featured"     element={<FeaturedAthletesPage />} />
+          </Route>
+        </Route>
+
+        {/* ==================== DEPORTES (Gestión Global) ==================== */}
         <Route
           path="sports"
           element={<ProtectedOutlet requiredRoles={["admin", "moderator"]} />}
         >
-          <Route index          element={<SportsPage />} />
+          <Route index             element={<SportsPage />} />
           <Route path="types"      element={<SportTypesPage />} />
           <Route path="categories" element={<CategoriesPage />} />
         </Route>
 
-        {/* ==================== INSTITUCIONES (Gestión Global) ====================
-            ⛔ operator NO puede
-        ======================================================================= */}
+        {/* ==================== INSTITUCIONES (Gestión Global) ==================== */}
         <Route
           path="institutions"
           element={<ProtectedOutlet requiredRoles={["admin", "moderator"]} />}
         >
-          <Route index          element={<InstitutionsPage />} />
-          <Route path="athletes" element={<AthletesPage />} />
-          <Route path="teams"    element={<TeamsPage />} />
+          <Route index             element={<InstitutionsPage />} />
+          <Route path="athletes"   element={<AthletesPage />} />
+          <Route path="teams"      element={<TeamsPage />} />
         </Route>
 
-        {/* ==================== EMPRESAS ====================
-            ⛔ operator NO puede — solo admin
-        ================================================== */}
+        {/* ==================== EMPRESAS ==================== */}
         <Route
           path="companies"
           element={<ProtectedOutlet requiredRoles={["admin", "moderator", "operator"]} />}
         >
-          <Route index                      element={<CompaniesPage />} />
-          <Route path=":companyId/events"   element={<EventsPage />} />
+          <Route index                    element={<CompaniesPage />} />
+          <Route path=":companyId/events" element={<EventsPage />} />
         </Route>
 
         <Route
@@ -172,8 +184,6 @@ export function AppRoutes() {
           element={<ProtectedOutlet requiredRoles={["admin"]} />}
         >
           <Route index element={<UsersPage />} />
-          
-          
         </Route>
 
         <Route
@@ -183,9 +193,7 @@ export function AppRoutes() {
           <Route index element={<OperatorPermissionsPage />} />
         </Route>
 
-        {/* ==================== CONFIGURACIÓN ====================
-            ⛔ operator NO puede
-        ======================================================= */}
+        {/* ==================== CONFIGURACIÓN ==================== */}
         <Route
           path="settings"
           element={<ProtectedOutlet requiredRoles={["admin", "moderator"]} />}

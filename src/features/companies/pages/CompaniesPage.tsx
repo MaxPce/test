@@ -5,12 +5,8 @@ import {
   Calendar,
   Plus,
   Search,
-  Pencil,
-  Trash2,
-  MapPin,
   Hash,
   X,
-  Tag,
   Grid3x3,
   List,
 } from "lucide-react";
@@ -58,10 +54,15 @@ const STATUS_OPTIONS = [
   { value: "finalizado", label: "Finalizados" },
 ];
 
+const SOURCE_OPTIONS = [
+  { value: "all", label: "Todas las fuentes" },
+  { value: "sismaster", label: "Sismaster" },
+  { value: "haymaster", label: "Haymaster" },
+];
+
 export default function CompaniesPage() {
   const navigate = useNavigate();
 
-  // ── Companies data ──
   const { data: companies = [], isLoading } = useCompanies();
   const createMutation = useCreateCompany();
   const updateMutation = useUpdateCompany();
@@ -70,28 +71,23 @@ export default function CompaniesPage() {
   const isOperator = useAuthStore((s) => s.isOperator);
   const canAccessEvent = useAuthStore((s) => s.canAccessEvent);
 
-  // ── Tab state ──
   const [activeTab, setActiveTab] = useState<"companies" | "events">(
     isOperator() ? "events" : "companies"
   );
 
-  // ── Companies UI state ──
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
   const [form, setForm] = useState<CreateCompanyData>(EMPTY_FORM);
   const [logoFile, setLogoFile] = useState<File | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ── Events tab state ──
   const [eventsSearch, setEventsSearch] = useState("");
   const [eventsStatus, setEventsStatus] = useState<EventStatus | undefined>(undefined);
+  const [eventsSource, setEventsSource] = useState<"all" | "sismaster" | "haymaster">("all");
   const [eventsViewMode, setEventsViewMode] = useState<"grid" | "list">("grid");
 
-  
-
-  // ── Sismaster events (sin filtro de company) ──
   const { data: rawSismasterEvents = [], isLoading: isLoadingSismaster } =
-  useSismasterEvents();
+    useSismasterEvents();
   const { data: rawHaymasterEvents = [], isLoading: isLoadingHaymaster } =
     useHaymasterEvents();
 
@@ -102,9 +98,8 @@ export default function CompaniesPage() {
       ...adaptSismasterEventsToLocal(rawSismasterEvents),
       ...adaptHaymasterEventsToLocal(rawHaymasterEvents),
     ],
-    [rawSismasterEvents, rawHaymasterEvents],
+    [rawSismasterEvents, rawHaymasterEvents]
   );
-
 
   const filteredEvents = useMemo(() => {
     return allEvents.filter((event) => {
@@ -112,17 +107,12 @@ export default function CompaniesPage() {
         !eventsSearch ||
         (event.name ?? "").toLowerCase().includes(eventsSearch.toLowerCase());
       const matchesStatus = !eventsStatus || event.status === eventsStatus;
-
-      // ← NUEVO: filtro de permisos para operator
-      const matchesPermission = isOperator()
-        ? canAccessEvent(event.eventId)
-        : true;
-
-      return matchesSearch && matchesStatus && matchesPermission;
+      const matchesSource = eventsSource === "all" || event.source === eventsSource;
+      const matchesPermission = isOperator() ? canAccessEvent(event.eventId) : true;
+      return matchesSearch && matchesStatus && matchesSource && matchesPermission;
     });
-  }, [allEvents, eventsSearch, eventsStatus, isOperator, canAccessEvent]);
+  }, [allEvents, eventsSearch, eventsStatus, eventsSource, isOperator, canAccessEvent]);
 
-  // ── Companies handlers ──
   const openCreate = () => {
     setEditing(null);
     setForm(EMPTY_FORM);
@@ -185,7 +175,7 @@ export default function CompaniesPage() {
       (c) =>
         (c.name ?? "").toLowerCase().includes(q) ||
         (c.ruc ?? "").toLowerCase().includes(q) ||
-        (c.address ?? "").toLowerCase().includes(q),
+        (c.address ?? "").toLowerCase().includes(q)
     );
   }, [companies, searchQuery]);
 
@@ -194,9 +184,10 @@ export default function CompaniesPage() {
     updateMutation.isPending ||
     uploadLogoMutation.isPending;
 
+  const hasActiveFilters = !!(eventsStatus || eventsSearch || eventsSource !== "all");
+
   return (
     <div className="p-6 space-y-6 animate-in">
-      {/* ── Header ── */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-medium">
@@ -210,9 +201,7 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      {/* ── Tab Toggle — reemplaza el existente ── */}
       <div className="flex bg-slate-100 rounded-2xl p-1 gap-1 w-fit">
-        {/* Tab Organizaciones: oculto para operator */}
         {!isOperator() && (
           <button
             onClick={() => setActiveTab("companies")}
@@ -245,9 +234,6 @@ export default function CompaniesPage() {
         </button>
       </div>
 
-      {/* ════════════════════════════════════════ */}
-      {/* ── TAB: ORGANIZACIONES ──               */}
-      {/* ════════════════════════════════════════ */}
       {activeTab === "companies" && (
         <>
           {isLoading && (
@@ -324,8 +310,7 @@ export default function CompaniesPage() {
                             <img
                               src={logoUrl}
                               alt={c.name}
-                              className="max-h-full max-w-full object-contain
-                     group-hover:scale-105 transition-transform duration-500 drop-shadow-sm"
+                              className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500 drop-shadow-sm"
                               onError={(e) => {
                                 e.currentTarget.style.display = "none";
                               }}
@@ -360,9 +345,7 @@ export default function CompaniesPage() {
                           variant="gradient"
                           size="md"
                           className="w-full"
-                          onClick={() =>
-                            navigate(`/admin/companies/${c.companyId}/events`)
-                          }
+                          onClick={() => navigate(`/admin/companies/${c.companyId}/events`)}
                         >
                           Ver eventos
                         </Button>
@@ -376,12 +359,8 @@ export default function CompaniesPage() {
         </>
       )}
 
-      {/* ════════════════════════════════════════ */}
-      {/* ── TAB: TODOS LOS EVENTOS SISMASTER ──  */}
-      {/* ════════════════════════════════════════ */}
       {activeTab === "events" && (
         <div className="space-y-5">
-          {/* Barra de búsqueda y filtros */}
           <Card variant="glass">
             <CardBody>
               <div className="flex flex-col lg:flex-row gap-4">
@@ -394,15 +373,24 @@ export default function CompaniesPage() {
                     variant="modern"
                   />
                 </div>
-                <div className="w-full lg:w-64">
+                <div className="w-full lg:w-52">
                   <Select
                     value={eventsStatus || ""}
                     onChange={(e) =>
                       setEventsStatus(
-                        e.target.value ? (e.target.value as EventStatus) : undefined,
+                        e.target.value ? (e.target.value as EventStatus) : undefined
                       )
                     }
                     options={STATUS_OPTIONS}
+                  />
+                </div>
+                <div className="w-full lg:w-48">
+                  <Select
+                    value={eventsSource}
+                    onChange={(e) =>
+                      setEventsSource(e.target.value as "all" | "sismaster" | "haymaster")
+                    }
+                    options={SOURCE_OPTIONS}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -423,14 +411,17 @@ export default function CompaniesPage() {
                 </div>
               </div>
 
-              {(eventsStatus || eventsSearch) && (
+              {hasActiveFilters && (
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-200">
-                  <span className="text-sm font-semibold text-slate-600">
-                    Filtros activos:
-                  </span>
+                  <span className="text-sm font-semibold text-slate-600">Filtros activos:</span>
                   {eventsStatus && (
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                       {STATUS_OPTIONS.find((o) => o.value === eventsStatus)?.label}
+                    </span>
+                  )}
+                  {eventsSource !== "all" && (
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                      {eventsSource === "sismaster" ? "Sismaster" : "Haymaster"}
                     </span>
                   )}
                   {eventsSearch && (
@@ -444,6 +435,7 @@ export default function CompaniesPage() {
                     onClick={() => {
                       setEventsStatus(undefined);
                       setEventsSearch("");
+                      setEventsSource("all");
                     }}
                   >
                     Limpiar todo
@@ -453,14 +445,12 @@ export default function CompaniesPage() {
             </CardBody>
           </Card>
 
-          {/* Cargando */}
           {isLoadingEvents && (
             <div className="flex justify-center items-center h-64">
               <Spinner size="lg" label="Cargando eventos..." />
             </div>
           )}
 
-          {/* Estado vacío */}
           {!isLoadingEvents && filteredEvents.length === 0 && (
             <Card variant="bordered" className="py-14">
               <div className="flex flex-col items-center text-center gap-3">
@@ -470,18 +460,19 @@ export default function CompaniesPage() {
                 <div>
                   <p className="text-base font-bold text-slate-900">Sin eventos</p>
                   <p className="text-sm text-slate-500 mt-1">
-                    {eventsSearch || eventsStatus
+                    {hasActiveFilters
                       ? "No se encontraron eventos con los filtros aplicados."
                       : "No hay eventos registrados."}
                   </p>
                 </div>
-                {(eventsSearch || eventsStatus) && (
+                {hasActiveFilters && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
                       setEventsSearch("");
                       setEventsStatus(undefined);
+                      setEventsSource("all");
                     }}
                   >
                     Limpiar filtros
@@ -491,7 +482,6 @@ export default function CompaniesPage() {
             </Card>
           )}
 
-          {/* Grid / List de eventos */}
           {!isLoadingEvents && filteredEvents.length > 0 && (
             <div
               className={
@@ -513,7 +503,6 @@ export default function CompaniesPage() {
         </div>
       )}
 
-      {/* ── Modal (sin cambios) ── */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <Card variant="elevated" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -541,8 +530,7 @@ export default function CompaniesPage() {
                     required
                     value={form.name ?? ""}
                     onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft
-                               focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                 </div>
                 <div>
@@ -551,8 +539,7 @@ export default function CompaniesPage() {
                     type="text"
                     value={form.ruc ?? ""}
                     onChange={(e) => setForm((prev) => ({ ...prev, ruc: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft
-                               focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                 </div>
                 <div>
@@ -561,8 +548,7 @@ export default function CompaniesPage() {
                     type="text"
                     value={form.address ?? ""}
                     onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft
-                               focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                 </div>
                 <div>
@@ -579,8 +565,7 @@ export default function CompaniesPage() {
                       }))
                     }
                     placeholder="Ej: FEDUP, FISU, FPV"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft
-                               focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm shadow-soft focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
                   />
                 </div>
                 <ImageUpload

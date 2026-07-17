@@ -9,7 +9,6 @@ import { RegistrationForm } from "../../components/RegistrationForm";
 import { TeamCreationForm } from "../../components/TeamCreationForm";
 import { BulkRegistrationModal } from "../../components/BulkRegistrationModal";
 import { RegistrationsList } from "../../components/RegistrationsList";
-import { useParams } from "react-router-dom";
 import {
   useCreateRegistration,
   useDeleteRegistration,
@@ -26,37 +25,21 @@ export function CategoryInscriptionsPage() {
   }>();
 
   const [isIndividualModalOpen, setIsIndividualModalOpen] = useState(false);
-  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isTeamModalOpen, setIsTeamModalOpen]             = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen]             = useState(false);
 
   const createRegistrationMutation = useCreateRegistration();
   const deleteRegistrationMutation = useDeleteRegistration();
-  const createTeamMutation = useCreateTeam();
-  const addTeamMemberMutation = useAddTeamMember();
+  const createTeamMutation         = useCreateTeam();
+  const addTeamMemberMutation      = useAddTeamMember();
 
   const isTeamCategory = eventCategory.category?.type === "equipo";
-  const registrations = eventCategory.registrations || [];
+  const registrations  = eventCategory.registrations || [];
 
   const hasSismasterIntegration = !!eventCategory.externalEventId;
-
-  const stats = {
-    total: registrations.length,
-    male: registrations.filter(
-      (r) =>
-        r.athlete?.gender === "M" ||
-        r.team?.members?.some((m) => m.athlete?.gender === "M"),
-    ).length,
-    female: registrations.filter(
-      (r) =>
-        r.athlete?.gender === "F" ||
-        r.team?.members?.some((m) => m.athlete?.gender === "F"),
-    ).length,
-    institutions: new Set(
-      registrations.map(
-        (r) => r.athlete?.institutionId || r.team?.institutionId,
-      ),
-    ).size,
-  };
+  const hasHaymasterIntegration = !!eventCategory.haymasterEventId;
+  const hasExternalIntegration  = hasSismasterIntegration || hasHaymasterIntegration;
+  const externalEventIdForModal  = eventCategory.externalEventId ?? eventCategory.haymasterEventId ?? undefined;
 
   const handleIndividualRegistration = async (data: any) => {
     await createRegistrationMutation.mutateAsync(data);
@@ -70,23 +53,17 @@ export function CategoryInscriptionsPage() {
     members: { athleteId: number; rol: string }[];
   }) => {
     try {
-      
-
       const team = await createTeamMutation.mutateAsync({
-        name: data.teamName, 
-        institutionId: data.institutionId,  
-        categoryId: data.categoryId, 
+        name: data.teamName,
+        institutionId: data.institutionId,
+        categoryId: data.categoryId,
       });
-
 
       await Promise.all(
         data.members.map((member) =>
           addTeamMemberMutation.mutateAsync({
             teamId: team.teamId,
-            data: {
-              athleteId: member.athleteId,
-              rol: member.rol,
-            },
+            data: { athleteId: member.athleteId, rol: member.rol },
           }),
         ),
       );
@@ -99,10 +76,9 @@ export function CategoryInscriptionsPage() {
       setIsTeamModalOpen(false);
     } catch (error) {
       console.error("Error al crear equipo:", error);
-      console.error("Detalles del error:", error.response?.data);  
+      console.error("Detalles del error:", error.response?.data);
     }
   };
-
 
   const handleDeleteRegistration = async (registrationId: number) => {
     await deleteRegistrationMutation.mutateAsync(registrationId);
@@ -115,7 +91,7 @@ export function CategoryInscriptionsPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      {/* Header mejorado */}
+      {/* Header */}
       <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 shadow-strong text-white">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Info */}
@@ -148,7 +124,7 @@ export function CategoryInscriptionsPage() {
               </Button>
             ) : (
               <>
-                {hasSismasterIntegration && (
+                {hasExternalIntegration && (
                   <Button
                     onClick={() => setIsBulkModalOpen(true)}
                     variant="outline"
@@ -159,13 +135,21 @@ export function CategoryInscriptionsPage() {
                     Inscripción de Atletas
                   </Button>
                 )}
+                {/* Botón individual siempre disponible */}
+                <Button
+                  onClick={() => setIsIndividualModalOpen(true)}
+                  variant="default"
+                  size="lg"
+                  icon={<Plus className="h-5 w-5" />}
+                  className="bg-white text-blue-600 hover:bg-white/90"
+                >
+                  Inscribir Atleta
+                </Button>
               </>
             )}
           </div>
         </div>
       </div>
-
-      
 
       {/* Lista de Inscripciones */}
       {registrations.length === 0 ? (
@@ -178,13 +162,13 @@ export function CategoryInscriptionsPage() {
           action={{
             label: isTeamCategory
               ? "Crear Primer Equipo"
-              : hasSismasterIntegration
+              : hasExternalIntegration
                 ? "Inscribir Atletas"
                 : "Inscribir Primer Atleta",
             onClick: () =>
               isTeamCategory
                 ? setIsTeamModalOpen(true)
-                : hasSismasterIntegration
+                : hasExternalIntegration
                   ? setIsBulkModalOpen(true)
                   : setIsIndividualModalOpen(true),
           }}
@@ -196,14 +180,14 @@ export function CategoryInscriptionsPage() {
               registrations={registrations}
               onDelete={handleDeleteRegistration}
               isDeleting={deleteRegistrationMutation.isPending}
-              eventId={eventCategory.externalEventId ?? undefined}
-              eventCategory={eventCategory} 
+              eventId={externalEventIdForModal}
+              eventCategory={eventCategory}
             />
           </CardBody>
         </Card>
       )}
 
-      {/* Modal para Inscripción Individual */}
+      {/* Modal: Inscripción Individual */}
       <Modal
         isOpen={isIndividualModalOpen}
         onClose={() => setIsIndividualModalOpen(false)}
@@ -218,7 +202,7 @@ export function CategoryInscriptionsPage() {
         />
       </Modal>
 
-      {/* Modal para Crear Equipo */}
+      {/* Modal: Crear Equipo */}
       <Modal
         isOpen={isTeamModalOpen}
         onClose={() => setIsTeamModalOpen(false)}
@@ -226,8 +210,8 @@ export function CategoryInscriptionsPage() {
         size="lg"
       >
         <TeamCreationForm
-          eventId={eventCategory.externalEventId!} 
-          eventCategory={eventCategory} 
+          eventId={externalEventIdForModal!}
+          eventCategory={eventCategory}
           categoryId={eventCategory.categoryId}
           onSubmit={handleTeamCreation}
           onCancel={() => setIsTeamModalOpen(false)}
@@ -235,13 +219,13 @@ export function CategoryInscriptionsPage() {
         />
       </Modal>
 
-      
-      {!isTeamCategory && hasSismasterIntegration && (
+      {/* Modal: Inscripción masiva (Sismaster o Haymaster) */}
+      {!isTeamCategory && hasExternalIntegration && (
         <BulkRegistrationModal
           isOpen={isBulkModalOpen}
           onClose={() => setIsBulkModalOpen(false)}
           eventCategory={eventCategory}
-          eventId={eventCategory.externalEventId!}
+          eventId={externalEventIdForModal!}
         />
       )}
     </div>

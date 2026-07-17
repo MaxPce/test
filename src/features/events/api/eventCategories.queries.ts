@@ -123,3 +123,34 @@ export const useRegisterEventCategories = () => {
     },
   });
 };
+
+export const useHaymasterEventCategories = (externalEventId?: number) => {
+  return useQuery({
+    queryKey: ["haymaster-event-categories", externalEventId],
+    queryFn: async () => {
+      if (!externalEventId) return [];
+      const { data } = await apiClient.get<EventCategory[]>(
+        `/events/haymaster/${externalEventId}/categories`,
+      );
+      return data;
+    },
+    enabled: !!externalEventId,
+    staleTime: 0,
+  });
+};
+
+
+export const useRegisterHaymasterEventCategories = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (haymasterEventId: number) =>
+      apiClient
+        .post(`/events/haymaster/${haymasterEventId}/register-categories`)
+        .then((r) => r.data as RegisterCategoriesResult),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["haymaster-event-categories", data.sismasterEventId],
+      });
+    },
+  });
+};
