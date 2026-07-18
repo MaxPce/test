@@ -26,7 +26,8 @@ interface BulkRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventCategory: EventCategory;
-  eventId: number;           // ID interno (para sismaster y mutations)
+  eventId: number;
+  haymasterEventId?: number;   // ← nuevo
   source: "sismaster" | "haymaster";
 }
 
@@ -54,6 +55,7 @@ export function BulkRegistrationModal({
   onClose,
   eventCategory,
   eventId,
+  haymasterEventId,   
   source,
 }: BulkRegistrationModalProps) {
   const [selectedAthletes, setSelectedAthletes] = useState<number[]>([]);
@@ -66,7 +68,6 @@ export function BulkRegistrationModal({
   const localSportId = eventCategory.category?.sport?.sportId;
   const categoryName = eventCategory.category?.name ?? "";
   const sportName = eventCategory.category?.sport?.name;
-  const haymasterEventId = eventCategory.haymasterEventId ?? 0;
   const categoryGender = eventCategory.category?.gender as "M" | "F" | undefined;
 
   const sourceLabel = source === "haymaster" ? "Haymaster" : "Sismaster";

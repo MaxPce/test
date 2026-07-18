@@ -239,6 +239,7 @@ export function CategoryInscriptionsPage() {
           onClose={() => setIsBulkModalOpen(false)}
           eventCategory={eventCategory}
           eventId={externalEventIdForModal!}
+          haymasterEventId={eventCategory.haymasterEventId ?? undefined}  // ← añadir
           source={externalSource!}
         />
       )}
