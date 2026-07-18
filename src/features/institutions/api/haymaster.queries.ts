@@ -357,7 +357,7 @@ export const useHaymasterAthletesByCategory = (
     queryFn: async () => {
       const { data } = await apiClient.get<HaymasterAthleteByCategoryDto[]>(
         HAYMASTER_ENDPOINTS.ATHLETES.BY_CATEGORY_LOCAL,
-        { params: { sismasterEventId: haymasterEventId, localSportId, idparam } },
+        { params: { haymasterEventId, localSportId, idparam } }
       );
       return data;
     },
