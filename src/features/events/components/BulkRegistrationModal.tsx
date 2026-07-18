@@ -5,13 +5,18 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
-import { Search, Filter, X, AlertCircle, Tag } from "lucide-react";
+import { Search, Filter, X, AlertCircle } from "lucide-react";
 import {
   useSportCategoriesByEvent,
   useAthletesByCategory,
-  useAccreditedAthletes,       
+  useAccreditedAthletes,
   type SportCategoryParam,
 } from "@/features/institutions/api/sismaster.queries";
+import {
+  useHaymasterSportCategoriesByEvent,
+  useHaymasterAthletesByCategory,
+  useHaymasterAccreditedAthletes,
+} from "@/features/institutions/api/haymaster.queries";
 import { useBulkRegistrationFromSismaster } from "../api/registrations.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { EventCategory } from "../types";
@@ -20,13 +25,10 @@ interface BulkRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventCategory: EventCategory;
-  eventId: number; // sismaster event ID (ej: 200)
+  eventId: number;
+  source: "sismaster" | "haymaster";
 }
 
-/**
- * Intenta encontrar la categoría de sismaster que coincida con el nombre local.
- * Normaliza espacios y mayúsculas para mayor tolerancia.
- */
 function findMatchingParam(
   params: SportCategoryParam[],
   localName: string,
@@ -34,130 +36,158 @@ function findMatchingParam(
   const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
   const target = normalize(localName);
 
-  // 1. Exacto
   const exact = params.find((p) => normalize(p.name) === target);
   if (exact) return exact;
 
-  
   const contained = params.find((p) => {
     const pName = normalize(p.name);
     return pName.includes(target) && Math.abs(pName.length - target.length) <= 8;
   });
   if (contained) return contained;
 
-  
   return undefined;
 }
-
 
 export function BulkRegistrationModal({
   isOpen,
   onClose,
   eventCategory,
   eventId,
+  source,
 }: BulkRegistrationModalProps) {
   const [selectedAthletes, setSelectedAthletes] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedInstitution, setSelectedInstitution] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
-
-  // idparam seleccionado manualmente (override del auto-match)
   const [manualIdparam, setManualIdparam] = useState<number | null>(null);
   const [mode, setMode] = useState<"byCategory" | "accredited">("byCategory");
 
   const localSportId = eventCategory.category?.sport?.sportId;
-  const categoryName  = eventCategory.category?.name ?? "";
-  const sportName     = eventCategory.category?.sport?.name;
+  const categoryName = eventCategory.category?.name ?? "";
+  const sportName = eventCategory.category?.sport?.name;
 
-  // ── 1. Obtener categorías del deporte para este evento ──────────────────
+  const sourceLabel = source === "haymaster" ? "Haymaster" : "Sismaster";
+
   const {
-    data: sismasterCategories = [],
-    isLoading: isLoadingCategories,
+    data: sismasterCategoriesData = [],
+    isLoading: isLoadingSismasterCategories,
   } = useSportCategoriesByEvent(
     localSportId!,
     eventId,
-    isOpen && !!localSportId,
+    isOpen && !!localSportId && source === "sismaster",
   );
 
-  
+  const {
+    data: haymasterCategoriesData = [],
+    isLoading: isLoadingHaymasterCategories,
+  } = useHaymasterSportCategoriesByEvent(
+    localSportId!,
+    eventId,
+    isOpen && !!localSportId && source === "haymaster",
+  );
 
-  // ── 2. Auto-match por nombre cuando llegan las categorías ───────────────
+  const externalCategories =
+    source === "haymaster" ? haymasterCategoriesData : sismasterCategoriesData;
+
+  const isLoadingCategories =
+    source === "haymaster"
+      ? isLoadingHaymasterCategories
+      : isLoadingSismasterCategories;
+
   const autoMatchedParam = useMemo(
-    () => findMatchingParam(sismasterCategories, categoryName),
-    [sismasterCategories, categoryName],
+    () => findMatchingParam(externalCategories, categoryName),
+    [externalCategories, categoryName],
   );
 
-  // Resetear override manual si cambia la categoría o el modal se abre
   useEffect(() => {
     if (isOpen) {
       setManualIdparam(null);
-      setMode("byCategory"); 
+      setMode("byCategory");
     }
   }, [isOpen, eventCategory.eventCategoryId]);
 
-
-  // El idparam efectivo: manual > auto-match
   const activeParam: SportCategoryParam | undefined = useMemo(() => {
     if (manualIdparam !== null) {
-      return sismasterCategories.find((p) => p.idparam === manualIdparam);
+      return externalCategories.find((p) => p.idparam === manualIdparam);
     }
     return autoMatchedParam;
-  }, [manualIdparam, autoMatchedParam, sismasterCategories]);
+  }, [manualIdparam, autoMatchedParam, externalCategories]);
 
-  const matchIsAuto = manualIdparam === null && !!autoMatchedParam;
-
-  // ── 3. Cargar atletas de la categoría resuelta ──────────────────────────
   const {
-    data: athletesFromSismaster = [],
-    isLoading: isLoadingAthletes,
-    error,
+    data: sismasterAthletesByCategory = [],
+    isLoading: isLoadingSismasterAthletes,
+    error: sismasterAthletesError,
   } = useAthletesByCategory(
     eventId,
     localSportId!,
     activeParam?.idparam ?? 0,
-    isOpen && !!localSportId && !!activeParam,
+    isOpen && !!localSportId && !!activeParam && source === "sismaster",
   );
 
   const {
-      data: accreditedAthletes = [],
-      isLoading: isLoadingAccredited,
-      error: errorAccredited,
-    } = useAccreditedAthletes(
-      { idevent: eventId, localSportId },
-      isOpen && mode === "accredited" && !!localSportId,
-    );
+    data: haymasterAthletesByCategory = [],
+    isLoading: isLoadingHaymasterAthletes,
+    error: haymasterAthletesError,
+  } = useHaymasterAthletesByCategory(
+    eventId,
+    localSportId!,
+    activeParam?.idparam ?? 0,
+    isOpen && !!localSportId && !!activeParam && source === "haymaster",
+  );
 
+  const athletesFromExternal =
+    source === "haymaster" ? haymasterAthletesByCategory : sismasterAthletesByCategory;
 
-  const activeAthletes = mode === "byCategory" ? athletesFromSismaster : accreditedAthletes;
-  const activeError    = mode === "byCategory" ? error : errorAccredited;
+  const isLoadingAthletes =
+    source === "haymaster" ? isLoadingHaymasterAthletes : isLoadingSismasterAthletes;
+
+  const error = source === "haymaster" ? haymasterAthletesError : sismasterAthletesError;
+
+  const {
+    data: sismasterAccreditedAthletes = [],
+    isLoading: isLoadingSismasterAccredited,
+    error: sismasterAccreditedError,
+  } = useAccreditedAthletes(
+    { idevent: eventId, localSportId },
+    isOpen && mode === "accredited" && !!localSportId && source === "sismaster",
+  );
+
+  const {
+    data: haymasterAccreditedAthletes = [],
+    isLoading: isLoadingHaymasterAccredited,
+    error: haymasterAccreditedError,
+  } = useHaymasterAccreditedAthletes(
+    { idevent: eventId, localSportId },
+    isOpen && mode === "accredited" && !!localSportId && source === "haymaster",
+  );
+
+  const accreditedAthletes =
+    source === "haymaster" ? haymasterAccreditedAthletes : sismasterAccreditedAthletes;
+
+  const isLoadingAccredited =
+    source === "haymaster" ? isLoadingHaymasterAccredited : isLoadingSismasterAccredited;
+
+  const errorAccredited =
+    source === "haymaster" ? haymasterAccreditedError : sismasterAccreditedError;
+
+  const activeAthletes = mode === "byCategory" ? athletesFromExternal : accreditedAthletes;
+  const activeError = mode === "byCategory" ? error : errorAccredited;
   const isLoading =
-    mode === "byCategory"
-      ? isLoadingCategories || isLoadingAthletes
-      : isLoadingAccredited;
-
-
+    mode === "byCategory" ? isLoadingCategories || isLoadingAthletes : isLoadingAccredited;
 
   const bulkMutation = useBulkRegistrationFromSismaster();
 
   const registeredAthleteIds =
-    eventCategory.registrations
-      ?.map((r) => r.external_athlete_id)
-      .filter(Boolean) ?? [];
+    eventCategory.registrations?.map((r) => r.external_athlete_id).filter(Boolean) ?? [];
 
-  // ── 4. Instituciones para el filtro ────────────────────────────────────
   const institutions = useMemo(() => {
     return Array.from(
       new Set(activeAthletes.map((a) => a.institutionName).filter(Boolean)),
     ).sort();
   }, [activeAthletes]);
 
-
-  // ── 5. Filtrado local ───────────────────────────────────────────────────
   const filteredAthletes = useMemo(() => {
-    let filtered = activeAthletes.filter(
-      (a) => !registeredAthleteIds.includes(a.idperson),
-    );
-
+    let filtered = activeAthletes.filter((a) => !registeredAthleteIds.includes(a.idperson));
 
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
@@ -170,15 +200,12 @@ export function BulkRegistrationModal({
     }
 
     if (selectedInstitution !== "all") {
-      filtered = filtered.filter(
-        (a) => a.institutionName === selectedInstitution,
-      );
+      filtered = filtered.filter((a) => a.institutionName === selectedInstitution);
     }
 
     return filtered;
   }, [activeAthletes, registeredAthleteIds, searchTerm, selectedInstitution]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────
   const handleToggleAthlete = (athleteId: number) =>
     setSelectedAthletes((prev) =>
       prev.includes(athleteId) ? prev.filter((id) => id !== athleteId) : [...prev, athleteId],
@@ -214,17 +241,16 @@ export function BulkRegistrationModal({
   const handleClose = () => {
     setSelectedAthletes([]);
     setManualIdparam(null);
-    setMode("byCategory"); 
+    setMode("byCategory");
     handleClearFilters();
     onClose();
   };
-
 
   const hasActiveFilters = searchTerm.trim() !== "" || selectedInstitution !== "all";
 
   const categoryOptions = [
     { value: "", label: "— Seleccionar categoría —" },
-    ...sismasterCategories.map((p) => ({
+    ...externalCategories.map((p) => ({
       value: String(p.idparam),
       label: `${p.name} (${p.athleteCount} atletas)`,
     })),
@@ -236,26 +262,15 @@ export function BulkRegistrationModal({
   ];
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Inscripción de Atletas"
-      size="lg"
-    >
+    <Modal isOpen={isOpen} onClose={handleClose} title="Inscripción de Atletas" size="lg">
       <div className="space-y-4">
-
-        {/* Header con info de categoría */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-bold text-blue-900 text-lg">
-                {categoryName}
-              </h4>
+              <h4 className="font-bold text-blue-900 text-lg">{categoryName}</h4>
               <p className="text-sm text-blue-700 mt-1">
                 {sportName}
-                {eventCategory.category?.type === "individual"
-                  ? " • Individual"
-                  : " • Equipo"}
+                {eventCategory.category?.type === "individual" ? " • Individual" : " • Equipo"}
               </p>
             </div>
             <Badge variant="primary" size="lg">
@@ -264,14 +279,11 @@ export function BulkRegistrationModal({
           </div>
         </div>
 
-        {/* Toggle de modo */}
         <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
           <button
             onClick={() => { setMode("byCategory"); setSelectedAthletes([]); }}
             className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              mode === "byCategory"
-                ? "bg-white shadow text-blue-700"
-                : "text-gray-500 hover:text-gray-700"
+              mode === "byCategory" ? "bg-white shadow text-blue-700" : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Por categoría
@@ -279,20 +291,17 @@ export function BulkRegistrationModal({
           <button
             onClick={() => { setMode("accredited"); setSelectedAthletes([]); }}
             className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              mode === "accredited"
-                ? "bg-white shadow text-blue-700"
-                : "text-gray-500 hover:text-gray-700"
+              mode === "accredited" ? "bg-white shadow text-blue-700" : "text-gray-500 hover:text-gray-700"
             }`}
           >
             Acreditados (sin categoría)
           </button>
         </div>
 
-        {/* Selector de categoría Sismaster */}
         {mode === "byCategory" && (
           <div className="space-y-1.5">
             <label className="block text-sm font-semibold text-gray-700">
-              Categoría Sismaster
+              Categoría {sourceLabel}
             </label>
 
             {isLoadingCategories ? (
@@ -300,7 +309,7 @@ export function BulkRegistrationModal({
                 <Spinner size="sm" />
                 <span>Cargando categorías...</span>
               </div>
-            ) : sismasterCategories.length === 0 ? (
+            ) : externalCategories.length === 0 ? (
               <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>No se encontraron categorías para este deporte y evento.</span>
@@ -309,15 +318,10 @@ export function BulkRegistrationModal({
               <>
                 <Select
                   value={String(activeParam?.idparam ?? "")}
-                  onChange={(e) =>
-                    setManualIdparam(e.target.value ? Number(e.target.value) : null)
-                  }
+                  onChange={(e) => setManualIdparam(e.target.value ? Number(e.target.value) : null)}
                   options={categoryOptions}
                 />
 
-                
-
-                {/* Advertencia si no hubo auto-match */}
                 {!activeParam && !isLoadingCategories && (
                   <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                     <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
@@ -331,7 +335,7 @@ export function BulkRegistrationModal({
             )}
           </div>
         )}
-        {/* Estado de carga o error de atletas */}
+
         {(mode === "byCategory" && !activeParam) ? null : isLoading ? (
           <div className="flex justify-center py-8">
             <Spinner size="lg" label="Cargando atletas de la categoría..." />
@@ -348,7 +352,6 @@ export function BulkRegistrationModal({
           </div>
         ) : (
           <>
-            {/* Filtros */}
             <div className="space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -405,7 +408,6 @@ export function BulkRegistrationModal({
               </div>
             </div>
 
-            {/* Lista de atletas */}
             {filteredAthletes.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <p className="text-lg font-medium mb-2">No hay atletas disponibles</p>
@@ -462,14 +464,12 @@ export function BulkRegistrationModal({
                             <p className="text-sm text-gray-600 truncate mt-0.5">
                               {athlete.institutionName || "Sin institución"}
                             </p>
-                            
                             {athlete.docnumber && (
                               <p className="text-xs text-gray-400 mt-0.5 font-mono">
                                 {athlete.docnumber}
                               </p>
                             )}
                           </div>
-
                         </div>
                       </label>
                     );
@@ -480,7 +480,6 @@ export function BulkRegistrationModal({
           </>
         )}
 
-        {/* Footer */}
         <div className="flex justify-between items-center gap-3 pt-4 border-t border-gray-200">
           <div className="text-sm text-gray-600">
             {selectedAthletes.length > 0 && (
@@ -503,7 +502,6 @@ export function BulkRegistrationModal({
             </Button>
           </div>
         </div>
-
       </div>
     </Modal>
   );

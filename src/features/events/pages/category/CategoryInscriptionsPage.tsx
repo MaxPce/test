@@ -38,8 +38,21 @@ export function CategoryInscriptionsPage() {
 
   const hasSismasterIntegration = !!eventCategory.externalEventId;
   const hasHaymasterIntegration = !!eventCategory.haymasterEventId;
-  const hasExternalIntegration  = hasSismasterIntegration || hasHaymasterIntegration;
-  const externalEventIdForModal  = eventCategory.externalEventId ?? eventCategory.haymasterEventId ?? undefined;
+  const hasExternalIntegration = hasSismasterIntegration || hasHaymasterIntegration;
+
+  const externalSource: "sismaster" | "haymaster" | undefined =
+    hasSismasterIntegration
+      ? "sismaster"
+      : hasHaymasterIntegration
+        ? "haymaster"
+        : undefined;
+
+  const externalEventIdForModal =
+    externalSource === "sismaster"
+      ? eventCategory.externalEventId
+      : externalSource === "haymaster"
+        ? eventCategory.haymasterEventId
+        : undefined;
 
   const handleIndividualRegistration = async (data: any) => {
     await createRegistrationMutation.mutateAsync(data);
@@ -226,6 +239,7 @@ export function CategoryInscriptionsPage() {
           onClose={() => setIsBulkModalOpen(false)}
           eventCategory={eventCategory}
           eventId={externalEventIdForModal!}
+          source={externalSource!}
         />
       )}
     </div>

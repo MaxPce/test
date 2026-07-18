@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 
+
 // ==================== TIPOS ====================
 // Misma forma que SismasterEvent — el backend de haymaster devuelve la misma estructura
+
 
 export interface HaymasterEvent {
   idevent: number;
@@ -21,10 +23,12 @@ export interface HaymasterEvent {
   updated_at?: string;
 }
 
+
 export interface HaymasterSport {
   idsport: number;
   namesport: string;
 }
+
 
 export interface HaymasterInstitution {
   idinstitution: number;
@@ -34,6 +38,7 @@ export interface HaymasterInstitution {
   avatar?: string;
   country?: string;
 }
+
 
 export interface HaymasterPerson {
   idperson: number;
@@ -54,6 +59,7 @@ export interface HaymasterPerson {
   mstatus: number;
 }
 
+
 export interface HaymasterAthlete {
   idperson: number;
   firstname: string;
@@ -72,6 +78,7 @@ export interface HaymasterAthlete {
   age?: number | null;
 }
 
+
 export interface HaymasterSportCategoryParam {
   idparam: number;
   code: string;
@@ -79,6 +86,7 @@ export interface HaymasterSportCategoryParam {
   idsport: number;
   athleteCount: number;
 }
+
 
 export interface HaymasterAthleteByCategoryDto extends HaymasterAthlete {
   idacreditation: number;
@@ -90,7 +98,9 @@ export interface HaymasterAthleteByCategoryDto extends HaymasterAthlete {
   gender_text: string;
 }
 
+
 // ==================== ENDPOINTS ====================
+
 
 const HAYMASTER_ENDPOINTS = {
   EVENTS: {
@@ -117,7 +127,9 @@ const HAYMASTER_ENDPOINTS = {
   },
 };
 
+
 // ==================== QUERY KEYS ====================
+
 
 export const haymasterKeys = {
   all: ["haymaster"] as const,
@@ -160,7 +172,9 @@ export const haymasterKeys = {
   },
 };
 
+
 // ==================== HOOKS ====================
+
 
 export const useHaymasterEvents = () => {
   return useQuery({
@@ -174,6 +188,7 @@ export const useHaymasterEvents = () => {
     staleTime: 1000 * 60 * 10,
   });
 };
+
 
 export const useHaymasterEvent = (id: number, enabled = true) => {
   return useQuery({
@@ -189,6 +204,7 @@ export const useHaymasterEvent = (id: number, enabled = true) => {
   });
 };
 
+
 export const useHaymasterSports = () => {
   return useQuery({
     queryKey: haymasterKeys.sports.list(),
@@ -202,6 +218,7 @@ export const useHaymasterSports = () => {
   });
 };
 
+
 export const useHaymasterInstitutions = () => {
   return useQuery({
     queryKey: haymasterKeys.institutions.list(),
@@ -214,6 +231,7 @@ export const useHaymasterInstitutions = () => {
     staleTime: 1000 * 60 * 5,
   });
 };
+
 
 export const useSearchHaymasterAthletes = (searchTerm: string, enabled = true) => {
   return useQuery({
@@ -230,6 +248,7 @@ export const useSearchHaymasterAthletes = (searchTerm: string, enabled = true) =
   });
 };
 
+
 interface AccreditedHaymasterAthletesOptions {
   idevent: number;
   idinstitution?: number;
@@ -237,7 +256,10 @@ interface AccreditedHaymasterAthletesOptions {
   localSportId?: number;
 }
 
-export const useAccreditedHaymasterAthletes = (
+
+// ⚠️ ÚNICO CAMBIO: renombrado de useAccreditedHaymasterAthletes → useHaymasterAccreditedAthletes
+// para mantener consistencia con los otros hooks (useHaymaster... como prefijo)
+export const useHaymasterAccreditedAthletes = (
   options: AccreditedHaymasterAthletesOptions,
   enabled = true,
 ) => {
@@ -260,6 +282,7 @@ export const useAccreditedHaymasterAthletes = (
   });
 };
 
+
 export const useHaymasterAthlete = (id: number, enabled = true) => {
   return useQuery({
     queryKey: haymasterKeys.athletes.detail(id),
@@ -273,6 +296,7 @@ export const useHaymasterAthlete = (id: number, enabled = true) => {
     staleTime: 1000 * 60 * 5,
   });
 };
+
 
 export const useHaymasterAthleteByDocument = (docNumber: string, enabled = true) => {
   return useQuery({
@@ -288,6 +312,7 @@ export const useHaymasterAthleteByDocument = (docNumber: string, enabled = true)
   });
 };
 
+
 export const useHaymasterAthletesCount = () => {
   return useQuery({
     queryKey: haymasterKeys.athletes.count(),
@@ -300,6 +325,7 @@ export const useHaymasterAthletesCount = () => {
     staleTime: 1000 * 60 * 10,
   });
 };
+
 
 export const useHaymasterSportCategoriesByEvent = (
   localSportId: number,
@@ -318,6 +344,7 @@ export const useHaymasterSportCategoriesByEvent = (
     staleTime: 1000 * 60 * 2,
   });
 };
+
 
 export const useHaymasterAthletesByCategory = (
   haymasterEventId: number,
