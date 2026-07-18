@@ -18,7 +18,7 @@ import {
   useHaymasterAccreditedAthletes,
   type HaymasterSportCategoryParam, 
 } from "@/features/institutions/api/haymaster.queries";
-import { useBulkRegistrationFromSismaster } from "../api/registrations.mutations";
+import { useBulkRegistrationFromHaymaster, useBulkRegistrationFromSismaster } from "../api/registrations.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { EventCategory } from "../types";
 
@@ -187,7 +187,10 @@ export function BulkRegistrationModal({
   const isLoading =
     mode === "byCategory" ? isLoadingCategories || isLoadingAthletes : isLoadingAccredited;
 
-  const bulkMutation = useBulkRegistrationFromSismaster();
+  const bulkMutationSismaster = useBulkRegistrationFromSismaster();
+  const bulkMutationHaymaster = useBulkRegistrationFromHaymaster();
+  const bulkMutation = source === "haymaster" ? bulkMutationHaymaster : bulkMutationSismaster;
+
 
   const registeredAthleteIds =
     eventCategory.registrations?.map((r) => r.external_athlete_id).filter(Boolean) ?? [];
@@ -199,7 +202,11 @@ export function BulkRegistrationModal({
   }, [activeAthletes]);
 
   const filteredAthletes = useMemo(() => {
-    let filtered = activeAthletes.filter((a) => !registeredAthleteIds.includes(a.idperson));
+    // Deduplicar primero
+    const unique = activeAthletes.filter(
+      (a, idx, self) => self.findIndex(b => b.idperson === a.idperson) === idx
+    );
+    let filtered = unique.filter((a) => !registeredAthleteIds.includes(a.idperson));
 
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();

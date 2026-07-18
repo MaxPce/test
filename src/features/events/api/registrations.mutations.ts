@@ -135,3 +135,29 @@ export const useBulkRegistrationFromSismaster = () => {
     },
   });
 };
+
+export const useBulkRegistrationFromHaymaster = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      eventCategoryId: number;
+      external_athlete_ids: number[];
+    }) => {
+      console.log("🌐 [Mutation Haymaster] Llamando al backend con:", data);
+      const response = await apiClient.post(
+        "/events/registrations/bulk-haymaster",
+        data,
+      );
+      return response.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: ["haymaster-event-categories"] });
+      await queryClient.refetchQueries({ queryKey: eventCategoryKeys.all, type: "active" });
+    },
+    onError: (error) => {
+      console.error("[Mutation Haymaster] Error:", error);
+    },
+  });
+};
