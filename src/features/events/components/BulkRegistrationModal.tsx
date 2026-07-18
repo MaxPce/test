@@ -86,8 +86,8 @@ export function BulkRegistrationModal({
     isLoading: isLoadingHaymasterCategories,
   } = useHaymasterSportCategoriesByEvent(
     localSportId!,
-    haymasterEventId,      // ← FIX
-    isOpen && !!localSportId && source === "haymaster",
+    haymasterEventId ?? 0,      // ← FIX
+    isOpen && !!localSportId && !!haymasterEventId && source === "haymaster"
   );
 
   const externalCategories =
@@ -133,11 +133,12 @@ export function BulkRegistrationModal({
     isLoading: isLoadingHaymasterAthletes,
     error: haymasterAthletesError,
   } = useHaymasterAthletesByCategory(
-    haymasterEventId,      // ← FIX
+    haymasterEventId ?? 0,
     localSportId!,
     activeParam?.idparam ?? 0,
-    isOpen && !!localSportId && !!activeParam && source === "haymaster",
-  );
+    isOpen && !!haymasterEventId && !!localSportId && !!activeParam && source === "haymaster",
+  )
+
 
   const athletesFromExternal =
     source === "haymaster" ? haymasterAthletesByCategory : sismasterAthletesByCategory;

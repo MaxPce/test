@@ -41,10 +41,10 @@ export function CategoryInscriptionsPage() {
   const hasExternalIntegration = hasSismasterIntegration || hasHaymasterIntegration;
 
   const externalSource: "sismaster" | "haymaster" | undefined =
-    hasSismasterIntegration
-      ? "sismaster"
-      : hasHaymasterIntegration
-        ? "haymaster"
+    hasHaymasterIntegration
+      ? "haymaster"
+      : hasSismasterIntegration
+        ? "sismaster"
         : undefined;
 
   const externalEventIdForModal =
