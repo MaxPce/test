@@ -16,6 +16,7 @@ import {
   useHaymasterSportCategoriesByEvent,
   useHaymasterAthletesByCategory,
   useHaymasterAccreditedAthletes,
+  type HaymasterSportCategoryParam, 
 } from "@/features/institutions/api/haymaster.queries";
 import { useBulkRegistrationFromSismaster } from "../api/registrations.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
@@ -25,7 +26,7 @@ interface BulkRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventCategory: EventCategory;
-  eventId: number;
+  eventId: number;           // ID interno (para sismaster y mutations)
   source: "sismaster" | "haymaster";
 }
 
@@ -65,6 +66,8 @@ export function BulkRegistrationModal({
   const localSportId = eventCategory.category?.sport?.sportId;
   const categoryName = eventCategory.category?.name ?? "";
   const sportName = eventCategory.category?.sport?.name;
+  const haymasterEventId = eventCategory.haymasterEventId ?? 0;
+  const categoryGender = eventCategory.category?.gender as "M" | "F" | undefined;
 
   const sourceLabel = source === "haymaster" ? "Haymaster" : "Sismaster";
 
@@ -82,7 +85,7 @@ export function BulkRegistrationModal({
     isLoading: isLoadingHaymasterCategories,
   } = useHaymasterSportCategoriesByEvent(
     localSportId!,
-    eventId,
+    haymasterEventId,      // ← FIX
     isOpen && !!localSportId && source === "haymaster",
   );
 
@@ -129,7 +132,7 @@ export function BulkRegistrationModal({
     isLoading: isLoadingHaymasterAthletes,
     error: haymasterAthletesError,
   } = useHaymasterAthletesByCategory(
-    eventId,
+    haymasterEventId,      // ← FIX
     localSportId!,
     activeParam?.idparam ?? 0,
     isOpen && !!localSportId && !!activeParam && source === "haymaster",
@@ -143,12 +146,14 @@ export function BulkRegistrationModal({
 
   const error = source === "haymaster" ? haymasterAthletesError : sismasterAthletesError;
 
+  
+
   const {
     data: sismasterAccreditedAthletes = [],
     isLoading: isLoadingSismasterAccredited,
     error: sismasterAccreditedError,
   } = useAccreditedAthletes(
-    { idevent: eventId, localSportId },
+    { idevent: eventId, localSportId },   // ← solo esto
     isOpen && mode === "accredited" && !!localSportId && source === "sismaster",
   );
 
@@ -157,8 +162,13 @@ export function BulkRegistrationModal({
     isLoading: isLoadingHaymasterAccredited,
     error: haymasterAccreditedError,
   } = useHaymasterAccreditedAthletes(
-    { idevent: eventId, localSportId },
-    isOpen && mode === "accredited" && !!localSportId && source === "haymaster",
+    {
+      idevent: haymasterEventId,          // ← FIX 1: haymasterEventId
+      localSportId,
+      gender: categoryGender,             // ← FIX 2: filtrar por género
+    },
+    isOpen && mode === "accredited" && !!localSportId && !!haymasterEventId && source === "haymaster",
+    //                                                   ↑ FIX 3: guard adicional
   );
 
   const accreditedAthletes =
@@ -260,6 +270,21 @@ export function BulkRegistrationModal({
     { value: "all", label: "Todas las instituciones" },
     ...institutions.map((inst) => ({ value: inst, label: inst })),
   ];
+
+
+  if (source === "haymaster" && !haymasterEventId) {
+    return (
+      <Modal isOpen={isOpen} onClose={handleClose} title="Inscripción de Atletas" size="lg">
+        <div className="p-8 text-center text-gray-500">
+          <AlertCircle className="h-8 w-8 mx-auto mb-3 text-amber-500" />
+          <p className="font-medium text-gray-800">Sin evento Haymaster configurado</p>
+          <p className="text-sm mt-1">
+            Esta categoría no tiene un <code>haymasterEventId</code> vinculado.
+          </p>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Inscripción de Atletas" size="lg">
@@ -398,10 +423,11 @@ export function BulkRegistrationModal({
 
               <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                 <p className="text-sm text-green-800">
-                  <strong>{activeAthletes.length}</strong> atletas
+                  <strong>{filteredAthletes.length}</strong> atletas disponibles
                   {registeredAthleteIds.length > 0 && (
                     <span className="text-green-700">
                       {" "}· <strong>{registeredAthleteIds.length}</strong> ya inscritos
+                      {" "}(de {activeAthletes.length} en total)
                     </span>
                   )}
                 </p>

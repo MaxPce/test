@@ -45,6 +45,8 @@ export interface EventCategory {
   categoryId: number;
   externalEventId?: number;
   externalSportId?: number;
+  haymasterEventId?: number;    // ← AGREGAR esta línea
+  externalSportParamId?: number; // ← también existe en el entity, opcional agregarlo
   status: "pendiente" | "en_curso" | "finalizado";
   createdAt: string;
   updatedAt: string;
