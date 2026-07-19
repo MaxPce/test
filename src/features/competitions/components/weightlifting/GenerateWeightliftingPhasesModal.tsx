@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { apiClient } from '@/lib/api/client';
-import { AlertCircle, CheckSquare, Square } from 'lucide-react';
+import { AlertCircle, CheckSquare, Square, Plus, Trash2 } from 'lucide-react';
 import { useGenerateWeightliftingPhases } from '../../api/weightlifting-phases.mutations';
 
 interface NivCatCombo { idniv: string; idcat: string; total: number; }
@@ -41,6 +41,27 @@ function extractWeightFromCategoryName(name: string): string {
   return match ? match[1] : name;
 }
 
+function buildHaymasterGroups(
+  allRegistrations: any[],
+  categoryName: string,
+): WeightliftingGroup[] {
+  const defaultWeight = extractWeightFromCategoryName(categoryName);
+  const athletes: WeightliftingAthlete[] = allRegistrations.map((reg) => ({
+    registrationId: reg.registrationId,
+    name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
+    institution: reg.athlete?.institution?.name ?? null,
+    weightClass: defaultWeight,
+  }));
+  if (athletes.length === 0) return [];
+  return [{
+    key: 'haymaster-default',
+    phaseName: `${categoryName} — Fase Principal`,
+    idniv: 'HAYMASTER',
+    idcat: 'ALL',
+    athletes,
+  }];
+}
+
 export interface GenerateWeightliftingPhasesModalProps {
   open: boolean;
   onClose: () => void;
@@ -48,17 +69,21 @@ export interface GenerateWeightliftingPhasesModalProps {
   categoryName: string;
   sismasterEventId?: number;
   sismasterSportId?: number;
+  haymasterEventId?: number;
   allRegistrations: any[];
 }
 
 export function GenerateWeightliftingPhasesModal({
   open, onClose, eventCategoryId, categoryName,
-  sismasterEventId, sismasterSportId, allRegistrations,
+  sismasterEventId, sismasterSportId, haymasterEventId,
+  allRegistrations,
 }: GenerateWeightliftingPhasesModalProps) {
 
   const mutation = useGenerateWeightliftingPhases();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
+  const isHaymaster  = Boolean(haymasterEventId && !hasSismaster);
 
+  // ── Sismaster queries ──────────────────────────────────────────────────────
   const { data: combosData, isLoading: loadingCombos } =
     useQuery<{ combos: NivCatCombo[] }>({
       queryKey: ['sismaster-niv-cat-options', sismasterEventId, sismasterSportId, eventCategoryId],
@@ -105,7 +130,7 @@ export function GenerateWeightliftingPhasesModal({
     return map;
   }, [allRegistrations]);
 
-  const initialGroups = useMemo((): WeightliftingGroup[] => {
+  const initialSismasterGroups = useMemo((): WeightliftingGroup[] => {
     if (!allQueriesDone) return [];
     const seenIds = new Set<number>();
     const defaultWeight = extractWeightFromCategoryName(categoryName);
@@ -147,13 +172,25 @@ export function GenerateWeightliftingPhasesModal({
     }
     prevOpenRef.current = open;
     if (!open || hasInitialized.current) return;
-    if (hasSismaster && allQueriesDone && initialGroups.length > 0) {
-      hasInitialized.current = true;
-      setGroups(initialGroups);
-      setSelectedGroupKeys(new Set(initialGroups.map((g) => g.key)));
-    }
-  }, [open, allQueriesDone, hasSismaster, initialGroups]);
 
+    // Flujo Sismaster
+    if (hasSismaster && allQueriesDone && initialSismasterGroups.length > 0) {
+      hasInitialized.current = true;
+      setGroups(initialSismasterGroups);
+      setSelectedGroupKeys(new Set(initialSismasterGroups.map((g) => g.key)));
+      return;
+    }
+
+    // Flujo Haymaster: inicializar con datos locales
+    if (isHaymaster && allRegistrations.length > 0) {
+      hasInitialized.current = true;
+      const haymasterGroups = buildHaymasterGroups(allRegistrations, categoryName);
+      setGroups(haymasterGroups);
+      setSelectedGroupKeys(new Set(haymasterGroups.map((g) => g.key)));
+    }
+  }, [open, allQueriesDone, hasSismaster, isHaymaster, initialSismasterGroups, allRegistrations, categoryName]);
+
+  // ── Edición ────────────────────────────────────────────────────────────────
   const setAthleteWeightClass = (groupKey: string, registrationId: number, value: string) => {
     setGroups((prev) =>
       prev.map((g) =>
@@ -165,6 +202,52 @@ export function GenerateWeightliftingPhasesModal({
         }
       )
     );
+  };
+
+  const setPhaseName = (groupKey: string, value: string) => {
+    setGroups((prev) =>
+      prev.map((g) => g.key !== groupKey ? g : { ...g, phaseName: value })
+    );
+  };
+
+  const splitGroup = (groupKey: string) => {
+    setGroups((prev) => {
+      const idx = prev.findIndex((g) => g.key === groupKey);
+      if (idx === -1) return prev;
+      const group = prev[idx];
+      const half = Math.ceil(group.athletes.length / 2);
+      const groupA: WeightliftingGroup = {
+        ...group,
+        key: `${groupKey}-A-${Date.now()}`,
+        phaseName: `${group.phaseName} — Grupo A`,
+        athletes: group.athletes.slice(0, half),
+      };
+      const groupB: WeightliftingGroup = {
+        ...group,
+        key: `${groupKey}-B-${Date.now()}`,
+        phaseName: `${group.phaseName} — Grupo B`,
+        athletes: group.athletes.slice(half),
+      };
+      const next = [...prev];
+      next.splice(idx, 1, groupA, groupB);
+      setSelectedGroupKeys((prevKeys) => {
+        const s = new Set(prevKeys);
+        s.delete(groupKey);
+        s.add(groupA.key);
+        s.add(groupB.key);
+        return s;
+      });
+      return next;
+    });
+  };
+
+  const removeGroup = (groupKey: string) => {
+    setGroups((prev) => prev.filter((g) => g.key !== groupKey));
+    setSelectedGroupKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(groupKey);
+      return next;
+    });
   };
 
   const toggleGroupSelection = (key: string) => {
@@ -202,13 +285,28 @@ export function GenerateWeightliftingPhasesModal({
     }
   };
 
-  const isLoading = loadingCombos || loadingCombosData;
+  // isLoading solo aplica en flujo Sismaster
+  const isLoading = hasSismaster && (loadingCombos || loadingCombosData);
   const validGroups = groups.filter((g) => g.athletes.length > 0 && selectedGroupKeys.has(g.key));
   const totalAthletes = validGroups.reduce((acc, g) => acc + g.athletes.length, 0);
+  const noAthletes = !isLoading && isHaymaster && allRegistrations.length === 0;
 
   return (
     <Modal isOpen={open} onClose={onClose} title={`Generar Fases — ${categoryName}`} size="xl">
       <div className="space-y-4">
+
+        {/* Badge de modo */}
+        {!isLoading && (hasSismaster || isHaymaster) && (
+          <div className={[
+            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+            hasSismaster
+              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+              : 'bg-violet-50 text-violet-700 border border-violet-200',
+          ].join(' ')}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {hasSismaster ? 'Modo Sismaster' : 'Modo Haymaster'}
+          </div>
+        )}
 
         {isLoading && (
           <div className="flex items-center justify-center gap-3 py-12 text-slate-500">
@@ -217,10 +315,18 @@ export function GenerateWeightliftingPhasesModal({
           </div>
         )}
 
-        {!hasSismaster && !isLoading && (
+        {/* Sin integración externa configurada */}
+        {!hasSismaster && !isHaymaster && !isLoading && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>Esta categoría no tiene Sismaster configurado.</span>
+            <span>Esta categoría no tiene integración externa configurada.</span>
+          </div>
+        )}
+
+        {noAthletes && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>No hay atletas inscritos en esta categoría para generar fases.</span>
           </div>
         )}
 
@@ -255,10 +361,41 @@ export function GenerateWeightliftingPhasesModal({
                           ? <CheckSquare size={16} className="text-blue-600" />
                           : <Square size={16} />}
                       </button>
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-800">{group.phaseName}</h3>
-                        <p className="text-xs text-slate-500">{group.athletes.length} atleta(s)</p>
+                      <div className="flex-1 min-w-0">
+                        {isHaymaster ? (
+                          <input
+                            type="text"
+                            value={group.phaseName}
+                            onChange={(e) => setPhaseName(group.key, e.target.value)}
+                            className="w-full text-sm font-semibold text-slate-800 bg-transparent
+                                       border-b border-dashed border-slate-300
+                                       focus:outline-none focus:border-blue-400 pb-0.5"
+                          />
+                        ) : (
+                          <h3 className="text-sm font-semibold text-slate-800">{group.phaseName}</h3>
+                        )}
+                        <p className="text-xs text-slate-500 mt-0.5">{group.athletes.length} atleta(s)</p>
                       </div>
+
+                      {/* Acciones Haymaster: dividir / eliminar */}
+                      {isHaymaster && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          {group.athletes.length >= 2 && (
+                            <button type="button" title="Dividir en dos grupos"
+                              onClick={() => splitGroup(group.key)}
+                              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-colors">
+                              <Plus size={14} />
+                            </button>
+                          )}
+                          {groups.length > 1 && (
+                            <button type="button" title="Eliminar grupo"
+                              onClick={() => removeGroup(group.key)}
+                              className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">
@@ -266,7 +403,6 @@ export function GenerateWeightliftingPhasesModal({
                         <span>Atleta</span>
                         <span className="text-center">División</span>
                       </div>
-
                       {group.athletes.map((athlete) => (
                         <div key={athlete.registrationId}
                           className="grid grid-cols-[1fr_72px] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2">

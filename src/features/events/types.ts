@@ -66,8 +66,10 @@ export interface CreateEventCategoryData {
 export interface UpdateEventCategoryData {
   externalEventId?: number;
   externalSportId?: number;
+  haymasterEventId?: number;       // ← AGREGAR esto
   status?: "pendiente" | "en_curso" | "finalizado";
 }
+
 
 export interface Registration {
   registrationId: number;

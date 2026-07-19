@@ -162,6 +162,7 @@ export function WeightliftingScheduleView({ eventCategory, schedule }: SportView
           categoryName={eventCategory.category?.name ?? "Levantamiento de Pesas"}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
+          haymasterEventId={eventCategory.haymasterEventId ?? undefined}  
           allRegistrations={eventCategory.registrations ?? []}
         />
       )}
