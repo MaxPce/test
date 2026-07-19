@@ -46,21 +46,67 @@ function buildHaymasterGroups(
   categoryName: string,
 ): WeightliftingGroup[] {
   const defaultWeight = extractWeightFromCategoryName(categoryName);
-  const athletes: WeightliftingAthlete[] = allRegistrations.map((reg) => ({
-    registrationId: reg.registrationId,
-    name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
-    institution: reg.athlete?.institution?.name ?? null,
-    weightClass: defaultWeight,
-  }));
-  if (athletes.length === 0) return [];
-  return [{
-    key: 'haymaster-default',
-    phaseName: `${categoryName} — Fase Principal`,
-    idniv: 'HAYMASTER',
-    idcat: 'ALL',
-    athletes,
-  }];
+
+  // Detectar géneros presentes
+  const genders = new Set<string>(
+    allRegistrations.map((reg) => reg.athlete?.gender).filter(Boolean)
+  );
+  const hasBoth = genders.has('M') && genders.has('F');
+
+  if (!hasBoth) {
+    // Un solo género (o sin dato) → un grupo con el nombre de la categoría sin diferenciador
+    const athletes: WeightliftingAthlete[] = allRegistrations.map((reg) => ({
+      registrationId: reg.registrationId,
+      name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
+      institution: reg.athlete?.institution?.name ?? null,
+      weightClass: defaultWeight,
+    }));
+    if (athletes.length === 0) return [];
+    return [{
+      key: 'haymaster-default',
+      phaseName: categoryName,
+      idniv: 'HAYMASTER',
+      idcat: 'ALL',
+      athletes,
+    }];
+  }
+
+  const varones = allRegistrations.filter((reg) => reg.athlete?.gender === 'M');
+  const damas   = allRegistrations.filter((reg) => reg.athlete?.gender === 'F');
+
+  const toAthletes = (regs: any[]): WeightliftingAthlete[] =>
+    regs.map((reg) => ({
+      registrationId: reg.registrationId,
+      name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
+      institution: reg.athlete?.institution?.name ?? null,
+      weightClass: defaultWeight,
+    }));
+
+  const groups: WeightliftingGroup[] = [];
+
+  if (varones.length > 0) {
+    groups.push({
+      key: 'haymaster-varones',
+      phaseName: `${categoryName} — Varones`,
+      idniv: 'HAYMASTER',
+      idcat: 'M',
+      athletes: toAthletes(varones),
+    });
+  }
+
+  if (damas.length > 0) {
+    groups.push({
+      key: 'haymaster-damas',
+      phaseName: `${categoryName} — Damas`,
+      idniv: 'HAYMASTER',
+      idcat: 'F',
+      athletes: toAthletes(damas),
+    });
+  }
+
+  return groups;
 }
+
 
 export interface GenerateWeightliftingPhasesModalProps {
   open: boolean;
