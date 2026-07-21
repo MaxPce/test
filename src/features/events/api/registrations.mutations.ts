@@ -7,6 +7,7 @@ import type {
   CreateRegistrationData,
   BulkRegistrationData,
   Registration,
+  CreateLocalAthleteRegistrationData,
 } from "../types";
 
 export const useCreateRegistration = () => {
@@ -158,6 +159,26 @@ export const useBulkRegistrationFromHaymaster = () => {
     },
     onError: (error) => {
       console.error("[Mutation Haymaster] Error:", error);
+    },
+  });
+};
+
+export const useCreateLocalAthleteRegistration = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateLocalAthleteRegistrationData) => {
+      const response = await apiClient.post<Registration>(
+        ENDPOINTS.REGISTRATIONS.LOCAL_ATHLETE,
+        data,
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+    },
+    onError: (error) => {
+      console.error("[LocalAthlete] Error al registrar atleta local:", error);
     },
   });
 };

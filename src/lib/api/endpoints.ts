@@ -113,6 +113,7 @@ export const ENDPOINTS = {
     BULK: "/events/registrations/bulk",
     DETAIL: (id: number) => `/events/registrations/${id}`,
     DELETE: (id: number) => `/events/registrations/${id}`,
+    LOCAL_ATHLETE: "/events/registrations/local-athlete",
   },
 
   // Competitions

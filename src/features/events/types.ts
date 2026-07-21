@@ -134,3 +134,11 @@ export interface UpsertFeaturedAthleteByPhasePayload {
   registrationId:  number;
   reason?:         string;
 }
+
+export interface CreateLocalAthleteRegistrationData {
+  eventCategoryId: number;
+  firstName: string;
+  lastName: string;
+  documentNumber?: string;
+  institutionName?: string;
+}
