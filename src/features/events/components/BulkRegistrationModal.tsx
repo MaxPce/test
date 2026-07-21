@@ -28,7 +28,7 @@ interface BulkRegistrationModalProps {
   eventCategory: EventCategory;
   eventId: number;
   haymasterEventId?: number;   // ← nuevo
-  source: "sismaster" | "haymaster";
+  source: "sismaster" | "haymaster" | undefined;
 }
 
 function findMatchingParam(
@@ -63,7 +63,11 @@ export function BulkRegistrationModal({
   const [selectedInstitution, setSelectedInstitution] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [manualIdparam, setManualIdparam] = useState<number | null>(null);
-  const [mode, setMode] = useState<"byCategory" | "accredited">("byCategory");
+  const hasSource = !!source;
+  const [mode, setMode] = useState<"byCategory" | "accredited">(
+    hasSource ? "byCategory" : "accredited"
+  );
+
 
   const localSportId = eventCategory.category?.sport?.sportId;
   const categoryName = eventCategory.category?.name ?? "";
@@ -106,7 +110,7 @@ export function BulkRegistrationModal({
   useEffect(() => {
     if (isOpen) {
       setManualIdparam(null);
-      setMode("byCategory");
+      setMode(hasSource ? "byCategory" : "accredited");
     }
   }, [isOpen, eventCategory.eventCategoryId]);
 
@@ -156,7 +160,7 @@ export function BulkRegistrationModal({
     error: sismasterAccreditedError,
   } = useAccreditedAthletes(
     { idevent: eventId, localSportId },   // ← solo esto
-    isOpen && mode === "accredited" && !!localSportId && source === "sismaster",
+    isOpen && mode === "accredited" && !!localSportId && (source === "sismaster" || !source),
   );
 
   const {
@@ -165,13 +169,15 @@ export function BulkRegistrationModal({
     error: haymasterAccreditedError,
   } = useHaymasterAccreditedAthletes(
     {
-      idevent: haymasterEventId,          // ← FIX 1: haymasterEventId
+      idevent: haymasterEventId ?? 0,   // ← mismo patrón que usas en useHaymasterSportCategoriesByEvent
       localSportId,
-      gender: categoryGender,             // ← FIX 2: filtrar por género
+      gender: categoryGender,
     },
     isOpen && mode === "accredited" && !!localSportId && !!haymasterEventId && source === "haymaster",
-    //                                                   ↑ FIX 3: guard adicional
+    //                                                   ↑ el guard !!haymasterEventId asegura que
+    //                                                     cuando idevent=0 el query no se ejecuta
   );
+
 
   const accreditedAthletes =
     source === "haymaster" ? haymasterAccreditedAthletes : sismasterAccreditedAthletes;
@@ -260,7 +266,7 @@ export function BulkRegistrationModal({
   const handleClose = () => {
     setSelectedAthletes([]);
     setManualIdparam(null);
-    setMode("byCategory");
+    setMode(hasSource ? "byCategory" : "accredited");
     handleClearFilters();
     onClose();
   };
@@ -281,19 +287,7 @@ export function BulkRegistrationModal({
   ];
 
 
-  if (source === "haymaster" && !haymasterEventId) {
-    return (
-      <Modal isOpen={isOpen} onClose={handleClose} title="Inscripción de Atletas" size="lg">
-        <div className="p-8 text-center text-gray-500">
-          <AlertCircle className="h-8 w-8 mx-auto mb-3 text-amber-500" />
-          <p className="font-medium text-gray-800">Sin evento Haymaster configurado</p>
-          <p className="text-sm mt-1">
-            Esta categoría no tiene un <code>haymasterEventId</code> vinculado.
-          </p>
-        </div>
-      </Modal>
-    );
-  }
+  
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Inscripción de Atletas" size="lg">
@@ -307,13 +301,12 @@ export function BulkRegistrationModal({
                 {eventCategory.category?.type === "individual" ? " • Individual" : " • Equipo"}
               </p>
             </div>
-            <Badge variant="primary" size="lg">
-              {eventCategory.category?.gender}
-            </Badge>
+            
           </div>
         </div>
 
         <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+        {hasSource && (
           <button
             onClick={() => { setMode("byCategory"); setSelectedAthletes([]); }}
             className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -322,15 +315,16 @@ export function BulkRegistrationModal({
           >
             Por categoría
           </button>
-          <button
-            onClick={() => { setMode("accredited"); setSelectedAthletes([]); }}
-            className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              mode === "accredited" ? "bg-white shadow text-blue-700" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Acreditados (sin categoría)
-          </button>
-        </div>
+        )}
+        <button
+          onClick={() => { setMode("accredited"); setSelectedAthletes([]); }}
+          className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            mode === "accredited" ? "bg-white shadow text-blue-700" : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          {hasSource ? "Acreditados (sin categoría)" : "Atletas acreditados"}
+        </button>
+      </div>
 
         {mode === "byCategory" && (
           <div className="space-y-1.5">

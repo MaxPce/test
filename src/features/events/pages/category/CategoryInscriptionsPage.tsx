@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Plus, Users, UserPlus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +27,15 @@ export function CategoryInscriptionsPage() {
   const [isIndividualModalOpen, setIsIndividualModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen]             = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen]             = useState(false);
+  
+  const [registrations, setRegistrations] = useState(
+    eventCategory.registrations || []
+  );
+
+  useEffect(() => {
+    setRegistrations(eventCategory.registrations || []);
+  }, [eventCategory.registrations]);
+
 
   const createRegistrationMutation = useCreateRegistration();
   const deleteRegistrationMutation = useDeleteRegistration();
@@ -34,7 +43,6 @@ export function CategoryInscriptionsPage() {
   const addTeamMemberMutation      = useAddTeamMember();
 
   const isTeamCategory = eventCategory.category?.type === "equipo";
-  const registrations  = eventCategory.registrations || [];
 
   const hasSismasterIntegration = !!eventCategory.externalEventId;
   const hasHaymasterIntegration = !!eventCategory.haymasterEventId;
@@ -94,7 +102,16 @@ export function CategoryInscriptionsPage() {
   };
 
   const handleDeleteRegistration = async (registrationId: number) => {
-    await deleteRegistrationMutation.mutateAsync(registrationId);
+    // ✅ CAMBIAR: quitar optimísticamente antes de la llamada
+    setRegistrations((prev) =>
+      prev.filter((r) => r.registrationId !== registrationId)
+    );
+    try {
+      await deleteRegistrationMutation.mutateAsync(registrationId);
+    } catch {
+      // ✅ AÑADIR: restaurar si falla
+      setRegistrations(eventCategory.registrations || []);
+    }
   };
 
   const isLoading =
@@ -137,7 +154,7 @@ export function CategoryInscriptionsPage() {
               </Button>
             ) : (
               <>
-                {hasExternalIntegration && (
+                
                   <Button
                     onClick={() => setIsBulkModalOpen(true)}
                     variant="outline"
@@ -147,17 +164,8 @@ export function CategoryInscriptionsPage() {
                   >
                     Inscripción de Atletas
                   </Button>
-                )}
-                {/* Botón individual siempre disponible */}
-                <Button
-                  onClick={() => setIsIndividualModalOpen(true)}
-                  variant="default"
-                  size="lg"
-                  icon={<Plus className="h-5 w-5" />}
-                  className="bg-white text-blue-600 hover:bg-white/90"
-                >
-                  Inscribir Atleta
-                </Button>
+                
+                
               </>
             )}
           </div>
@@ -178,12 +186,7 @@ export function CategoryInscriptionsPage() {
               : hasExternalIntegration
                 ? "Inscribir Atletas"
                 : "Inscribir Primer Atleta",
-            onClick: () =>
-              isTeamCategory
-                ? setIsTeamModalOpen(true)
-                : hasExternalIntegration
-                  ? setIsBulkModalOpen(true)
-                  : setIsIndividualModalOpen(true),
+            onClick: () => isTeamCategory ? setIsTeamModalOpen(true) : setIsBulkModalOpen(true)
           }}
         />
       ) : (
@@ -233,7 +236,7 @@ export function CategoryInscriptionsPage() {
       </Modal>
 
       {/* Modal: Inscripción masiva (Sismaster o Haymaster) */}
-      {!isTeamCategory && hasExternalIntegration && (
+      {!isTeamCategory && (
         <BulkRegistrationModal
           isOpen={isBulkModalOpen}
           onClose={() => setIsBulkModalOpen(false)}
