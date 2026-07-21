@@ -159,8 +159,8 @@ export function BulkRegistrationModal({
     isLoading: isLoadingSismasterAccredited,
     error: sismasterAccreditedError,
   } = useAccreditedAthletes(
-    { idevent: eventId, localSportId },   // ← solo esto
-    isOpen && mode === "accredited" && !!localSportId && (source === "sismaster" || !source),
+    { idevent: eventId },   // ← solo el evento, todos los acreditados
+    isOpen && mode === "accredited" && source === "sismaster",
   );
 
   const {
@@ -169,14 +169,14 @@ export function BulkRegistrationModal({
     error: haymasterAccreditedError,
   } = useHaymasterAccreditedAthletes(
     {
-      idevent: haymasterEventId ?? 0,   // ← mismo patrón que usas en useHaymasterSportCategoriesByEvent
-      localSportId,
-      gender: categoryGender,
+      idevent: haymasterEventId ?? 0,   // ← asegurar tipo number
+      // localSportId removido — queremos TODOS los acreditados del evento
+      // gender removido también — mostrar todos, el usuario ya sabe que busca acreditados
     },
-    isOpen && mode === "accredited" && !!localSportId && !!haymasterEventId && source === "haymaster",
-    //                                                   ↑ el guard !!haymasterEventId asegura que
-    //                                                     cuando idevent=0 el query no se ejecuta
+    isOpen && mode === "accredited" && !!haymasterEventId && source === "haymaster",
+    //                                  ↑ removido !!localSportId (innecesario sin ese filtro)
   );
+
 
 
   const accreditedAthletes =

@@ -250,7 +250,7 @@ export const useSearchHaymasterAthletes = (searchTerm: string, enabled = true) =
 
 
 interface AccreditedHaymasterAthletesOptions {
-  idevent: number;
+  idevent: number | undefined; 
   idinstitution?: number;
   gender?: "M" | "F";
   localSportId?: number;
