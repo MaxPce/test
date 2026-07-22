@@ -8,6 +8,7 @@ import type {
   BulkRegistrationData,
   Registration,
   CreateLocalAthleteRegistrationData,
+  CreateLocalTeamData,   
 } from "../types";
 
 export const useCreateRegistration = () => {
@@ -182,6 +183,48 @@ export const useCreateLocalAthleteRegistration = () => {
     },
     onError: (error) => {
       console.error("[LocalAthlete] Error al registrar atleta local:", error);
+    },
+  });
+};
+
+export const useCreateLocalTeamRegistration = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      eventCategoryId,
+      localTeam,
+    }: {
+      eventCategoryId: number;
+      localTeam: CreateLocalTeamData;
+    }) => {
+      // 1. Crear el equipo local con sus atletas en una sola llamada
+      const teamResponse = await apiClient.post(
+        ENDPOINTS.TEAMS.LOCAL,
+        localTeam,
+      );
+      const team = teamResponse.data;
+
+      // 2. Inscribir el equipo en la categoría
+      const regResponse = await apiClient.post<Registration>(
+        ENDPOINTS.REGISTRATIONS.CREATE,
+        { eventCategoryId, teamId: team.teamId },
+      );
+
+      // 3. Obtener la registration completa con team+members+institution anidados
+      const fullResponse = await apiClient.get<Registration>(
+        ENDPOINTS.REGISTRATIONS.DETAIL(regResponse.data.registrationId),
+      );
+      return fullResponse.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: registrationKeys.all });
+      await queryClient.refetchQueries({ queryKey: eventCategoryKeys.all, type: "active" });
+      await queryClient.refetchQueries({ queryKey: registrationKeys.all, type: "active" });
+    },
+    onError: (error) => {
+      console.error("[LocalTeam] Error al crear equipo local:", error);
     },
   });
 };

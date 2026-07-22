@@ -146,3 +146,17 @@ export interface CreateLocalAthleteRegistrationData {
   institutionId?: number;
   seedNumber?: number;
 }
+
+
+export interface LocalTeamMemberData {
+  name: string;
+  docNumber?: string;
+  rol?: string;
+}
+
+export interface CreateLocalTeamData {
+  teamName: string;
+  categoryId: number;
+  institutionId?: number;
+  members: LocalTeamMemberData[];
+}

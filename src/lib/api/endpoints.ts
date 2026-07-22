@@ -79,6 +79,7 @@ export const ENDPOINTS = {
   TEAMS: {
     LIST: "/institutions/teams",
     CREATE: "/institutions/teams",
+    LOCAL: "/institutions/teams/local",
     DETAIL: (id: number) => `/institutions/teams/${id}`,
     UPDATE: (id: number) => `/institutions/teams/${id}`,
     DELETE: (id: number) => `/institutions/teams/${id}`,

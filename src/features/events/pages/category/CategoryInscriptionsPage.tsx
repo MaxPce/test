@@ -11,17 +11,19 @@ import { BulkRegistrationModal } from "../../components/BulkRegistrationModal";
 import { UserCheck } from "lucide-react";                          // ← nuevo icono
 import { LocalAthleteForm } from "../../components/LocalAthleteForm"; 
 import { RegistrationsList } from "../../components/RegistrationsList";
+import { LocalTeamCreationForm } from "../../components/LocalTeamCreationForm";
 import {
   useCreateRegistration,
   useDeleteRegistration,
   useCreateLocalAthleteRegistration,
+  useCreateLocalTeamRegistration,
 } from "../../api/registrations.mutations";
 import {
   useCreateTeam,
   useAddTeamMember,
 } from "@/features/institutions/api/teams.mutations";
-import type { EventCategory } from "../../types";
-import type { CreateLocalAthleteRegistrationData } from "../../types"; 
+import type { EventCategory, CreateLocalAthleteRegistrationData, CreateLocalTeamData } from "../../types";
+
 
 export function CategoryInscriptionsPage() {
   const { eventCategory } = useOutletContext<{
@@ -32,6 +34,7 @@ export function CategoryInscriptionsPage() {
   const [isTeamModalOpen, setIsTeamModalOpen]             = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen]             = useState(false);
   const [isLocalAthleteModalOpen, setIsLocalAthleteModalOpen] = useState(false);
+  const [isLocalTeamModalOpen, setIsLocalTeamModalOpen] = useState(false);
   
   const [registrations, setRegistrations] = useState(
     eventCategory.registrations || []
@@ -46,6 +49,7 @@ export function CategoryInscriptionsPage() {
   const deleteRegistrationMutation = useDeleteRegistration();
   const createTeamMutation         = useCreateTeam();
   const addTeamMemberMutation      = useAddTeamMember();
+  const createLocalTeamMutation = useCreateLocalTeamRegistration();
   const createLocalAthleteMutation = useCreateLocalAthleteRegistration();
 
   const isTeamCategory = eventCategory.category?.type === "equipo";
@@ -113,6 +117,21 @@ export function CategoryInscriptionsPage() {
     setIsLocalAthleteModalOpen(false);
   };
 
+  const handleLocalTeamCreation = async (data: CreateLocalTeamData) => {
+    const result = await createLocalTeamMutation.mutateAsync({
+      eventCategoryId: eventCategory.eventCategoryId,
+      localTeam: {
+        teamName: data.teamName,
+        categoryId: eventCategory.categoryId,
+        institutionId: data.institutionId,
+        members: data.members,
+      },
+    });
+    setRegistrations((prev) => [...prev, result]); // ← agregar
+    setIsLocalTeamModalOpen(false);
+  };
+
+
   const handleDeleteRegistration = async (registrationId: number) => {
     // ✅ CAMBIAR: quitar optimísticamente antes de la llamada
     setRegistrations((prev) =>
@@ -155,15 +174,26 @@ export function CategoryInscriptionsPage() {
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
             {isTeamCategory ? (
-              <Button
-                onClick={() => setIsTeamModalOpen(true)}
-                variant="default"
-                size="lg"
-                icon={<Plus className="h-5 w-5" />}
-                className="bg-white text-blue-600 hover:bg-white/90"
-              >
-                Crear e Inscribir Equipo
-              </Button>
+              <>
+                <Button
+                  onClick={() => setIsTeamModalOpen(true)}
+                  variant="default"
+                  size="lg"
+                  icon={<Plus className="h-5 w-5" />}
+                  className="bg-white text-blue-600 hover:bg-white/90"
+                >
+                  Crear e Inscribir Equipo
+                </Button>
+                <Button
+                  onClick={() => setIsLocalTeamModalOpen(true)}
+                  variant="outline"
+                  size="lg"
+                  icon={<UserCheck className="h-5 w-5" />}
+                  className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                >
+                  Equipo Local
+                </Button>
+              </>
             ) : (
               <>
                   <Button
@@ -280,6 +310,22 @@ export function CategoryInscriptionsPage() {
             onSubmit={handleLocalAthleteRegistration}
             onCancel={() => setIsLocalAthleteModalOpen(false)}
             isLoading={createLocalAthleteMutation.isPending}
+          />
+        </Modal>
+      )}
+
+      {isTeamCategory && (
+        <Modal
+          isOpen={isLocalTeamModalOpen}
+          onClose={() => setIsLocalTeamModalOpen(false)}
+          title="Crear Equipo Local"
+          size="lg"
+        >
+          <LocalTeamCreationForm
+            eventCategory={eventCategory}
+            onSubmit={handleLocalTeamCreation}
+            onCancel={() => setIsLocalTeamModalOpen(false)}
+            isLoading={createLocalTeamMutation.isPending}
           />
         </Modal>
       )}
