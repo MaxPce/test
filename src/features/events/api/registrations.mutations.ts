@@ -76,7 +76,7 @@ export const useUpdateRegistrationSeed = () => {
       seedNumber: number | null;
     }) => {
       const response = await apiClient.patch(
-        `/competitions/registrations/${registrationId}/seed`,
+        ENDPOINTS.REGISTRATIONS.UPDATE_SEED(registrationId),
         { seedNumber },
       );
       return response.data;
@@ -174,8 +174,11 @@ export const useCreateLocalAthleteRegistration = () => {
       );
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: eventCategoryKeys.all });
+      await queryClient.invalidateQueries({ queryKey: registrationKeys.all });
+      await queryClient.refetchQueries({ queryKey: eventCategoryKeys.all, type: "active" });
+      await queryClient.refetchQueries({ queryKey: registrationKeys.all, type: "active" });
     },
     onError: (error) => {
       console.error("[LocalAthlete] Error al registrar atleta local:", error);

@@ -114,6 +114,7 @@ export const ENDPOINTS = {
     DETAIL: (id: number) => `/events/registrations/${id}`,
     DELETE: (id: number) => `/events/registrations/${id}`,
     LOCAL_ATHLETE: "/events/registrations/local-athlete",
+    UPDATE_SEED: (id: number) => `/events/registrations/${id}/seed`,
   },
 
   // Competitions

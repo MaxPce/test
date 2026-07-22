@@ -137,8 +137,12 @@ export interface UpsertFeaturedAthleteByPhasePayload {
 
 export interface CreateLocalAthleteRegistrationData {
   eventCategoryId: number;
-  firstName: string;
-  lastName: string;
-  documentNumber?: string;
-  institutionName?: string;
+  name: string;             // nombre completo
+  docNumber?: string;
+  gender?: 'MASCULINO' | 'FEMENINO' | 'MIXTO';
+  dateBirth?: string;       // formato ISO: "1990-05-20"
+  nationality?: string;     // 3 letras: "PER", "COL", etc.
+  photoUrl?: string;
+  institutionId?: number;
+  seedNumber?: number;
 }
