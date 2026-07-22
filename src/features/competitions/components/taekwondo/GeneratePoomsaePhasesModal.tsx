@@ -88,6 +88,7 @@ export function GeneratePoomsaePhasesModal({
 }: GeneratePoomsaePhasesModalProps) {
   const mutation = useGeneratePoomsaePhases();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
+  const hasHaymaster = !hasSismaster;
 
 
   // ── Carga combos niv/cat ──────────────────────────────────────────────────
@@ -201,19 +202,33 @@ export function GeneratePoomsaePhasesModal({
     }
     prevOpenRef.current = open;
     if (!open || hasInitialized.current) return;
+
+    // ── Haymaster: inicializar desde allRegistrations ──
+    if (hasHaymaster && allRegistrations.length > 0) {
+      const g = buildGroupsFromRegistrations(allRegistrations, categoryName);
+      if (g.length > 0) {
+        hasInitialized.current = true;
+        setGroups(g);
+        setSelectedGroupKeys(new Set(g.map((grp) => grp.key)));
+        const defaultTypes: Record<string, PhaseType> = {};
+        g.forEach((grp) => { defaultTypes[grp.key] = 'grupo'; });
+        setPhaseTypes(defaultTypes);
+      }
+    }
+
+    // ── Sismaster: inicializar desde combos ──
     if (hasSismaster && allQueriesDone) {
       const g = initialGroupsRef.current;
       if (g.length > 0) {
         hasInitialized.current = true;
         setGroups(g);
         setSelectedGroupKeys(new Set(g.map((grp) => grp.key)));
-        // Por defecto todas las fases son de tipo "grupo"
         const defaultTypes: Record<string, PhaseType> = {};
         g.forEach((grp) => { defaultTypes[grp.key] = 'grupo'; });
         setPhaseTypes(defaultTypes);
       }
     }
-  }, [open, allQueriesDone, hasSismaster]);
+  }, [open, allQueriesDone, hasSismaster, hasHaymaster, allRegistrations, categoryName]);
 
 
   // ── Selección de grupos ───────────────────────────────────────────────────
@@ -294,7 +309,7 @@ export function GeneratePoomsaePhasesModal({
   // ── Derivados ─────────────────────────────────────────────────────────────
 
 
-  const isLoading = loadingCombos || loadingCombosData;
+  const isLoading = hasSismaster && (loadingCombos || loadingCombosData);
   const validGroups = groups.filter((g) => g.athletes.length > 0 && selectedGroupKeys.has(g.key));
   const totalAthletes = validGroups.reduce((acc, g) => acc + g.athletes.length, 0);
   const canMoveAthletes = groups.length > 1;
@@ -328,10 +343,10 @@ export function GeneratePoomsaePhasesModal({
           </div>
         )}
 
-        {!hasSismaster && !isLoading && (
+        {hasHaymaster && !isLoading && groups.length === 0 && allRegistrations.length === 0 && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>Esta categoría no tiene Sismaster configurado.</span>
+            <span>No hay atletas inscritos en esta categoría.</span>
           </div>
         )}
 

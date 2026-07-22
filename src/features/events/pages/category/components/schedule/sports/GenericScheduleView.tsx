@@ -1309,6 +1309,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           categoryName={eventCategory.category?.name ?? "Categoría"}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
+          haymasterEventId={eventCategory.haymasterEventId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}
         />
       )}
@@ -1321,6 +1322,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           categoryName={eventCategory.category?.name ?? "Categoría"}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
+          haymasterEventId={eventCategory.haymasterEventId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}
         />
       )}
@@ -1333,6 +1335,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           categoryName={eventCategory.category?.name ?? "Categoría"}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
+          haymasterEventId={eventCategory.haymasterEventId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}
         />
       )}
@@ -1350,16 +1353,16 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
       )}
 
       {modals.generatePoomsaePhases && taekwondoType === "poomsae" && (
-        <GeneratePoomsaePhasesModal
-          open={modals.generatePoomsaePhases}
-          onClose={() => closeModal("generatePoomsaePhases")}
-          eventCategoryId={eventCategory.eventCategoryId}
-          categoryName={eventCategory.category?.name ?? "Poomsae"}
-          sismasterEventId={eventCategory.externalEventId ?? undefined}
-          sismasterSportId={eventCategory.externalSportId ?? undefined}
-          allRegistrations={eventCategory.registrations ?? []}
-        />
-      )}
+          <GeneratePoomsaePhasesModal
+            open={modals.generatePoomsaePhases}
+            onClose={() => closeModal("generatePoomsaePhases")}
+            eventCategoryId={eventCategory.eventCategoryId}
+            categoryName={eventCategory.category?.name ?? "Poomsae"}
+            sismasterEventId={eventCategory.externalEventId ?? undefined}   
+            sismasterSportId={eventCategory.externalSportId ?? undefined}  
+            allRegistrations={eventCategory.registrations ?? []}
+          />
+        )}
 
       {modals.generateShootingPhases && isTiroDeportivo && (
         <GenerateShootingPhasesModal
@@ -1381,6 +1384,7 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
           categoryName={eventCategory.category?.name ?? 'Kyourugui'}
           sismasterEventId={eventCategory.externalEventId ?? undefined}
           sismasterSportId={eventCategory.externalSportId ?? undefined}
+          haymasterEventId={eventCategory.haymasterEventId ?? undefined}
           allRegistrations={eventCategory.registrations ?? []}
         />
       )}
