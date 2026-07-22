@@ -32,9 +32,10 @@ export function AddEventCategoryPage() {
   const { data: allCategories = [], isLoading } = useQuery({
     queryKey: ["local-categories-by-sport", sportIdNum],
     queryFn: async () => {
-        const { data } = await apiClient.get<Category[]>(   // ← agregar <Category[]>
-        `/categories?sportId=${sportIdNum}`,
+        const { data } = await apiClient.get<Category[]>(
+        `/sports/categories?sportId=${sportIdNum}`,
         );
+
         return data;
     },
     enabled: !!sportIdNum,
@@ -132,32 +133,32 @@ export function AddEventCategoryPage() {
           {filtered.map((cat) => {
             const isSelected = selectedCategoryId === cat.categoryId;
             return (
-              <Card
+                <Card
                 key={cat.categoryId}
                 hover
                 padding="none"
                 onClick={() => setSelectedCategoryId(cat.categoryId)}
                 className={[
-                  "cursor-pointer p-4 border-2 transition-all",
-                  isSelected
+                    "cursor-pointer p-4 border-2 transition-all select-none", // ← añade select-none
+                    isSelected
                     ? "border-blue-500 bg-blue-50"
                     : "border-transparent hover:border-slate-200",
                 ].join(" ")}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                >
+                <div className="flex items-center gap-3 pointer-events-none"> {/* ← añade pointer-events-none */}
+                    <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
                     <Trophy className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <p className="font-semibold text-slate-900 text-sm">{cat.name}</p>
                     {cat.type && (
-                      <p className="text-xs text-slate-500 capitalize">{cat.type}</p>
+                        <p className="text-xs text-slate-500 capitalize">{cat.type}</p>
                     )}
-                  </div>
+                    </div>
                 </div>
-              </Card>
+                </Card>
             );
-          })}
+            })}
         </div>
       )}
 
