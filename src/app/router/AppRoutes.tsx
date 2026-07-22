@@ -28,6 +28,7 @@ import { CategoryInstitutionsPage } from "@/features/events/pages/category/Categ
 import { FeaturedAthletesPage }     from "@/features/events/pages/FeaturedAthletesPage";
 import { AddSportToEventPage }      from "@/features/events/pages/AddSportToEventPage";
 import { SismasterSportDetailPage } from "@/features/events/pages/SismasterSportDetailPage";
+import { AddEventCategoryPage }     from "@/features/events/pages/AddEventCategoryPage"; // ← NUEVO
 
 // Sports (Gestión Global)
 import { SportTypesPage } from "@/features/sports/pages/SportTypesPage";
@@ -70,6 +71,12 @@ export function AppRoutes() {
             <Route path="sports"        element={<EventSportsPage />} />
             <Route path="sports/:sportId" element={<EventSportCategoriesPage />} />
 
+            {/* ← NUEVO: agregar categoría en evento local */}
+            <Route
+              path="sports/:sportId/categories/add"
+              element={<AddEventCategoryPage />}
+            />
+
             <Route
               path="sports/add"
               element={
@@ -98,6 +105,12 @@ export function AppRoutes() {
           <Route path=":externalEventId/sports"          element={<EventSportsPage />} />
           <Route path=":externalEventId/sports/:sportId" element={<EventSportCategoriesPage />} />
 
+          {/* ← NUEVO: agregar categoría en evento sismaster */}
+          <Route
+            path=":externalEventId/sports/:sportId/categories/add"
+            element={<AddEventCategoryPage />}
+          />
+
           <Route
             path=":externalEventId/add-sport"
             element={
@@ -120,13 +133,16 @@ export function AppRoutes() {
           </Route>
         </Route>
 
-        {/* ==================== EVENTOS DE HAYMASTER ====================  ← NUEVO BLOQUE
-            ✅ operator accede — misma lógica de filtrado
-            ⛔ "add-sport" restringido a admin/moderador
-        ============================================================== */}
+        {/* ==================== EVENTOS DE HAYMASTER ==================== */}
         <Route path="haymaster-events">
           <Route path=":externalEventId/sports"          element={<EventSportsPage />} />
           <Route path=":externalEventId/sports/:sportId" element={<EventSportCategoriesPage />} />
+
+          {/* ← NUEVO: agregar categoría en evento haymaster */}
+          <Route
+            path=":externalEventId/sports/:sportId/categories/add"
+            element={<AddEventCategoryPage />}
+          />
 
           <Route
             path=":externalEventId/add-sport"
