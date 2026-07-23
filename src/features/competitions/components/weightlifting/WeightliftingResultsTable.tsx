@@ -1,31 +1,56 @@
-import { Trophy, Medal } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Trophy, Pencil, Check, X } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { useWeightliftingPhaseResults } from "../../api/weightlifting.queries";
+import { useSetManualRanks } from "../../api/manual-ranks.mutations";
 import { getImageUrl } from "@/lib/utils/imageUrl";
 import type { WeightliftingAthleteResult } from "../../api/weightlifting.api";
+import type { UpdatePositionEntry } from "../../api/weightlifting.api";
+import { useUpdateWeightliftingPositions } from "../../api/weightlifting.mutations";
+
 
 interface Props {
   phaseId: number;
   phaseName: string;
 }
 
-// ── Calcular lugar dentro de un grupo por tipo de lift ───────────────────────
+// ── Tipos locales para edición ────────────────────────────────────────────────
+type EditablePositions = Map<
+  number, // participationId
+  { snatchPosition: string; cnjPosition: string; totalPosition: string }
+>;
+
+// ── calcLugares (sin cambios) ─────────────────────────────────────────────────
 function calcLugares(
   athletes: WeightliftingAthleteResult[],
+  editMode: boolean,
+  editPositions: EditablePositions,
 ): Map<number, { snatchLugar: number | null; cnjLugar: number | null; totalLugar: number | null }> {
   const map = new Map<number, { snatchLugar: number | null; cnjLugar: number | null; totalLugar: number | null }>();
 
-  // Ordenar por bestSnatch desc → asignar lugar
+  if (editMode) {
+    // En modo edición mostramos los valores editables tal cual
+    for (const r of athletes) {
+      const id = r.participation.participationId;
+      const ep = editPositions.get(id);
+      map.set(id, {
+        snatchLugar: ep?.snatchPosition ? Number(ep.snatchPosition) : null,
+        cnjLugar: ep?.cnjPosition ? Number(ep.cnjPosition) : null,
+        totalLugar: ep?.totalPosition ? Number(ep.totalPosition) : null,
+      });
+    }
+    return map;
+  }
+
+  // Modo normal: cálculo automático por peso
   const bySnatch = [...athletes]
     .filter((r) => r.bestSnatch !== null)
     .sort((a, b) => (b.bestSnatch ?? 0) - (a.bestSnatch ?? 0));
-
   const byCnj = [...athletes]
     .filter((r) => r.bestCleanAndJerk !== null)
     .sort((a, b) => (b.bestCleanAndJerk ?? 0) - (a.bestCleanAndJerk ?? 0));
-
   const byTotal = [...athletes]
     .filter((r) => r.total !== null)
     .sort((a, b) => {
@@ -38,17 +63,16 @@ function calcLugares(
     const snatchLugar = bySnatch.findIndex((x) => x.participation.participationId === id);
     const cnjLugar = byCnj.findIndex((x) => x.participation.participationId === id);
     const totalLugar = byTotal.findIndex((x) => x.participation.participationId === id);
-
     map.set(id, {
       snatchLugar: snatchLugar >= 0 ? snatchLugar + 1 : null,
       cnjLugar: cnjLugar >= 0 ? cnjLugar + 1 : null,
       totalLugar: totalLugar >= 0 ? totalLugar + 1 : null,
     });
   }
-
   return map;
 }
 
+// ── Helpers de estilo (sin cambios) ──────────────────────────────────────────
 const lugarStyle = (lugar: number | null) => {
   if (lugar === 1) return "bg-yellow-400 text-white font-bold";
   if (lugar === 2) return "bg-slate-300 text-slate-700 font-bold";
@@ -57,7 +81,6 @@ const lugarStyle = (lugar: number | null) => {
   return "text-slate-300";
 };
 
-// ── Agrupar por división ──────────────────────────────────────────────────────
 function groupByDivision(
   results: WeightliftingAthleteResult[],
 ): Map<string, WeightliftingAthleteResult[]> {
@@ -70,44 +93,69 @@ function groupByDivision(
   return groups;
 }
 
-// ── Thead ─────────────────────────────────────────────────────────────────────
+// ── Celda de lugar: normal o editable ────────────────────────────────────────
+function LugarCell({
+  lugar,
+  editMode,
+  value,
+  onChange,
+  borderClass,
+}: {
+  lugar: number | null;
+  editMode: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  borderClass: string;
+}) {
+  if (editMode) {
+    return (
+      <td className={`px-2 py-2 text-center ${borderClass}`}>
+        <input
+          type="number"
+          min={1}
+          max={99}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-12 text-center text-xs border border-slate-300 rounded-md px-1 py-1
+                     focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                     [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                     [&::-webkit-inner-spin-button]:appearance-none"
+          placeholder="—"
+        />
+      </td>
+    );
+  }
+
+  return (
+    <td className={`px-2 py-3 text-center ${borderClass}`}>
+      {lugar !== null ? (
+        <span
+          className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${lugarStyle(lugar)}`}
+        >
+          {lugar}
+        </span>
+      ) : (
+        <span className="text-slate-200 text-xs">—</span>
+      )}
+    </td>
+  );
+}
+
+// ── TableHead (sin cambios) ───────────────────────────────────────────────────
 function TableHead() {
   return (
     <thead>
       <tr className="bg-slate-50 border-b-2 border-slate-200">
-        <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 w-10">
-          Seed
-        </th>
-        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 min-w-[180px]">
-          Atleta
-        </th>
-        {/* Arranque */}
-        <th colSpan={3} className="px-2 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-x border-blue-200">
-          ARRANQUE
-        </th>
-        <th className="px-3 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-r border-blue-100">
-          Mejor
-        </th>
-        <th className="px-2 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-r border-blue-200">
-          Lugar
-        </th>
-        {/* Envión */}
-        <th colSpan={3} className="px-2 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-x border-purple-200">
-          ENVIÓN
-        </th>
-        <th className="px-3 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-r border-purple-100">
-          Mejor
-        </th>
-        <th className="px-2 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-r border-purple-200">
-          Lugar
-        </th>
-        {/* Total */}
-        <th className="px-3 py-3 text-center text-xs font-semibold text-slate-900 bg-yellow-50 w-16">
-          TOTAL
-        </th>
-        <th className="px-2 py-3 text-center text-xs font-semibold text-slate-900 bg-yellow-50 w-14">
-          Lugar
-        </th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 w-10">Seed</th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 min-w-[180px]">Atleta</th>
+        <th colSpan={3} className="px-2 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-x border-blue-200">ARRANQUE</th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-r border-blue-100">Mejor</th>
+        <th className="px-2 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-r border-blue-200">Lugar</th>
+        <th colSpan={3} className="px-2 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-x border-purple-200">ENVIÓN</th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-r border-purple-100">Mejor</th>
+        <th className="px-2 py-3 text-center text-xs font-semibold text-purple-700 bg-purple-50 border-r border-purple-200">Lugar</th>
+        <th className="px-3 py-3 text-center text-xs font-semibold text-slate-900 bg-yellow-50 w-16">TOTAL</th>
+        <th className="px-2 py-3 text-center text-xs font-semibold text-slate-900 bg-yellow-50 w-14">Lugar</th>
       </tr>
       <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-400">
         <th /><th />
@@ -127,28 +175,31 @@ function TableHead() {
   );
 }
 
-// ── Fila de atleta ────────────────────────────────────────────────────────────
+// ── Fila de atleta con soporte de edición ─────────────────────────────────────
 function AthleteRow({
   result,
   lugares,
+  editMode,
+  editValues,
+  onEditChange,
 }: {
   result: WeightliftingAthleteResult;
   lugares: { snatchLugar: number | null; cnjLugar: number | null; totalLugar: number | null };
+  editMode: boolean;
+  editValues: { snatchPosition: string; cnjPosition: string; totalPosition: string };
+  onEditChange: (field: "snatchPosition" | "cnjPosition" | "totalPosition", value: string) => void;
 }) {
-  const name =
-    result.participation?.registration?.athlete?.name ?? "Sin nombre";
-  const institution =
-    result.participation?.registration?.athlete?.institution ?? null;
+  const name = result.participation?.registration?.athlete?.name ?? "Sin nombre";
+  const institution = result.participation?.registration?.athlete?.institution ?? null;
   const logoUrl = institution?.logoUrl;
   const seedNumber = result.participation?.registration?.seedNumber ?? null;
+  const updatePositions = useUpdateWeightliftingPositions(phaseId);
 
   return (
-    <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+    <tr className={`border-b border-slate-100 transition-colors ${editMode ? "bg-blue-50/30" : "hover:bg-slate-50"}`}>
       {/* Seed */}
       <td className="px-3 py-3 text-center">
-        <span className="text-sm font-semibold text-slate-500">
-          {seedNumber ?? "—"}
-        </span>
+        <span className="text-sm font-semibold text-slate-500">{seedNumber ?? "—"}</span>
       </td>
 
       {/* Atleta */}
@@ -164,9 +215,7 @@ function AthleteRow({
           )}
           <div>
             <p className="font-semibold text-slate-900 text-sm">{name}</p>
-            {institution && (
-              <p className="text-xs text-slate-400">{institution.name}</p>
-            )}
+            {institution && <p className="text-xs text-slate-400">{institution.name}</p>}
           </div>
         </div>
       </td>
@@ -187,15 +236,13 @@ function AthleteRow({
       </td>
 
       {/* Lugar Arranque */}
-      <td className="px-2 py-3 text-center border-r border-blue-200">
-        {lugares.snatchLugar !== null ? (
-          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${lugarStyle(lugares.snatchLugar)}`}>
-            {lugares.snatchLugar}
-          </span>
-        ) : (
-          <span className="text-slate-200 text-xs">—</span>
-        )}
-      </td>
+      <LugarCell
+        lugar={lugares.snatchLugar}
+        editMode={editMode}
+        value={editValues.snatchPosition}
+        onChange={(v) => onEditChange("snatchPosition", v)}
+        borderClass="border-r border-blue-200"
+      />
 
       {/* C&J 1, 2, 3 */}
       {[1, 2, 3].map((num) => (
@@ -213,15 +260,13 @@ function AthleteRow({
       </td>
 
       {/* Lugar Envión */}
-      <td className="px-2 py-3 text-center border-r border-purple-200">
-        {lugares.cnjLugar !== null ? (
-          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${lugarStyle(lugares.cnjLugar)}`}>
-            {lugares.cnjLugar}
-          </span>
-        ) : (
-          <span className="text-slate-200 text-xs">—</span>
-        )}
-      </td>
+      <LugarCell
+        lugar={lugares.cnjLugar}
+        editMode={editMode}
+        value={editValues.cnjPosition}
+        onChange={(v) => onEditChange("cnjPosition", v)}
+        borderClass="border-r border-purple-200"
+      />
 
       {/* Total */}
       <td className="px-3 py-3 text-center bg-yellow-50/50">
@@ -231,40 +276,64 @@ function AthleteRow({
       </td>
 
       {/* Lugar Total */}
-      <td className="px-2 py-3 text-center bg-yellow-50/50">
-        {lugares.totalLugar !== null ? (
-          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${lugarStyle(lugares.totalLugar)}`}>
-            {lugares.totalLugar}
-          </span>
-        ) : (
-          <span className="text-slate-200 text-xs">—</span>
-        )}
-      </td>
+      <LugarCell
+        lugar={lugares.totalLugar}
+        editMode={editMode}
+        value={editValues.totalPosition}
+        onChange={(v) => onEditChange("totalPosition", v)}
+        borderClass=""
+      />
     </tr>
   );
 }
 
-// ── Bloque de tabla para un grupo de atletas ──────────────────────────────────
-function DivisionTable({ athletes }: { athletes: WeightliftingAthleteResult[] }) {
-  const lugares = calcLugares(athletes);
+// ── DivisionTable con soporte de edición ──────────────────────────────────────
+function DivisionTable({
+  athletes,
+  editMode,
+  editPositions,
+  onEditChange,
+}: {
+  athletes: WeightliftingAthleteResult[];
+  editMode: boolean;
+  editPositions: EditablePositions;
+  onEditChange: (
+    participationId: number,
+    field: "snatchPosition" | "cnjPosition" | "totalPosition",
+    value: string,
+  ) => void;
+}) {
+  const lugares = calcLugares(athletes, editMode, editPositions);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
         <TableHead />
         <tbody>
-          {athletes.map((result) => (
-            <AthleteRow
-              key={result.participation.participationId}
-              result={result}
-              lugares={
-                lugares.get(result.participation.participationId) ?? {
-                  snatchLugar: null,
-                  cnjLugar: null,
-                  totalLugar: null,
-                }
-              }
-            />
-          ))}
+          {athletes.map((result) => {
+            const id = result.participation.participationId;
+            const ep = editPositions.get(id) ?? {
+              snatchPosition: "",
+              cnjPosition: "",
+              totalPosition: "",
+            };
+            const lug = lugares.get(id) ?? {
+              snatchLugar: null,
+              cnjLugar: null,
+              totalLugar: null,
+            };
+
+            return (
+              <AthleteRow
+                key={id}
+                result={result}
+                lugares={lug}
+                editMode={editMode}
+                editValues={ep}
+                onEditChange={(field, value) => onEditChange(id, field, value)}
+              />
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -274,12 +343,69 @@ function DivisionTable({ athletes }: { athletes: WeightliftingAthleteResult[] })
 // ── Componente principal ──────────────────────────────────────────────────────
 export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
   const { data: results = [], isLoading } = useWeightliftingPhaseResults(phaseId);
+  const updatePositions = useUpdateWeightliftingPositions(phaseId);
 
-  const hasDivisions = results.some(
-    (r) => r.participation?.registration?.weightClass,
-  );
+  const [editMode, setEditMode] = useState(false);
+  const [editPositions, setEditPositions] = useState<EditablePositions>(new Map());
 
+  const hasDivisions = results.some((r) => r.participation?.registration?.weightClass);
   const groups = groupByDivision(results);
+
+  // Inicializar estado editable a partir de los resultados actuales
+  const enterEditMode = useCallback(() => {
+    const initial: EditablePositions = new Map();
+    for (const r of results) {
+      const id = r.participation.participationId;
+      initial.set(id, {
+        // Si ya tienes campos de posición guardados en el result, úsalos:
+        snatchPosition: String(r.snatchPosition ?? ""),
+        cnjPosition: String(r.cnjPosition ?? ""),
+        totalPosition: String(r.totalPosition ?? ""),
+      });
+    }
+    setEditPositions(initial);
+    setEditMode(true);
+  }, [results]);
+
+  const cancelEdit = () => {
+    setEditMode(false);
+    setEditPositions(new Map());
+  };
+
+  const savePositions = async () => {
+    const payload: UpdatePositionEntry[] = [];
+    for (const [participationId, vals] of editPositions.entries()) {
+      payload.push({
+        participationId,
+        snatchPosition: vals.snatchPosition !== "" ? Number(vals.snatchPosition) : null,
+        cnjPosition: vals.cnjPosition !== "" ? Number(vals.cnjPosition) : null,
+        totalPosition: vals.totalPosition !== "" ? Number(vals.totalPosition) : null,
+      });
+    }
+    await updatePositions.mutateAsync(payload);
+    setEditMode(false);
+    setEditPositions(new Map());
+  };
+
+  const handleEditChange = useCallback(
+    (
+      participationId: number,
+      field: "snatchPosition" | "cnjPosition" | "totalPosition",
+      value: string,
+    ) => {
+      setEditPositions((prev) => {
+        const next = new Map(prev);
+        const current = next.get(participationId) ?? {
+          snatchPosition: "",
+          cnjPosition: "",
+          totalPosition: "",
+        };
+        next.set(participationId, { ...current, [field]: value });
+        return next;
+      });
+    },
+    [],
+  );
 
   return (
     <Card>
@@ -298,8 +424,61 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
               )}
             </div>
           </div>
-          <Badge variant="primary">{results.length} atletas</Badge>
+
+          <div className="flex items-center gap-2">
+            <Badge variant="primary">{results.length} atletas</Badge>
+
+            {/* Controles de edición */}
+            {!editMode ? (
+              <button
+                onClick={enterEditMode}
+                disabled={isLoading || results.length === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                           bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-700
+                           transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Editar posiciones
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={cancelEdit}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
+                             bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancelar
+                </button>
+                <button
+                  onClick={savePositions}
+                  disabled={updatePositions.isPending}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
+                             bg-blue-600 text-white hover:bg-blue-700 transition-colors
+                             disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {updatePositions.isPending ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
+                  Guardar
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Banner de modo edición */}
+        {editMode && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <Pencil className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+            <p className="text-xs text-blue-700 font-medium">
+              Modo edición activo — modifica los lugares de cada atleta y presiona{" "}
+              <span className="font-bold">Guardar</span>
+            </p>
+          </div>
+        )}
       </CardHeader>
 
       <CardBody className="p-0">
@@ -314,7 +493,6 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
             <p className="font-medium">No hay resultados aún</p>
           </div>
         ) : hasDivisions ? (
-          // ── Con divisiones: una tabla por división ────────────────────────
           <div className="divide-y divide-slate-200">
             {Array.from(groups.entries()).map(([div, athletes]) => (
               <div key={div}>
@@ -326,20 +504,29 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
                     — {athletes.length} atleta{athletes.length !== 1 ? "s" : ""}
                   </span>
                 </div>
-                <DivisionTable athletes={athletes} />
+                <DivisionTable
+                  athletes={athletes}
+                  editMode={editMode}
+                  editPositions={editPositions}
+                  onEditChange={handleEditChange}
+                />
               </div>
             ))}
           </div>
         ) : (
-          // ── Sin divisiones: tabla única ───────────────────────────────────
-          <DivisionTable athletes={results} />
+          <DivisionTable
+            athletes={results}
+            editMode={editMode}
+            editPositions={editPositions}
+            onEditChange={handleEditChange}
+          />
         )}
       </CardBody>
     </Card>
   );
 }
 
-// ── Celda de intento ──────────────────────────────────────────────────────────
+// ── AttemptCell (sin cambios) ─────────────────────────────────────────────────
 function AttemptCell({
   attempt,
 }: {
@@ -355,9 +542,7 @@ function AttemptCell({
   if (attempt.result === "retired") {
     return (
       <td className="px-2 py-2 text-center border-r border-slate-100 bg-amber-50">
-        <span className="text-xs text-amber-400 line-through block">
-          {attempt.weightKg ?? "—"}
-        </span>
+        <span className="text-xs text-amber-400 line-through block">{attempt.weightKg ?? "—"}</span>
         <span className="text-xs font-bold text-amber-600">RT</span>
       </td>
     );
@@ -372,4 +557,3 @@ function AttemptCell({
     </td>
   );
 }
-

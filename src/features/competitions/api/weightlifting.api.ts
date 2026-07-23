@@ -64,6 +64,13 @@ export interface WeightliftingPhaseEntry {
   weightClass: string | null;
 }
 
+export interface UpdatePositionEntry {
+  participationId: number;
+  snatchPosition?: number | null;
+  cnjPosition?: number | null;
+  totalPosition?: number | null;
+}
+
 export const weightliftingApi = {
   getPhaseResults: async (
     phaseId: number,
@@ -136,3 +143,11 @@ export const weightliftingApi = {
 
 
 };
+export async function updateWeightliftingPositions(
+  phaseId: number,
+  positions: UpdatePositionEntry[],
+): Promise<void> {
+  await apiClient.patch(`/weightlifting/phase/${phaseId}/positions`, {
+    positions,
+  });
+}

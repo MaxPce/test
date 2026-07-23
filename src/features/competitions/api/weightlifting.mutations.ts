@@ -2,9 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   weightliftingApi,
+  type UpdatePositionEntry,
   type WeightliftingAttemptData,
   type WeightliftingPhaseEntry,
 } from "./weightlifting.api";
+
+import { updateWeightliftingPositions } from "./weightlifting.api";
 import { weightliftingKeys } from "./weightlifting.queries";
 
 export function useUpsertWeightliftingAttempt(phaseId: number) {
@@ -75,6 +78,20 @@ export function useRemoveWeightliftingAthlete(phaseId: number) {
     },
     onError: () => {
       toast.error("Error al remover el atleta");
+    },
+  });
+}
+
+export function useUpdateWeightliftingPositions(phaseId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (positions: UpdatePositionEntry[]) =>
+      updateWeightliftingPositions(phaseId, positions),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["weightlifting-phase-results", phaseId],
+      });
     },
   });
 }
