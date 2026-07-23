@@ -55,6 +55,43 @@ function getCatLabel(idcat: string): string {
   return idcat.toUpperCase();
 }
 
+// ─── Helper Haymaster ────────────────────────────────────────────────────────
+
+function buildGroupsFromRegistrations(
+  registrations: any[],
+  categoryName: string,
+): PoomsaeGroup[] {
+  const grouped = new Map<string, { idniv: string; idcat: string; athletes: PoomsaeAthlete[] }>();
+
+  for (const reg of registrations) {
+    const idniv: string = reg.idniv ?? reg.level ?? 'general';
+    const idcat: string = reg.idcat ?? reg.gender ?? reg.category ?? 'general';
+    const key = `${idniv}-${idcat}`;
+
+    if (!grouped.has(key)) {
+      grouped.set(key, { idniv, idcat, athletes: [] });
+    }
+    grouped.get(key)!.athletes.push({
+      registrationId: reg.registrationId,
+      name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
+      institution: reg.athlete?.institution?.name ?? reg.team?.institution?.name ?? null,
+    });
+  }
+
+  return Array.from(grouped.entries())
+    .map(([key, { idniv, idcat, athletes }]) => ({
+      key,
+      phaseName:
+        idniv === 'general' && idcat === 'general'
+          ? categoryName
+          : buildPhaseName(idniv, idcat, categoryName),
+      idniv,
+      idcat,
+      athletes,
+    }))
+    .filter((g) => g.athletes.length > 0);
+}
+
 function buildPhaseName(idniv: string, idcat: string, categoryName: string): string {
   return `${getCatLabel(idcat)} ${getNivLabel(idniv)} ${categoryName}`;
 }
