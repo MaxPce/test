@@ -90,8 +90,12 @@ export function useUpdateWeightliftingPositions(phaseId: number) {
       updateWeightliftingPositions(phaseId, positions),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["weightlifting-phase-results", phaseId],
+        queryKey: weightliftingKeys.phaseResults(phaseId),
       });
+      toast.success("Posiciones guardadas correctamente");
+    },
+    onError: () => {
+      toast.error("Error al guardar las posiciones");
     },
   });
 }

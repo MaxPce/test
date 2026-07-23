@@ -56,7 +56,11 @@ export interface WeightliftingAthleteResult {
   rank: number | null;
   manualSnatchRank?: number | null;       
   manualCleanAndJerkRank?: number | null; 
-  manualTotalRank?: number | null;        
+  manualTotalRank?: number | null;
+  snatchPosition: number | null;
+  cnjPosition: number | null;
+  totalPosition: number | null;
+        
 }
 
 export interface WeightliftingPhaseEntry {
@@ -65,11 +69,12 @@ export interface WeightliftingPhaseEntry {
 }
 
 export interface UpdatePositionEntry {
-  participationId: number;
-  snatchPosition?: number | null;
-  cnjPosition?: number | null;
-  totalPosition?: number | null;
+  registrationId: number;
+  snatchRank?: number | null;
+  cleanAndJerkRank?: number | null;
+  totalRank?: number | null;
 }
+
 
 export const weightliftingApi = {
   getPhaseResults: async (
@@ -147,7 +152,9 @@ export async function updateWeightliftingPositions(
   phaseId: number,
   positions: UpdatePositionEntry[],
 ): Promise<void> {
-  await apiClient.patch(`/weightlifting/phase/${phaseId}/positions`, {
-    positions,
-  });
+  await apiClient.patch(
+    `/competitions/weightlifting/phases/${phaseId}/manual-ranks`,
+    { ranks: positions },
+  );
 }
+

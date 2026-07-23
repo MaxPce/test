@@ -10,7 +10,6 @@ import type { WeightliftingAthleteResult } from "../../api/weightlifting.api";
 import type { UpdatePositionEntry } from "../../api/weightlifting.api";
 import { useUpdateWeightliftingPositions } from "../../api/weightlifting.mutations";
 
-
 interface Props {
   phaseId: number;
   phaseName: string;
@@ -22,7 +21,7 @@ type EditablePositions = Map<
   { snatchPosition: string; cnjPosition: string; totalPosition: string }
 >;
 
-// ── calcLugares (sin cambios) ─────────────────────────────────────────────────
+// ── calcLugares ───────────────────────────────────────────────────────────────
 function calcLugares(
   athletes: WeightliftingAthleteResult[],
   editMode: boolean,
@@ -31,7 +30,6 @@ function calcLugares(
   const map = new Map<number, { snatchLugar: number | null; cnjLugar: number | null; totalLugar: number | null }>();
 
   if (editMode) {
-    // En modo edición mostramos los valores editables tal cual
     for (const r of athletes) {
       const id = r.participation.participationId;
       const ep = editPositions.get(id);
@@ -44,7 +42,6 @@ function calcLugares(
     return map;
   }
 
-  // Modo normal: cálculo automático por peso
   const bySnatch = [...athletes]
     .filter((r) => r.bestSnatch !== null)
     .sort((a, b) => (b.bestSnatch ?? 0) - (a.bestSnatch ?? 0));
@@ -72,7 +69,7 @@ function calcLugares(
   return map;
 }
 
-// ── Helpers de estilo (sin cambios) ──────────────────────────────────────────
+// ── Helpers de estilo ─────────────────────────────────────────────────────────
 const lugarStyle = (lugar: number | null) => {
   if (lugar === 1) return "bg-yellow-400 text-white font-bold";
   if (lugar === 2) return "bg-slate-300 text-slate-700 font-bold";
@@ -93,7 +90,7 @@ function groupByDivision(
   return groups;
 }
 
-// ── Celda de lugar: normal o editable ────────────────────────────────────────
+// ── Celda de lugar: normal o editable ────���───────────────────────────────────
 function LugarCell({
   lugar,
   editMode,
@@ -141,7 +138,7 @@ function LugarCell({
   );
 }
 
-// ── TableHead (sin cambios) ───────────────────────────────────────────────────
+// ── TableHead ─────────────────────────────────────────────────────────────────
 function TableHead() {
   return (
     <thead>
@@ -175,7 +172,7 @@ function TableHead() {
   );
 }
 
-// ── Fila de atleta con soporte de edición ─────────────────────────────────────
+// ── Fila de atleta ────────────────────────────────────────────────────────────
 function AthleteRow({
   result,
   lugares,
@@ -193,16 +190,12 @@ function AthleteRow({
   const institution = result.participation?.registration?.athlete?.institution ?? null;
   const logoUrl = institution?.logoUrl;
   const seedNumber = result.participation?.registration?.seedNumber ?? null;
-  const updatePositions = useUpdateWeightliftingPositions(phaseId);
 
   return (
     <tr className={`border-b border-slate-100 transition-colors ${editMode ? "bg-blue-50/30" : "hover:bg-slate-50"}`}>
-      {/* Seed */}
       <td className="px-3 py-3 text-center">
         <span className="text-sm font-semibold text-slate-500">{seedNumber ?? "—"}</span>
       </td>
-
-      {/* Atleta */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           {logoUrl && (
@@ -219,23 +212,17 @@ function AthleteRow({
           </div>
         </div>
       </td>
-
-      {/* Snatch 1, 2, 3 */}
       {[1, 2, 3].map((num) => (
         <AttemptCell
           key={`s${num}`}
           attempt={result.snatchAttempts?.find((a) => a.attemptNumber === num)}
         />
       ))}
-
-      {/* Mejor Snatch */}
       <td className="px-3 py-3 text-center border-r border-blue-100">
         <span className={`font-bold text-sm ${result.bestSnatch ? "text-blue-700" : "text-slate-300"}`}>
           {result.bestSnatch ?? "—"}
         </span>
       </td>
-
-      {/* Lugar Arranque */}
       <LugarCell
         lugar={lugares.snatchLugar}
         editMode={editMode}
@@ -243,23 +230,17 @@ function AthleteRow({
         onChange={(v) => onEditChange("snatchPosition", v)}
         borderClass="border-r border-blue-200"
       />
-
-      {/* C&J 1, 2, 3 */}
       {[1, 2, 3].map((num) => (
         <AttemptCell
           key={`c${num}`}
           attempt={result.cleanAndJerkAttempts?.find((a) => a.attemptNumber === num)}
         />
       ))}
-
-      {/* Mejor C&J */}
       <td className="px-3 py-3 text-center border-r border-purple-100">
         <span className={`font-bold text-sm ${result.bestCleanAndJerk ? "text-purple-700" : "text-slate-300"}`}>
           {result.bestCleanAndJerk ?? "—"}
         </span>
       </td>
-
-      {/* Lugar Envión */}
       <LugarCell
         lugar={lugares.cnjLugar}
         editMode={editMode}
@@ -267,15 +248,11 @@ function AthleteRow({
         onChange={(v) => onEditChange("cnjPosition", v)}
         borderClass="border-r border-purple-200"
       />
-
-      {/* Total */}
       <td className="px-3 py-3 text-center bg-yellow-50/50">
         <span className={`font-bold text-base ${result.total ? "text-slate-900" : "text-slate-300"}`}>
           {result.total ?? "—"}
         </span>
       </td>
-
-      {/* Lugar Total */}
       <LugarCell
         lugar={lugares.totalLugar}
         editMode={editMode}
@@ -287,7 +264,7 @@ function AthleteRow({
   );
 }
 
-// ── DivisionTable con soporte de edición ──────────────────────────────────────
+// ── DivisionTable ─────────────────────────────────────────────────────────────
 function DivisionTable({
   athletes,
   editMode,
@@ -322,7 +299,6 @@ function DivisionTable({
               cnjLugar: null,
               totalLugar: null,
             };
-
             return (
               <AthleteRow
                 key={id}
@@ -351,16 +327,15 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
   const hasDivisions = results.some((r) => r.participation?.registration?.weightClass);
   const groups = groupByDivision(results);
 
-  // Inicializar estado editable a partir de los resultados actuales
+  // ✅ Bug 1 corregido: usar manualSnatchRank / manualCleanAndJerkRank / manualTotalRank
   const enterEditMode = useCallback(() => {
     const initial: EditablePositions = new Map();
     for (const r of results) {
       const id = r.participation.participationId;
       initial.set(id, {
-        // Si ya tienes campos de posición guardados en el result, úsalos:
-        snatchPosition: String(r.snatchPosition ?? ""),
-        cnjPosition: String(r.cnjPosition ?? ""),
-        totalPosition: String(r.totalPosition ?? ""),
+        snatchPosition: String(r.manualSnatchRank ?? ""),
+        cnjPosition: String(r.manualCleanAndJerkRank ?? ""),
+        totalPosition: String(r.manualTotalRank ?? ""),
       });
     }
     setEditPositions(initial);
@@ -372,19 +347,31 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
     setEditPositions(new Map());
   };
 
+  // ✅ Bug 2 y 3 corregidos: usar results + editPositions (por participationId),
+  //    y mapear registrationId para el payload del backend
   const savePositions = async () => {
-    const payload: UpdatePositionEntry[] = [];
-    for (const [participationId, vals] of editPositions.entries()) {
-      payload.push({
-        participationId,
-        snatchPosition: vals.snatchPosition !== "" ? Number(vals.snatchPosition) : null,
-        cnjPosition: vals.cnjPosition !== "" ? Number(vals.cnjPosition) : null,
-        totalPosition: vals.totalPosition !== "" ? Number(vals.totalPosition) : null,
-      });
-    }
+    const payload: UpdatePositionEntry[] = results
+      .map((r) => {
+        const regId = r.participation.registration?.registrationId;
+        if (regId == null) return null;
+        const ep = editPositions.get(r.participation.participationId);
+        return {
+          registrationId: regId,
+          snatchRank: ep?.snatchPosition !== "" && ep?.snatchPosition != null
+            ? Number(ep.snatchPosition)
+            : null,
+          cleanAndJerkRank: ep?.cnjPosition !== "" && ep?.cnjPosition != null
+            ? Number(ep.cnjPosition)
+            : null,
+          totalRank: ep?.totalPosition !== "" && ep?.totalPosition != null
+            ? Number(ep.totalPosition)
+            : null,
+        };
+      })
+      .filter((e): e is UpdatePositionEntry => e !== null);
+
     await updatePositions.mutateAsync(payload);
     setEditMode(false);
-    setEditPositions(new Map());
   };
 
   const handleEditChange = useCallback(
@@ -427,8 +414,6 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
 
           <div className="flex items-center gap-2">
             <Badge variant="primary">{results.length} atletas</Badge>
-
-            {/* Controles de edición */}
             {!editMode ? (
               <button
                 onClick={enterEditMode}
@@ -469,7 +454,6 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
           </div>
         </div>
 
-        {/* Banner de modo edición */}
         {editMode && (
           <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
             <Pencil className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
@@ -526,7 +510,7 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
   );
 }
 
-// ── AttemptCell (sin cambios) ─────────────────────────────────────────────────
+// ── AttemptCell ───────────────────────────────────────────────────────────────
 function AttemptCell({
   attempt,
 }: {
