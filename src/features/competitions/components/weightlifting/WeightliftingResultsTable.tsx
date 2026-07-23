@@ -42,6 +42,27 @@ function calcLugares(
     return map;
   }
 
+  // ✅ NUEVO: si algún atleta tiene manualRanks guardados en BD, usarlos directamente
+  const hasManualRanks = athletes.some(
+    (r) =>
+      r.manualSnatchRank != null ||
+      r.manualCleanAndJerkRank != null ||
+      r.manualTotalRank != null,
+  );
+
+  if (hasManualRanks) {
+    for (const r of athletes) {
+      const id = r.participation.participationId;
+      map.set(id, {
+        snatchLugar: r.manualSnatchRank ?? null,
+        cnjLugar: r.manualCleanAndJerkRank ?? null,
+        totalLugar: r.manualTotalRank ?? null,
+      });
+    }
+    return map;
+  }
+
+  // Fallback automático (sin cambios — solo cuando no hay ningún rank guardado)
   const bySnatch = [...athletes]
     .filter((r) => r.bestSnatch !== null)
     .sort((a, b) => (b.bestSnatch ?? 0) - (a.bestSnatch ?? 0));
@@ -347,28 +368,30 @@ export function WeightliftingResultsTable({ phaseId, phaseName }: Props) {
     setEditPositions(new Map());
   };
 
-  // ✅ Bug 2 y 3 corregidos: usar results + editPositions (por participationId),
-  //    y mapear registrationId para el payload del backend
   const savePositions = async () => {
-    const payload: UpdatePositionEntry[] = results
-      .map((r) => {
-        const regId = r.participation.registration?.registrationId;
-        if (regId == null) return null;
-        const ep = editPositions.get(r.participation.participationId);
-        return {
-          registrationId: regId,
-          snatchRank: ep?.snatchPosition !== "" && ep?.snatchPosition != null
+    const payload: UpdatePositionEntry[] = [];
+
+    for (const r of results) {
+      const regId = r.participation.registration?.registrationId;
+      if (regId == null) continue;
+
+      const ep = editPositions.get(r.participation.participationId);
+      payload.push({
+        registrationId: regId,
+        snatchRank:
+          ep?.snatchPosition !== "" && ep?.snatchPosition != null
             ? Number(ep.snatchPosition)
             : null,
-          cleanAndJerkRank: ep?.cnjPosition !== "" && ep?.cnjPosition != null
+        cleanAndJerkRank:
+          ep?.cnjPosition !== "" && ep?.cnjPosition != null
             ? Number(ep.cnjPosition)
             : null,
-          totalRank: ep?.totalPosition !== "" && ep?.totalPosition != null
+        totalRank:
+          ep?.totalPosition !== "" && ep?.totalPosition != null
             ? Number(ep.totalPosition)
             : null,
-        };
-      })
-      .filter((e): e is UpdatePositionEntry => e !== null);
+      });
+    }
 
     await updatePositions.mutateAsync(payload);
     setEditMode(false);
