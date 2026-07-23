@@ -10,6 +10,7 @@ import type { WeightliftingAthleteResult } from "../../api/weightlifting.api";
 import type { UpdatePositionEntry } from "../../api/weightlifting.api";
 import { useUpdateWeightliftingPositions } from "../../api/weightlifting.mutations";
 
+
 interface Props {
   phaseId: number;
   phaseName: string;
