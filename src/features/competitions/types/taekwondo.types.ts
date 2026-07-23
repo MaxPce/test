@@ -52,15 +52,20 @@ export interface PoomsaeScore {
 export interface PoomsaeParticipant {
   participationId: number;
   rank: number | null;
-  participantName: string;     
-  isTeam: boolean;              
-  participantPhoto: string | null;  
+  participantName: string;
+  isTeam: boolean;
+  participantPhoto: string | null;
   institution: string;
   institutionLogo: string | null;
   gender: string;
   accuracy: number | null;
   presentation: number | null;
   total: number | null;
+  members?: Array<{
+    athleteId: number;
+    name: string;
+    photo?: string | null;
+  }>;
 }
 
 

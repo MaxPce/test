@@ -94,18 +94,37 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                   className="hover:bg-gray-50 transition-colors"
                 >
                   {/* Participante */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     <div className="text-sm font-medium text-gray-900">
                       {participant.participantName}
                       {participant.isTeam && (
-                        <span className="ml-1 text-xs text-blue-600">
-                          (Equipo)
-                        </span>
+                        <span className="ml-1 text-xs text-blue-600">(Equipo)</span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {participant.gender}
-                    </div>
+                    <div className="text-xs text-gray-500">{participant.gender}</div>
+
+                    {/* ✅ NUEVO — miembros del equipo */}
+                    {participant.isTeam && participant.members && participant.members.length > 0 && (
+                      <div className="mt-1.5 space-y-1">
+                        {participant.members.map((member) => (
+                          <div key={member.athleteId} className="flex items-center gap-1.5">
+                            {member.photo ? (
+                              <img
+                                src={getImageUrl(member.photo)}
+                                alt={member.name}
+                                className="h-5 w-5 rounded-full object-cover"
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                              />
+                            ) : (
+                              <div className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] text-slate-500 font-bold flex-shrink-0">
+                                {member.name.charAt(0)}
+                              </div>
+                            )}
+                            <span className="text-xs text-slate-600">{member.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   {/* Institución */}
                   <td className="px-4 py-3 whitespace-nowrap">
@@ -146,18 +165,37 @@ export const PoomsaeScoreTable = ({ phaseId }: Props) => {
                 className="hover:bg-gray-50 transition-colors"
               >
                 {/* Participante */}
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 py-3">
                   <div className="text-sm font-medium text-gray-900">
                     {participant.participantName}
                     {participant.isTeam && (
-                      <span className="ml-1 text-xs text-blue-600">
-                        (Equipo)
-                      </span>
+                      <span className="ml-1 text-xs text-blue-600">(Equipo)</span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {participant.gender}
-                  </div>
+                  <div className="text-xs text-gray-500">{participant.gender}</div>
+
+                  {/* ✅ NUEVO — miembros del equipo */}
+                  {participant.isTeam && participant.members && participant.members.length > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      {participant.members.map((member) => (
+                        <div key={member.athleteId} className="flex items-center gap-1.5">
+                          {member.photo ? (
+                            <img
+                              src={getImageUrl(member.photo)}
+                              alt={member.name}
+                              className="h-5 w-5 rounded-full object-cover"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                          ) : (
+                            <div className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] text-slate-500 font-bold flex-shrink-0">
+                              {member.name.charAt(0)}
+                            </div>
+                          )}
+                          <span className="text-xs text-slate-600">{member.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </td>
                 {/* Institución */}
                 <td className="px-4 py-3 whitespace-nowrap">
