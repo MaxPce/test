@@ -13,6 +13,7 @@ import type {
 
 interface Props {
   phaseId: number;
+  readOnly?: boolean;
 }
 
 type AttemptResult = "valid" | "invalid" | "not_attempted" | "retired";
@@ -97,11 +98,13 @@ function AthleteRow({
   idx,
   phaseId,
   onEdit,
+  readOnly,
 }: {
   result: WeightliftingAthleteResult;
   idx: number;
   phaseId: number;
   onEdit: (r: WeightliftingAthleteResult) => void;
+  readOnly?: boolean;
 }) {
   const athleteName =
     result.participation.registration?.athlete?.name ??
@@ -190,6 +193,7 @@ function AthleteRow({
             size="sm"
             variant="ghost"
             onClick={() => onEdit(result)}
+            disabled={readOnly}
           >
             <Edit3 className="h-3.5 w-3.5" />
           </Button>
@@ -200,7 +204,7 @@ function AthleteRow({
             variant="ghost"
             className="text-red-400 hover:text-red-600 hover:bg-red-50"
             isLoading={removeMutation.isPending}
-            disabled={removeMutation.isPending}
+            disabled={removeMutation.isPending || readOnly}
             onClick={() => {
               if (
                 registrationId &&
@@ -259,12 +263,14 @@ function TableHead() {
 
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export function WeightliftingAttemptsTable({ phaseId }: Props) {
+export function WeightliftingAttemptsTable({ phaseId, readOnly = false }: Props) {
+
   const { data: results = [], isLoading, refetch } = useWeightliftingPhaseResults(phaseId);
   const [editingParticipationId, setEditingParticipationId] = useState<number | null>(null);
   const [editingAthleteName, setEditingAthleteName] = useState("");
 
   const openModal = (result: WeightliftingAthleteResult) => {
+    if (readOnly) return;
     setEditingParticipationId(result.participation.participationId);
     setEditingAthleteName(
       result.participation.registration?.athlete?.name ??
@@ -329,6 +335,7 @@ export function WeightliftingAttemptsTable({ phaseId }: Props) {
                       idx={idx}
                       phaseId={phaseId}
                       onEdit={openModal}
+                      readOnly={readOnly}
                     />
                   ))}
                 </tbody>
@@ -354,6 +361,7 @@ export function WeightliftingAttemptsTable({ phaseId }: Props) {
                   idx={idx}
                   phaseId={phaseId}
                   onEdit={openModal}
+                  readOnly={readOnly}
                 />
               ))}
             </tbody>

@@ -23,3 +23,11 @@ export function useWeightliftingAttempts(participationId: number) {
     enabled: !!participationId,
   });
 }
+
+export function useWeightliftingManualRanks(phaseId: number) {
+  return useQuery({
+    queryKey: ['weightlifting-manual-ranks', phaseId],  // ← misma key que usa useFinalizeWeightliftingPhase en onSuccess
+    queryFn: () => weightliftingApi.getManualRanks(phaseId),
+    enabled: !!phaseId,
+  });
+}

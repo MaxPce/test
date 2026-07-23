@@ -25,7 +25,8 @@ export function useGenerateWeightliftingPhases() {
 
 export function useFinalizeWeightliftingPhase(phaseId: number) {
   const queryClient = useQueryClient();
-  return useMutation({
+
+  const finalize = useMutation({
     mutationFn: () => weightliftingApi.finalizePhase(phaseId),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['weightlifting-results', phaseId] });
@@ -36,4 +37,22 @@ export function useFinalizeWeightliftingPhase(phaseId: number) {
       toast.error(error.message || 'Error al finalizar la fase');
     },
   });
+
+  const reopen = useMutation({
+    mutationFn: () => weightliftingApi.clearManualRanks(phaseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weightlifting-manual-ranks', phaseId] });
+      queryClient.invalidateQueries({ queryKey: ['weightlifting-results', phaseId] });
+      toast.success('Fase reabierta correctamente');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Error al reabrir la fase');
+    },
+  });
+
+  return {
+    mutate: finalize.mutate,
+    reopen: reopen.mutate,
+    isPending: finalize.isPending || reopen.isPending,
+  };
 }
