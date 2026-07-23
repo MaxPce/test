@@ -1,4 +1,4 @@
-import { Trophy, Plus, UserPlus } from "lucide-react";
+import { Trophy, Plus, UserPlus, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
@@ -7,7 +7,7 @@ import { PhaseForm } from "@/features/competitions/components/PhaseForm";
 import { WeightliftingAttemptsTable } from "@/features/competitions/components/weightlifting/WeightliftingAttemptsTable";
 import { GenerateWeightliftingModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingModal";
 import { GenerateWeightliftingPhasesModal } from "@/features/competitions/components/weightlifting/GenerateWeightliftingPhasesModal";
-// ── NUEVO ──────────────────────────────────────────────────────────────────────
+import { useFinalizeWeightliftingPhase } from "@/features/competitions/hooks/useFinalizeWeightliftingPhase";
 import { useWeightliftingMedallero } from "@/features/competitions/hooks/useWeightliftingMedallero";
 import { MedalleroPanel } from "@/features/competitions/components/MedalleroPanel";
 // ──────────────────────────────────────────────────────────────────────────────
@@ -38,9 +38,11 @@ export function WeightliftingScheduleView({ eventCategory, schedule }: SportView
     mutations,
   } = schedule;
 
-  // ── NUEVO: medallero de la fase seleccionada ───────────────────────────────
+  
   const medals = useWeightliftingMedallero(selectedPhase?.phaseId);
-  // ──────────────────────────────────────────────────────────────────────────
+  const finalizeMutation = useFinalizeWeightliftingPhase(
+    selectedPhase?.phaseId ?? 0,
+  );
 
   const getCardVisual = (phase: Phase) => ({
     headerHeight: "h-20" as const,
@@ -111,14 +113,29 @@ export function WeightliftingScheduleView({ eventCategory, schedule }: SportView
                 headerIcon={<Trophy className="h-5 w-5 text-white" />}
                 bodyNoPadding
                 actions={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon={<UserPlus className="h-4 w-4" />}
-                    onClick={() => openModal("generateWeightlifting")}
-                  >
-                    Asignar atletas
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={<UserPlus className="h-4 w-4" />}
+                      onClick={() => openModal("generateWeightlifting")}
+                    >
+                      Asignar atletas
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={<CheckCircle2 className="h-4 w-4 text-green-600" />}
+                      isLoading={finalizeMutation.isPending}
+                      onClick={() => {
+                        if (window.confirm('¿Finalizar fase? Se calcularán los rankings de arranque, envión y total.')) {
+                          finalizeMutation.mutate();
+                        }
+                      }}
+                    >
+                      Finalizar Fase
+                    </Button>
+                  </>
                 }
               >
                 <WeightliftingAttemptsTable phaseId={selectedPhase.phaseId} />

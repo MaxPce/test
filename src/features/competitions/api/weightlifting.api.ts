@@ -6,6 +6,10 @@ export interface WeightliftingAttemptData {
   weightKg: number | null;
   result: "valid" | "invalid" | "not_attempted" | "retired"; 
 }
+export interface WeightliftingManualRankPayload {
+  participationId: number;
+  rank: number;
+}
 
 export interface WeightliftingAttempt {
   attemptId: number;
@@ -50,6 +54,9 @@ export interface WeightliftingAthleteResult {
   total: number | null;
   totalAchievedAtAttempt: number | null;
   rank: number | null;
+  manualSnatchRank?: number | null;       
+  manualCleanAndJerkRank?: number | null; 
+  manualTotalRank?: number | null;        
 }
 
 export interface WeightliftingPhaseEntry {
@@ -106,5 +113,26 @@ export const weightliftingApi = {
     );
     return data;
   },
+
+  getManualRanks: async (phaseId: number) => {
+    const { data } = await apiClient.get(`/competitions/weightlifting/phases/${phaseId}/manual-ranks`);
+    return data;
+  },
+
+  setManualRanks: async (phaseId: number, ranks: WeightliftingManualRankPayload[]) => {
+    const { data } = await apiClient.patch(`/competitions/weightlifting/phases/${phaseId}/manual-ranks`, { ranks });
+    return data;
+  },
+
+  clearManualRanks: async (phaseId: number) => {
+    const { data } = await apiClient.delete(`/competitions/weightlifting/phases/${phaseId}/manual-ranks`);
+    return data;
+  },
+
+  finalizePhase: async (phaseId: number) => {
+    const { data } = await apiClient.post(`/competitions/weightlifting/phases/${phaseId}/finalize`);
+    return data;
+  },
+
 
 };

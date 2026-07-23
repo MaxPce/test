@@ -115,6 +115,22 @@ function AthleteRow({
 
   return (
     <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+
+      {/* Pos / Rank */}
+      <td className="px-2 py-3 text-center">
+        {result.rank !== null ? (
+          <span className={`text-xs font-bold ${
+            result.rank === 1 ? "text-yellow-500" :
+            result.rank === 2 ? "text-gray-400"   :
+            result.rank === 3 ? "text-amber-600"  :
+            "text-gray-500"
+          }`}>
+            {result.rank}°
+          </span>
+        ) : (
+          <span className="text-xs text-gray-300">—</span>
+        )}
+      </td>
       {/* Seed */}
       <td className="px-2 py-3 text-center">
         <span className="text-xs font-semibold text-slate-400">
@@ -210,6 +226,7 @@ function TableHead() {
   return (
     <thead>
       <tr className="bg-gray-50 border-b-2 border-gray-200">
+        <th className="px-2 py-3 text-center text-xs font-semibold text-gray-400 w-8">Pos</th>
         <th className="px-2 py-3 text-center text-xs font-semibold text-gray-400 w-8">Seed</th> 
         <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 w-8">#</th>
         <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 min-w-[160px]">Atleta</th>
@@ -225,7 +242,7 @@ function TableHead() {
         <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 w-20">Acción</th>
       </tr>
       <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-400">
-        <th /><th /><th />  {/* ← una th más */}
+        <th /><th /><th /><th />
         <th className="py-1 text-center font-normal border-r border-gray-100">1°</th>
         <th className="py-1 text-center font-normal border-r border-gray-100">2°</th>
         <th className="py-1 text-center font-normal border-r border-blue-200">3°</th>
@@ -298,7 +315,14 @@ export function WeightliftingAttemptsTable({ phaseId }: Props) {
               <table className="w-full text-sm border-collapse">
                 <TableHead />
                 <tbody>
-                  {group.map((result, idx) => (
+                  {[...group]
+                    .sort((a, b) => {
+                      if (a.rank === null && b.rank === null) return 0;
+                      if (a.rank === null) return 1;
+                      if (b.rank === null) return -1;
+                      return a.rank - b.rank;
+                    })
+                    .map((result, idx) => (
                     <AthleteRow
                       key={result.participation.participationId}
                       result={result}
@@ -316,7 +340,14 @@ export function WeightliftingAttemptsTable({ phaseId }: Props) {
           <table className="w-full text-sm border-collapse">
             <TableHead />
             <tbody>
-              {results.map((result, idx) => (
+              {[...results]
+                .sort((a, b) => {
+                  if (a.rank === null && b.rank === null) return 0;
+                  if (a.rank === null) return 1;
+                  if (b.rank === null) return -1;
+                  return a.rank - b.rank;
+                })
+                .map((result, idx) => (
                 <AthleteRow
                   key={result.participation.participationId}
                   result={result}
