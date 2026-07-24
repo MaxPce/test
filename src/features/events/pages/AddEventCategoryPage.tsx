@@ -151,12 +151,13 @@ export function AddEventCategoryPage() {
                     </div>
                     <div>
                     <p className="font-semibold text-slate-900 text-sm">{cat.name}</p>
+                    <p className="text-xs text-slate-400 font-mono">ID: {cat.categoryId}</p>
                     {cat.type && (
-                        <p className="text-xs text-slate-500 capitalize">{cat.type}</p>
+                      <p className="text-xs text-slate-500 capitalize">{cat.type}</p>
                     )}
-                    </div>
+                  </div>
                 </div>
-                </Card>
+                </Card> 
             );
             })}
         </div>
