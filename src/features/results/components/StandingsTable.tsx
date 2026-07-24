@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Trophy, Medal, Clock, Timer, ChevronRight } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import { usePhases } from "@/features/competitions/api/phases.queries";
-import { usePhaseResults } from "../api/results.queries";
+import { usePhaseResults, useUpdateTimeResult } from "../api/results.queries"; // ← AGREGADO
 import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface StandingsTableProps {
@@ -13,15 +13,43 @@ interface StandingsTableProps {
 
 function PhaseStandings({ phaseId }: { phaseId: number }) {
   const { data: results = [], isLoading } = usePhaseResults(phaseId);
+  const updateResult = useUpdateTimeResult(); // ← AGREGADO
+
+  // ── Estado para edición inline ─────────────────────────────────────────
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
+
+  const handleStartEdit = (resultId: number, currentPosition: number) => {
+    setEditingId(resultId);
+    setEditingValue(String(currentPosition));
+  };
+
+  const handleSave = (resultId: number) => {
+    const newRank = parseInt(editingValue, 10);
+    if (!isNaN(newRank) && newRank > 0) {
+      updateResult.mutate(
+        { resultId, data: { rankPosition: newRank } },
+        { onSettled: () => setEditingId(null) }
+      );
+    } else {
+      setEditingId(null);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, resultId: number) => {
+    if (e.key === "Enter") handleSave(resultId);
+    if (e.key === "Escape") setEditingId(null);
+  };
+  // ──────────────────────────────────────────────────────────────────────────
 
   const standings = [...results]
     .filter((r: any) => r.timeValue && r.rankPosition && !r.notes?.includes("DQ"))
     .sort((a: any, b: any) => (a.rankPosition || 999) - (b.rankPosition || 999));
 
   const dqResults = results.filter((r: any) => r.notes?.includes("DQ"));
-  const noTimeResults = results.filter(
-    (r: any) => !r.timeValue || !r.rankPosition
-  ).filter((r: any) => !r.notes?.includes("DQ"));
+  const noTimeResults = results
+    .filter((r: any) => !r.timeValue || !r.rankPosition)
+    .filter((r: any) => !r.notes?.includes("DQ"));
 
   if (isLoading) {
     return (
@@ -30,8 +58,6 @@ function PhaseStandings({ phaseId }: { phaseId: number }) {
       </div>
     );
   }
-
-  
 
   const getMedalConfig = (position: number) => {
     if (position === 1)
@@ -91,8 +117,7 @@ function PhaseStandings({ phaseId }: { phaseId: number }) {
             const institutionObj = isTeam
               ? reg.team.institution
               : reg?.athlete?.institution;
-            const institutionName =
-              institutionObj?.name || "Sin institución";
+            const institutionName = institutionObj?.name || "Sin institución";
             const institutionLogo = institutionObj?.logoUrl;
             const members =
               isTeam && reg.team.members
@@ -102,6 +127,8 @@ function PhaseStandings({ phaseId }: { phaseId: number }) {
                     .join(", ")
                 : null;
             const medal = getMedalConfig(position);
+            const isEditing = editingId === result.resultId;
+            const isSaving = updateResult.isPending && editingId === result.resultId;
 
             return (
               <tr
@@ -110,24 +137,71 @@ function PhaseStandings({ phaseId }: { phaseId: number }) {
                   medal ? `${medal.bg} ${medal.border}` : "hover:bg-gray-50"
                 }`}
               >
+                {/* ── CELDA EDITABLE ──────────────────────────────────── */}
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    {medal ? (
-                      <>
-                        <span className="text-xl">{medal.label}</span>
-                        <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded-full ${medal.badge}`}
-                        >
+                  {isEditing ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, result.resultId)}
+                        autoFocus
+                        disabled={isSaving}
+                        className="w-14 text-center text-sm font-bold border-2 border-blue-400 rounded-lg py-0.5 px-1 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
+                      />
+                      {/* Botón confirmar */}
+                      <button
+                        onClick={() => handleSave(result.resultId)}
+                        disabled={isSaving}
+                        title="Confirmar"
+                        className="flex items-center justify-center w-6 h-6 rounded-md bg-green-100 hover:bg-green-200 text-green-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isSaving ? (
+                          <span className="text-xs animate-spin">⟳</span>
+                        ) : (
+                          <span className="text-xs font-bold">✓</span>
+                        )}
+                      </button>
+                      {/* Botón cancelar */}
+                      <button
+                        onClick={() => setEditingId(null)}
+                        disabled={isSaving}
+                        title="Cancelar"
+                        className="flex items-center justify-center w-6 h-6 rounded-md bg-red-100 hover:bg-red-200 text-red-600 disabled:opacity-50 transition-colors"
+                      >
+                        <span className="text-xs font-bold">✕</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center gap-1 cursor-pointer group"
+                      onClick={() => handleStartEdit(result.resultId, position)}
+                      title="Click para editar posición"
+                    >
+                      {medal ? (
+                        <>
+                          <span className="text-xl">{medal.label}</span>
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded-full ${medal.badge} group-hover:ring-2 group-hover:ring-blue-300 transition-all`}
+                          >
+                            {position}°
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm font-semibold text-gray-500 ml-8 group-hover:text-blue-500 transition-colors">
                           {position}°
                         </span>
-                      </>
-                    ) : (
-                      <span className="text-sm font-semibold text-gray-500 ml-8">
-                        {position}°
+                      )}
+                      <span className="opacity-0 group-hover:opacity-50 text-blue-400 transition-opacity text-xs ml-1">
+                        ✏️
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </td>
+                {/* ────────────────────────────────────────────────────── */}
+                {/* ────────────────────────────────────────────────────── */}
 
                 <td className="px-6 py-4">
                   <p className="text-sm font-semibold text-gray-900">
@@ -301,7 +375,6 @@ export function StandingsTable({ eventCategoryId }: StandingsTableProps) {
           </div>
           <div>
             <h3 className="text-2xl font-bold">Tabla de Posiciones</h3>
-            
           </div>
         </div>
       </div>
