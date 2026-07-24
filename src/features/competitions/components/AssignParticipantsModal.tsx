@@ -11,9 +11,14 @@ import type { Match } from "../types";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 interface TeamMember {
+  tmId: number;
   athleteId: number;
-  name: string;
-  photo?: string | null;
+  rol?: string;
+  athlete?: {
+    athleteId: number;
+    name: string;
+    photo?: string | null;
+  };
 }
 
 interface PhaseRegistration {
@@ -21,7 +26,6 @@ interface PhaseRegistration {
   registrationId: number;
   registration: {
     registrationId: number;
-    isTeam?: boolean;
     athlete?: {
       athleteId: number;
       name: string;
@@ -32,11 +36,11 @@ interface PhaseRegistration {
       teamId: number;
       name: string;
       institution?: { name: string };
+      members?: TeamMember[];   // ← aquí está, dentro de team
     };
-    members?: TeamMember[];
-    teamMembers?: TeamMember[];
   };
 }
+
 
 interface AssignParticipantsModalProps {
   isOpen: boolean;
@@ -56,11 +60,7 @@ function getMembersForReg(
   regId: number
 ): TeamMember[] {
   const found = regs.find((pr) => pr.registrationId === regId);
-  return (
-    found?.registration?.members ??
-    found?.registration?.teamMembers ??
-    []
-  );
+  return found?.registration?.team?.members ?? [];
 }
 
 // ── Sub-componente: lista de integrantes ─────────────────────────────────────
@@ -75,9 +75,9 @@ function MemberList({
   return (
     <div className="mt-1.5 space-y-0.5">
       {members.map((m) => (
-        <div key={m.athleteId} className="flex items-center gap-1.5">
+        <div key={m.tmId} className="flex items-center gap-1.5">
           <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${dotColor}`} />
-          <span className="text-xs text-gray-500">{m.name}</span>
+          <span className="text-xs text-gray-500">{m.athlete?.name ?? "—"}</span>
         </div>
       ))}
     </div>
@@ -129,8 +129,7 @@ export function AssignParticipantsModal({
       .filter((pr) => pr.registrationId !== excludeId)
       .map((pr) => {
         const reg = pr.registration;
-        const members =
-          reg?.members ?? reg?.teamMembers ?? [];
+        const members = reg?.team?.members ?? [];          // ← aquí el fix
         const membersSuffix =
           members.length > 0 ? ` · ${members.length} integrantes` : "";
         const name = reg?.athlete
@@ -226,10 +225,7 @@ export function AssignParticipantsModal({
                   reg?.athlete?.institution?.name ??
                   reg?.team?.institution?.name ??
                   "";
-                const members =
-                  (reg as PhaseRegistration["registration"])?.members ??
-                  (reg as PhaseRegistration["registration"])?.teamMembers ??
-                  [];
+                const members = reg?.team?.members ?? [];
 
                 return (
                   <div
