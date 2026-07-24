@@ -60,6 +60,16 @@ function buildSeriesName(idniv: string, idcat: string, eventName: string): strin
   return `${getCatLabel(idcat)} ${getNivLabel(idniv)} ${eventName}`;
 }
 
+// ─── Helper: construir SeriesAthlete desde una registration ──────────────────
+
+function toSeriesAthlete(reg: any): SeriesAthlete {
+  return {
+    registrationId: reg.registrationId,
+    name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
+    institution: reg.athlete?.institution?.name ?? reg.team?.institution?.name ?? null,
+  };
+}
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export function GenerateSwimmingSeriesModal({
@@ -124,21 +134,17 @@ export function GenerateSwimmingSeriesModal({
   const loadingCombosData = comboQueries.some((q) => q.isLoading);
   const allQueriesDone = combos.length > 0 && comboQueries.every((q) => q.isSuccess);
 
-  // ── Step 3: Mapa de registrations ─────────────────────────────────────────
+  // ── Step 3: Mapa de registrations (Haymaster) ─────────────────────────────
   const regMap = useMemo(() => {
     const map = new Map<number, SeriesAthlete>();
     for (const reg of allRegistrations) {
-      map.set(reg.registrationId, {
-        registrationId: reg.registrationId,
-        name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
-        institution: reg.athlete?.institution?.name ?? reg.team?.institution?.name ?? null,
-      });
+      map.set(reg.registrationId, toSeriesAthlete(reg));
     }
     return map;
   }, [allRegistrations]);
 
-  // ── Step 4: Construir grupos desde Sismaster ──────────────────────────────
-  const initialGroups = useMemo((): SeriesGroup[] => {
+  // ── Step 4: Grupos desde Sismaster (cruzados con Haymaster via regMap) ────
+  const sismasterGroups = useMemo((): SeriesGroup[] => {
     if (!allQueriesDone) return [];
     const seenIds = new Set<number>();
     return combos
@@ -163,16 +169,74 @@ export function GenerateSwimmingSeriesModal({
       .filter((g) => g.athletes.length > 0);
   }, [allQueriesDone, combos, comboQueries, regMap, eventName]);
 
-  // ── Grupo único de fallback (sin Sismaster) ───────────────────────────────
-  const fallbackGroup = useMemo((): SeriesGroup[] => {
-    if (hasSismaster || !open) return [];
-    const athletes: SeriesAthlete[] = allRegistrations.map((reg) => ({
-      registrationId: reg.registrationId,
-      name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
-      institution: reg.athlete?.institution?.name ?? reg.team?.institution?.name ?? null,
-    }));
-    if (athletes.length === 0) return [];
-    return [{ key: "swimming-group", seriesName: eventName, idniv: "", idcat: "", athletes }];
+  // ── Step 4b: Atletas de Haymaster no cubiertos por Sismaster ─────────────
+  const sismasterGroupsWithFallback = useMemo((): SeriesGroup[] => {
+    if (!hasSismaster || !allQueriesDone) return sismasterGroups;
+
+    const coveredIds = new Set<number>(
+      sismasterGroups.flatMap((g) => g.athletes.map((a) => a.registrationId))
+    );
+
+    const uncovered = allRegistrations
+      .filter((reg) => !coveredIds.has(reg.registrationId))
+      .map(toSeriesAthlete);
+
+    if (uncovered.length === 0) return sismasterGroups;
+
+    return [
+      ...sismasterGroups,
+      {
+        key: "haymaster-only",
+        seriesName: `Sin clasificar — ${eventName}`,
+        idniv: "",
+        idcat: "",
+        athletes: uncovered,
+      },
+    ];
+  }, [sismasterGroups, allRegistrations, hasSismaster, allQueriesDone, eventName]);
+
+  // ── Step 5: Grupos desde Haymaster separados por género (sin Sismaster) ───
+  const haymasterGroups = useMemo((): SeriesGroup[] => {
+    if (hasSismaster || !open || allRegistrations.length === 0) return [];
+
+    const damas = allRegistrations.filter(
+      (reg) => (reg.athlete?.gender ?? "").toUpperCase() === "F"
+    );
+    const varones = allRegistrations.filter(
+      (reg) => (reg.athlete?.gender ?? "").toUpperCase() === "M"
+    );
+    const sinGenero = allRegistrations.filter((reg) => {
+      const g = (reg.athlete?.gender ?? "").toUpperCase();
+      return g !== "F" && g !== "M";
+    });
+
+    const result: SeriesGroup[] = [];
+    if (damas.length > 0)
+      result.push({
+        key: "damas",
+        seriesName: `Damas — ${eventName}`,
+        idniv: "",
+        idcat: "F",
+        athletes: damas.map(toSeriesAthlete),
+      });
+    if (varones.length > 0)
+      result.push({
+        key: "varones",
+        seriesName: `Varones — ${eventName}`,
+        idniv: "",
+        idcat: "M",
+        athletes: varones.map(toSeriesAthlete),
+      });
+    if (sinGenero.length > 0)
+      result.push({
+        key: "sin-genero",
+        seriesName: `Sin clasificar — ${eventName}`,
+        idniv: "",
+        idcat: "",
+        athletes: sinGenero.map(toSeriesAthlete),
+      });
+
+    return result;
   }, [hasSismaster, open, allRegistrations, eventName]);
 
   // ── Estado editable de grupos ─────────────────────────────────────────────
@@ -183,8 +247,8 @@ export function GenerateSwimmingSeriesModal({
 
   const hasInitialized = useRef(false);
   const prevOpenRef = useRef(false);
-  const initialGroupsRef = useRef<SeriesGroup[]>([]);
-  initialGroupsRef.current = initialGroups;
+  const sismasterGroupsRef = useRef<SeriesGroup[]>([]);
+  sismasterGroupsRef.current = sismasterGroupsWithFallback;
 
   useEffect(() => {
     if (!open && prevOpenRef.current) {
@@ -197,8 +261,9 @@ export function GenerateSwimmingSeriesModal({
     prevOpenRef.current = open;
     if (!open || hasInitialized.current) return;
 
+    // Modo Sismaster: esperar a que todas las queries terminen
     if (hasSismaster && allQueriesDone) {
-      const g = initialGroupsRef.current;
+      const g = sismasterGroupsRef.current;
       if (g.length > 0) {
         hasInitialized.current = true;
         setGroups(g);
@@ -207,13 +272,14 @@ export function GenerateSwimmingSeriesModal({
       return;
     }
 
-    if (!hasSismaster && fallbackGroup.length > 0) {
+    // Modo Haymaster: separar por género inmediatamente
+    if (!hasSismaster && haymasterGroups.length > 0) {
       hasInitialized.current = true;
-      setGroups(fallbackGroup);
-      setSelectedGroupKeys(new Set(fallbackGroup.map((g) => g.key)));
+      setGroups(haymasterGroups);
+      setSelectedGroupKeys(new Set(haymasterGroups.map((g) => g.key)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, allQueriesDone, hasSismaster, fallbackGroup]);
+  }, [open, allQueriesDone, hasSismaster, haymasterGroups]);
 
   // ── Selección de series ───────────────────────────────────────────────────
   const toggleGroupSelection = (key: string) => {
@@ -290,13 +356,14 @@ export function GenerateSwimmingSeriesModal({
     (g) => g.athletes.length > 0 && selectedGroupKeys.has(g.key),
   );
   const totalAthletes = validGroups.reduce((acc, g) => acc + g.athletes.length, 0);
-  const canMoveAthletes = hasSismaster && groups.length > 1;
+  // Mover atletas entre grupos está disponible cuando hay más de 1 grupo
+  const canMoveAthletes = groups.length > 1;
 
   return (
     <Modal isOpen={open} onClose={onClose} title={`Generar Series — ${eventName}`} size="xl">
       <div className="space-y-4">
 
-        {/* Cargando */}
+        {/* Cargando Sismaster */}
         {isLoading && (
           <div className="flex items-center justify-center gap-3 py-12 text-slate-500">
             <Spinner size="md" />
@@ -308,7 +375,7 @@ export function GenerateSwimmingSeriesModal({
         {combosError && !isLoading && (
           <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>No se pudieron cargar los grupos. Verifica la conexión con Sismaster.</span>
+            <span>No se pudieron cargar los grupos desde Sismaster. Se muestran grupos por género desde Haymaster.</span>
           </div>
         )}
 
@@ -319,7 +386,7 @@ export function GenerateSwimmingSeriesModal({
           </p>
         )}
 
-        {/* Sin nadadores (sin Sismaster) */}
+        {/* Sin nadadores (Haymaster) */}
         {!hasSismaster && !isLoading && groups.length === 0 && (
           <p className="py-10 text-center text-sm text-slate-500">
             No hay nadadores registrados en esta categoría.
@@ -329,10 +396,15 @@ export function GenerateSwimmingSeriesModal({
         {/* Grid de series */}
         {!isLoading && groups.length > 0 && (
           <>
-            {/* Barra de selección global */}
+            {/* Indicador de modo */}
             <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <span className="text-xs font-medium text-slate-600">
                 {selectedGroupKeys.size} de {groups.length} serie(s) seleccionada(s)
+                {!hasSismaster && (
+                  <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                    Haymaster · separado por género
+                  </span>
+                )}
               </span>
               <button
                 type="button"
@@ -389,6 +461,11 @@ export function GenerateSwimmingSeriesModal({
                           <h3 className="text-sm font-semibold leading-tight text-slate-800">
                             {group.seriesName}
                           </h3>
+                          {group.key === "haymaster-only" && (
+                            <span className="inline-block mt-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                              Solo Haymaster
+                            </span>
+                          )}
                           <p className="mt-0.5 text-xs text-slate-500">
                             {group.athletes.length} nadador(es)
                           </p>
