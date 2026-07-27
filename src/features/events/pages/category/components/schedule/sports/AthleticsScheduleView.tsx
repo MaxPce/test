@@ -304,6 +304,7 @@ export function AthleticsScheduleView({ eventCategory, schedule }: SportViewProp
         allRegistrations={eventCategory.registrations ?? []}
         sismasterEventId={eventCategory.externalEventId ?? undefined}
         sismasterSportId={eventCategory.externalSportId ?? undefined}
+        haymasterEventId={eventCategory.haymasterEventId ?? undefined}   
         isTeamMode={isTeamMode}
       />
 

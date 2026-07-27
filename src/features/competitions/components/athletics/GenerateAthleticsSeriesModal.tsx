@@ -74,6 +74,7 @@ export interface GenerateAthleticsSeriesModalProps {
   eventName?: string;
   sismasterEventId?: number;
   sismasterSportId?: number;
+  haymasterEventId?: number;   
   allRegistrations: any[];
   isTeamMode?: boolean;
 }
@@ -124,11 +125,16 @@ export function GenerateAthleticsSeriesModal({
   eventName = "Atletismo",
   sismasterEventId,
   sismasterSportId,
+  haymasterEventId,   
   allRegistrations,
   isTeamMode = false,
 }: GenerateAthleticsSeriesModalProps) {
   const mutation = useGenerateAthleticsSeries();
   const hasSismaster = Boolean(sismasterEventId && sismasterSportId);
+  const hasHaymaster = Boolean(haymasterEventId && sismasterSportId); // reutiliza sismasterSportId
+  const activeSystem: "sismaster" | "haymaster" | null =
+    hasHaymaster ? "haymaster" : hasSismaster ? "sismaster" : null;
+  const hasSismaster_or_Haymaster = activeSystem !== null;
 
   const seriesType = categoryId ? getAthleticsSeriesType(categoryId) : "metros";
   const isFieldEvent = seriesType === "altura" || seriesType === "distancia";
@@ -166,30 +172,26 @@ export function GenerateAthleticsSeriesModal({
   const comboQueries = useQueries({
     queries: combos.map((combo) => ({
       queryKey: [
-        "sismaster-registrations-niv-cat",
-        sismasterEventId,
+        "external-registrations-niv-cat",
+        activeSystem,
+        sismasterEventId ?? haymasterEventId,
         sismasterSportId,
         eventCategoryId,
         combo.idniv,
         combo.idcat,
       ],
       queryFn: async (): Promise<{ registrationIds: number[] }> => {
-        const { data } = await apiClient.get(
-          "/sismaster/athletes/registrations-by-niv-cat",
-          {
-            params: {
-              sismasterEventId,
-              sismasterSportId,
-              idniv: combo.idniv,
-              idcat: combo.idcat,
-              eventCategoryId,
-            },
-          },
-        );
+        const url = activeSystem === "haymaster"
+          ? "/haymaster/athletes/registrations-by-niv-cat"
+          : "/sismaster/athletes/registrations-by-niv-cat";
+        const params = activeSystem === "haymaster"
+          ? { haymasterEventId, sismasterSportId, idniv: combo.idniv, idcat: combo.idcat, eventCategoryId }
+          : { sismasterEventId, sismasterSportId, idniv: combo.idniv, idcat: combo.idcat, eventCategoryId };
+        const { data } = await apiClient.get(url, { params });
         return data;
       },
-      // Deshabilitado completamente en modo equipos
-      enabled: !isTeamMode && hasSismaster && open && combos.length > 0,
+      enabled: !isTeamMode && hasSismaster_or_Haymaster && open && combos.length > 0,
+
       staleTime: 1000 * 60 * 5,
     })),
   });
@@ -243,7 +245,7 @@ export function GenerateAthleticsSeriesModal({
   }, [isTeamMode, allQueriesDone, combos, comboQueries, regMap, eventName]);
 
   const fieldGroup = useMemo((): SeriesGroup[] => {
-    if (isTeamMode || !isFieldEvent || hasSismaster || !open) return [];
+    if (isTeamMode || !isFieldEvent || hasSismaster_or_Haymaster || !open) return [];
     const athletes: SeriesAthlete[] = allRegistrations.map((reg) => ({
       registrationId: reg.registrationId,
       name: reg.athlete?.name ?? reg.team?.name ?? `Registro ${reg.registrationId}`,
@@ -334,7 +336,7 @@ export function GenerateAthleticsSeriesModal({
     }
 
     // ── Modo individuales: flujo Sismaster existente ───────────────────────
-    if (hasSismaster && allQueriesDone) {
+    if (hasSismaster_or_Haymaster && allQueriesDone) {
       const g = initialGroupsRef.current;
       if (g.length > 0) {
         hasInitialized.current = true;
@@ -343,12 +345,12 @@ export function GenerateAthleticsSeriesModal({
       return;
     }
 
-    if (!hasSismaster && isFieldEvent && fieldGroup.length > 0) {
+    if (!hasSismaster_or_Haymaster && isFieldEvent && fieldGroup.length > 0) {
       hasInitialized.current = true;
       setGroups(fieldGroup);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, allQueriesDone, isFieldEvent, hasSismaster, fieldGroup, isTeamMode, allRegistrations]);
+  }, [open, allQueriesDone, isFieldEvent, hasSismaster_or_Haymaster, fieldGroup, isTeamMode, allRegistrations]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Handlers modo individuales (sin cambios respecto al original)
@@ -460,7 +462,8 @@ export function GenerateAthleticsSeriesModal({
   // Individuales: todos los grupos con atletas
   const validGroupsIndividual = groups.filter((g) => g.athletes.length > 0);
   const totalAthletes = validGroupsIndividual.reduce((acc, g) => acc + g.athletes.length, 0);
-  const canMoveAthletes = !isTeamMode && hasSismaster && groups.length > 1;
+  const canMoveAthletes = !isTeamMode && hasSismaster_or_Haymaster && groups.length > 1;
+
 
   // Equipos
   const unassignedGroup  = groups.find((g) => g.key === UNASSIGNED_KEY);

@@ -897,7 +897,8 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
 
           return (
             <>
-              {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo && !hasSubPhases
+              {wushuType !== "taolu" && !isTiroDeportivo && !hasSubPhases
+                && (taekwondoType !== "poomsae")               // poomsae tiene su propio flujo
                 && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion") && (
                 <Button variant="outline" size="sm" icon={<UserPlus className="h-4 w-4" />} onClick={() => {
                   closeModal("result");
@@ -906,7 +907,8 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
                   Asignar
                 </Button>
               )}
-              {!taekwondoType && wushuType !== "taolu" && !isTiroDeportivo
+              {wushuType !== "taolu" && !isTiroDeportivo
+                && taekwondoType !== "poomsae"
                 && (!hasSubPhases || sport.isTennis)
                 && (selectedPhase.type === "grupo" || selectedPhase.type === "eliminacion" || selectedPhase.type === "repechaje") && (
                 <Button variant="outline" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => openModal("match")}>
@@ -1096,16 +1098,31 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             />
           )}
 
-          {modals.assign && selectedMatch && (
+          {modals.assign && selectedMatch && (() => {
+          // IDs ya asignados en esta fase (excepto el partido actual)
+          const assignedIds = new Set(
+            matches
+              .filter((m) => m.matchId !== selectedMatch.matchId)
+              .flatMap((m) => m.participations ?? [])
+              .map((p) => p.registrationId)
+              .filter((id): id is number => id != null)
+          );
+
+          const availableForMatch = (eventCategory.registrations ?? []).filter(
+            (r) => !assignedIds.has(r.registrationId)
+          );
+
+          return (
             <AssignParticipantsModal
               isOpen={modals.assign}
               onClose={() => { closeModal("assign"); setSelectedMatch(null); }}
               match={selectedMatch}
-              registrations={eventCategory.registrations ?? []}
+              registrations={availableForMatch}   // ← Solo los disponibles
               onAssign={handlers.assignParticipant}
               isLoading={mutations.createParticipation.isPending}
             />
-          )}
+          );
+        })()}
 
           {modals.generateRoundRobin && !isTableTennis && (
             <GenerateRoundRobinModal
