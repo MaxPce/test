@@ -3,7 +3,7 @@ export interface OperatorPermission {
   userId: number;
   sportId: number | null;
   eventId: number | null;
-  eventSource: 'local' | 'sismaster' | null;  
+  eventSource: 'local' | 'sismaster' | 'haymaster' | null; 
   createdAt: string;
 }
 
@@ -17,5 +17,5 @@ export interface AssignPermissionPayload {
   userId: number;
   sportId?: number;
   eventId?: number;
-  eventSource?: 'local' | 'sismaster';  
+  eventSource?: 'local' | 'sismaster' | 'haymaster';
 }

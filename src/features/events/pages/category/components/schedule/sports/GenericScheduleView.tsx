@@ -1040,9 +1040,16 @@ export function GenericScheduleView({ eventCategory, schedule, sport }: GenericV
             onSubmit={handlers.createPhase}
             onCancel={() => closeModal("phase")}
             isLoading={mutations.createPhase.isPending}
+            typeOptions={[
+              { value: "grupo",       label: "Fase de Grupos" },
+              { value: "eliminacion", label: "Eliminación Directa" },
+              { value: "repechaje",   label: "Repechaje" },
+              { value: "mejor_de_3",  label: "Mejor de 3" },
+            ]}
           />
         </Modal>
       )}
+
 
       {/* ── Modales que dependen de selectedPhase ── */}
       {selectedPhase && (

@@ -11,6 +11,7 @@ import {
   useRemovePermission,
 } from "../hooks/useOperatorPermissions";
 import { useSismasterEvents } from "@/features/institutions/api/sismaster.queries";
+import { useHaymasterEvents } from "@/features/institutions/api/haymaster.queries";  
 import type { User } from "@/app/store/useAuthStore";
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ interface Sport {
 interface EventOption {
   eventId: number;
   name: string;
-  source: "local" | "sismaster";
+  source: "local" | "sismaster" | "haymaster";
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ const useAllEvents = () => {
   });
 
   const sismasterQuery = useSismasterEvents();
+  const haymasterQuery = useHaymasterEvents();
 
   const localEvents: EventOption[] = (localQuery.data ?? []).map((e) => ({
     eventId: e.eventId,
@@ -72,12 +74,21 @@ const useAllEvents = () => {
     source: "sismaster" as const,
   }));
 
+  const haymasterEvents: EventOption[] = (haymasterQuery.data ?? []).map((e) => ({
+    eventId: e.idevent,
+    name: e.name,
+    source: "haymaster" as const,
+  }));
+
+
   return {
-    events: [...localEvents, ...sismasterEvents],
+    events: [...localEvents, ...sismasterEvents, ...haymasterEvents],
     localEvents,
     sismasterEvents,
-    isLoading: localQuery.isLoading || sismasterQuery.isLoading,
+    haymasterEvents,
+    isLoading: localQuery.isLoading || sismasterQuery.isLoading || haymasterQuery.isLoading,
   };
+
 };
 
 // ─── Helper de display para la tabla ─────────────────────────────────────────
@@ -117,7 +128,7 @@ export function OperatorPermissionsPage() {
   const { data: permissions = [], isLoading: isLoadingPerms } =
     useOperatorPermissionsByUser(parsedUserId);
   const { data: sports = [] } = useSportsList();
-  const { events, localEvents, sismasterEvents, isLoading: isLoadingEvents } =
+  const { events, localEvents, sismasterEvents, haymasterEvents, isLoading: isLoadingEvents } =
     useAllEvents();
 
   const assignMutation = useAssignPermission(parsedUserId);
@@ -135,7 +146,7 @@ export function OperatorPermissionsPage() {
     if (!parsedEventId) return;
 
     // Extrae el source del key "local-5" o "sismaster-200"
-    const source = selectedEventKey.split("-")[0] as "local" | "sismaster";
+    const source = selectedEventKey.split("-")[0] as "local" | "sismaster" | "haymaster";  
 
     assignMutation.mutate(
       {
@@ -242,6 +253,20 @@ export function OperatorPermissionsPage() {
                     <option
                       key={`sismaster-${e.eventId}`}
                       value={`sismaster-${e.eventId}`}
+                    >
+                      {e.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+
+              {/* Justo después del optgroup de sismaster */}
+              {haymasterEvents.length > 0 && (
+                <optgroup label="── Haymaster">
+                  {haymasterEvents.map((e) => (
+                    <option
+                      key={`haymaster-${e.eventId}`}
+                      value={`haymaster-${e.eventId}`}
                     >
                       {e.name}
                     </option>
@@ -367,7 +392,11 @@ export function OperatorPermissionsPage() {
                           {label.eventName}
                         </div>
                         <div className="text-xs text-slate-400 mt-0.5">
-                          {label.source === "sismaster" ? "Sismaster" : "Local"}
+                          {label.source === "sismaster"
+                            ? "Sismaster"
+                            : label.source === "haymaster"     
+                            ? "Haymaster"
+                            : "Local"}
                         </div>
                       </td>
 

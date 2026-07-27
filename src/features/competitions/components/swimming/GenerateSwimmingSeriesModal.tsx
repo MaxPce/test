@@ -187,7 +187,7 @@ export function GenerateSwimmingSeriesModal({
       ...sismasterGroups,
       {
         key: "haymaster-only",
-        seriesName: `Sin clasificar — ${eventName}`,
+        seriesName: `${eventName}`,
         idniv: "",
         idcat: "",
         athletes: uncovered,
@@ -230,7 +230,7 @@ export function GenerateSwimmingSeriesModal({
     if (sinGenero.length > 0)
       result.push({
         key: "sin-genero",
-        seriesName: `Sin clasificar — ${eventName}`,
+        seriesName: `${eventName}`,
         idniv: "",
         idcat: "",
         athletes: sinGenero.map(toSeriesAthlete),
