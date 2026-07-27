@@ -262,7 +262,7 @@ export function GenerateAthleticsSeriesModal({
     return [{ key: "field-group", seriesName: eventName, idniv: "", idcat: "", athletes }];
   }, [isTeamMode, isFieldEvent, hasSismaster_or_Haymaster, open, allRegistrations, eventName]);
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════ ═════════════
   // BLOQUE B — Estado compartido (individuales + equipos)
   // ═══════════════════════════════════════════════════════════════════════════
 
