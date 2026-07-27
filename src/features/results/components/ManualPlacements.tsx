@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react";
-import { Save, Trash2, AlertCircle, User, Users } from "lucide-react";
+import { Trash2, User, Users } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import { useMatches } from "@/features/competitions/api/matches.queries";
-import { useManualRanks } from "@/features/competitions/api/standings.queries"; 
+import { usePhaseRegistrations } from "@/features/competitions/api/phases.queries";
+import { useManualRanks } from "@/features/competitions/api/standings.queries";
 import {
   useSetManualStandingRanks,
   useClearManualStandingRanks,
@@ -16,7 +16,7 @@ interface ManualPlacementsProps {
 }
 
 export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
-  const { data: matches = [], isLoading: matchesLoading } = useMatches(phaseId);
+  const { data: phaseRegistrations = [], isLoading: regsLoading } = usePhaseRegistrations(phaseId);
   const { data: savedRanks = [], isLoading: ranksLoading } = useManualRanks(phaseId);
   const setManualRanksMutation = useSetManualStandingRanks();
   const clearManualRanksMutation = useClearManualStandingRanks();
@@ -30,25 +30,12 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
   }, [savedRanks]);
 
   const participants = useMemo(() => {
-    const seen = new Set<number>();
-    const result: any[] = [];
-
-    matches.forEach((match: any) => {
-      match.participations?.forEach((p: any) => {
-        const regId = p.registration?.registrationId;
-        if (regId && !seen.has(regId)) {
-          seen.add(regId);
-          result.push({
-            registrationId: regId,
-            registration: p.registration,
-            manualRankPosition: savedRanksMap.get(regId) ?? null,
-          });
-        }
-      });
-    });
-
-    return result;
-  }, [matches, savedRanksMap]); 
+    return phaseRegistrations.map((pr: any) => ({
+      registrationId: pr.registrationId,
+      registration: pr.registration,
+      manualRankPosition: savedRanksMap.get(pr.registrationId) ?? null,
+    }));
+  }, [phaseRegistrations, savedRanksMap]);
 
   const getRankValue = (
     registrationId: number,
@@ -58,9 +45,7 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
     return serverValue;
   };
 
-  
   const hasAnyManualSaved = savedRanks.some((r) => r.manualRankPosition != null);
-  const hasLocalChanges = Object.keys(localRanks).length > 0;
 
   const handleSave = async () => {
     const ranks = participants.map((p) => ({
@@ -76,7 +61,7 @@ export function ManualPlacements({ phaseId }: ManualPlacementsProps) {
     setLocalRanks({});
   };
 
-  if (matchesLoading || ranksLoading) {
+  if (regsLoading || ranksLoading) {
     return (
       <Card>
         <CardBody className="flex justify-center items-center py-12">

@@ -16,3 +16,11 @@ export function usePhase(id: number) {
     enabled: !!id,
   });
 }
+
+export function usePhaseRegistrations(phaseId: number) {
+  return useQuery({
+    queryKey: ["phaseRegistrations", phaseId],
+    queryFn: () => phasesApi.getPhaseRegistrations(phaseId),
+    enabled: !!phaseId,
+  });
+}

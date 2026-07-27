@@ -38,6 +38,10 @@ export const phasesApi = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/competitions/phases/${id}`);
   },
+  getPhaseRegistrations: async (phaseId: number): Promise<any[]> => {
+    const response = await apiClient.get(`/competitions/phases/${phaseId}/registrations`);
+    return response.data;
+  },
 
   updateSettings: async (
     id: number,

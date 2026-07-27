@@ -94,11 +94,14 @@ const useAllEvents = () => {
 // ─── Helper de display para la tabla ─────────────────────────────────────────
 
 function getPermissionLabel(
-  perm: { sportId: number | null; eventId: number | null },
+  perm: { sportId: number | null; eventId: number | null; eventSource?: string | null },
   sports: Sport[],
   events: EventOption[]
 ) {
-  const event = events.find((e) => e.eventId === perm.eventId);
+  const event = events.find(
+    (e) => e.eventId === perm.eventId && e.source === perm.eventSource
+  );
+
   const sport = sports.find((s) => s.sportId === perm.sportId);
 
   return {
