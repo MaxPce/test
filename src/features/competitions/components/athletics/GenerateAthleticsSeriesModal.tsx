@@ -150,20 +150,27 @@ export function GenerateAthleticsSeriesModal({
     error: combosError,
   } = useQuery<{ combos: NivCatCombo[] }>({
     queryKey: [
-      "sismaster-niv-cat-options",
-      sismasterEventId,
-      sismasterSportId,
-      eventCategoryId,
-    ],
-    queryFn: async () => {
-      const { data } = await apiClient.get(
-        "/sismaster/athletes/niv-cat-options",
-        { params: { sismasterEventId, sismasterSportId, eventCategoryId } },
-      );
-      return data;
-    },
-    // Deshabilitado completamente en modo equipos
-    enabled: !isTeamMode && hasSismaster && open,
+        "niv-cat-options",
+        activeSystem,
+        sismasterEventId,
+        haymasterEventId,
+        sismasterSportId,
+        eventCategoryId,
+      ],
+      queryFn: async () => {
+        const url =
+          activeSystem === "haymaster"
+            ? "/haymaster/athletes/niv-cat-options"
+            : "/sismaster/athletes/niv-cat-options";
+        const params =
+          activeSystem === "haymaster"
+            ? { haymasterEventId, sismasterSportId, eventCategoryId }
+            : { sismasterEventId, sismasterSportId, eventCategoryId };
+        const { data } = await apiClient.get(url, { params });
+        return data;
+      },
+      enabled: !isTeamMode && hasSismaster_or_Haymaster && open,
+
     staleTime: 1000 * 60 * 5,
   });
 
@@ -253,7 +260,7 @@ export function GenerateAthleticsSeriesModal({
     }));
     if (athletes.length === 0) return [];
     return [{ key: "field-group", seriesName: eventName, idniv: "", idcat: "", athletes }];
-  }, [isTeamMode, isFieldEvent, hasSismaster, open, allRegistrations, eventName]);
+  }, [isTeamMode, isFieldEvent, hasSismaster_or_Haymaster, open, allRegistrations, eventName]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BLOQUE B — Estado compartido (individuales + equipos)
