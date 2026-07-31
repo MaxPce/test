@@ -1,6 +1,6 @@
 // src/pages/CategoryStandingsPage.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { BarChart3, Timer, Trophy, Users } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
@@ -290,6 +290,14 @@ export function CategoryStandingsPage() {
   type WrestlingView = "results" | "bracket" | "ranking";
   const [wrestlingView, setWrestlingView] = useState<WrestlingView>("results");
   const [selectedAnyPhaseId, setSelectedAnyPhaseId] = useState<number>(0);
+
+  useEffect(() => {
+    setSelectedPhaseId(0);
+    setSelectedAnyPhaseId(0);
+    setElimView("bracket");
+    setWrestlingView("results");
+  }, [eventCategory.eventCategoryId]);
+
 
   const { data: phases = [] } = usePhases(eventCategory.eventCategoryId);
 
@@ -644,7 +652,10 @@ export function CategoryStandingsPage() {
                 />
               )}
               {isTaekwondoPoomsae && (
-                <PoomsaeResultsTable eventCategoryId={eventCategory.eventCategoryId} />
+                <PoomsaeResultsTable
+                  eventCategoryId={eventCategory.eventCategoryId}
+                  phaseId={activePhase.phaseId}
+                />
               )}
               {isWushuTaolu && (
                 <WushuTaoluResultsTable eventCategoryId={eventCategory.eventCategoryId} />

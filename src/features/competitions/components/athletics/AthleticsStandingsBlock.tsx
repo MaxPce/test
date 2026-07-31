@@ -16,6 +16,9 @@ import {
   useAthleticsTrackTable,
   useAthleticsSections,
   useAthleticsFieldTable,
+  useAthleticsClassification, 
+  useOverrideRank,           
+  useClassificationStatus,    
 } from "../../api/athletics.queries";
 
 // ── Constantes estables ───────────────────────────────────────────────────────
@@ -100,6 +103,71 @@ function PosBadge({ pos }: { pos: number }) {
   );
 }
 
+function EditablePosBadge({
+  pos,
+  phaseRegistrationId,
+  phaseId,
+}: {
+  pos: number | null;
+  phaseRegistrationId: number;
+  phaseId: number;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(pos ?? ""));
+  const { mutate, isPending } = useOverrideRank(phaseId);
+
+  const commit = () => {
+    const n = parseInt(draft, 10);
+    if (!isNaN(n) && n >= 1 && n !== pos) {
+      mutate({ phaseRegistrationId, rankPosition: n });
+    }
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        type="number"
+        min={1}
+        className="w-12 rounded border border-orange-400 px-1 py-0.5 text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-orange-300"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+      />
+    );
+  }
+
+  return (
+    <button
+      title="Click para editar posición"
+      disabled={isPending}
+      onClick={() => {
+        setDraft(String(pos ?? ""));
+        setEditing(true);
+      }}
+      className="group relative"
+    >
+      {isPending ? (
+        <span className="inline-flex h-6 w-6 items-center justify-center">
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
+        </span>
+      ) : pos !== null ? (
+        <PosBadge pos={pos} />
+      ) : (
+        <span className="text-slate-300 text-xs">—</span>
+      )}
+      <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+        Editar pos.
+      </span>
+    </button>
+  );
+}
+
 function LoadingSpinner() {
   return (
     <div className="flex h-24 items-center justify-center">
@@ -179,11 +247,18 @@ function TeamMemberRow({ name, rol }: { name: string; rol: string }) {
 
 // ── Vista: PISTA (con soporte para Postas 4x) ─────────────────────────────────
 
-function TrackView({ phaseId }: { phaseId: number }) {
+function TrackView({ phaseId, isFinalized }: { phaseId: number; isFinalized: boolean }) {
   const { data: rows = EMPTY_TRACK_ROWS, isLoading: rowsLoading } =
     useAthleticsTrackTable(phaseId);
   const { data: sections = EMPTY_SECTIONS, isLoading: sectionsLoading } =
     useAthleticsSections(phaseId);
+
+  const { data: classif = [] } = useAthleticsClassification(phaseId);
+  const classifMap = useMemo(
+    () => new Map(classif.map((c) => [c.phaseRegistrationId, c.rankPosition])),
+    [classif],
+  );
+
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
@@ -277,7 +352,12 @@ function TrackView({ phaseId }: { phaseId: number }) {
                     const status = parseStatus(row.entry.notes);
                     const hasTime = !status && !!row.entry.time;
                     if (hasTime) posCounter += 1;
-                    const pos = hasTime ? posCounter : null;
+                    const pos = isFinalized
+                        ? (classifMap.get(row.phaseRegistrationId) ?? null)
+                        : hasTime
+                        ? posCounter
+                        : null;
+
 
                     const isOpen = expanded.has(row.phaseRegistrationId);
                     const hasMembers =
@@ -310,7 +390,13 @@ function TrackView({ phaseId }: { phaseId: number }) {
                           }
                         >
                           <td className="px-3 py-2.5 text-center">
-                            {pos !== null ? (
+                            {isFinalized ? (
+                              <EditablePosBadge
+                                pos={pos}
+                                phaseRegistrationId={row.phaseRegistrationId}
+                                phaseId={phaseId}
+                              />
+                            ) : pos !== null ? (
                               <PosBadge pos={pos} />
                             ) : (
                               <span className="text-slate-300 text-xs">—</span>
@@ -465,12 +551,21 @@ function AttemptCellReadOnly({
 function DistanceView({
   phaseId,
   eventType,
+  isFinalized,
 }: {
   phaseId: number;
   eventType: FieldEventType;
+  isFinalized: boolean;
 }) {
   const { data: rows = EMPTY_FIELD_ROWS, isLoading } =
     useAthleticsFieldTable(phaseId);
+
+  const { data: classif = [] } = useAthleticsClassification(phaseId);
+  const classifMap = useMemo(
+    () => new Map(classif.map((c) => [c.phaseRegistrationId, c.rankPosition])),
+    [classif],
+  );
+
 
   const config = FIELD_EVENT_CONFIG[eventType];
   const { maxAttempts, hasWind } = config;
@@ -541,8 +636,12 @@ function DistanceView({
           {sorted.map((row) => {
             const best = getBest(row.attempts);
             const rowStatus = getRowStatus(row);
-            if (best !== null) posCounter += 1;
-            const pos = best !== null ? posCounter : null;
+            if (!isFinalized && best !== null) posCounter += 1;
+            const pos = isFinalized
+              ? (classifMap.get(row.phaseRegistrationId) ?? null)
+              : best !== null
+              ? posCounter
+              : null;
             const institutionLogo = getImageUrl(row.institutionLogo);
 
             return (
@@ -555,18 +654,24 @@ function DistanceView({
                 }
               >
                 <td className="px-3 py-2.5 text-center">
-                  {pos !== null ? (
-                    <PosBadge pos={pos} />
-                  ) : rowStatus ? (
-                    <span
-                      className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold ${STATUS_CONFIG[rowStatus].bg} ${STATUS_CONFIG[rowStatus].text}`}
-                    >
-                      {rowStatus}
-                    </span>
-                  ) : (
-                    <span className="text-slate-300 text-xs">—</span>
-                  )}
-                </td>
+                {isFinalized ? (
+                  <EditablePosBadge
+                    pos={pos}
+                    phaseRegistrationId={row.phaseRegistrationId}
+                    phaseId={phaseId}
+                  />
+                ) : pos !== null ? (
+                  <PosBadge pos={pos} />
+                ) : rowStatus ? (
+                  <span
+                    className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold ${STATUS_CONFIG[rowStatus].bg} ${STATUS_CONFIG[rowStatus].text}`}
+                  >
+                    {rowStatus}
+                  </span>
+                ) : (
+                  <span className="text-slate-300 text-xs">—</span>
+                )}
+              </td>
 
                 <td className="px-4 py-2.5">
                   <div className="font-semibold text-slate-900">
@@ -623,9 +728,19 @@ function DistanceView({
 
 // ── Vista: ALTURA ─────────────────────────────────────────────────────────────
 
-function HeightView({ phaseId }: { phaseId: number }) {
+function HeightView({ phaseId, isFinalized }: { phaseId: number; isFinalized: boolean }) {
+
   const { data: rows = EMPTY_FIELD_ROWS, isLoading } =
     useAthleticsFieldTable(phaseId);
+
+  
+  
+  const { data: classif = [] } = useAthleticsClassification(phaseId);
+  const classifMap = useMemo(
+    () => new Map(classif.map((c) => [c.phaseRegistrationId, c.rankPosition])),
+    [classif],
+  );
+
 
   const allHeights = useMemo(() => {
     const set = new Set<number>();
@@ -709,7 +824,11 @@ function HeightView({ phaseId }: { phaseId: number }) {
             const best = getBestHeight(row);
             const rowStatus = getRowStatus(row);
             if (best !== null) posCounter += 1;
-            const pos = best !== null ? posCounter : null;
+            const pos = isFinalized
+              ? (classifMap.get(row.phaseRegistrationId) ?? null)
+              : best !== null
+              ? posCounter
+              : null;
             const institutionLogo = getImageUrl(row.institutionLogo);
 
             return (
@@ -722,7 +841,13 @@ function HeightView({ phaseId }: { phaseId: number }) {
                 }
               >
                 <td className="px-3 py-2.5 text-center">
-                  {pos !== null ? (
+                  {isFinalized ? (
+                    <EditablePosBadge
+                      pos={pos}
+                      phaseRegistrationId={row.phaseRegistrationId}
+                      phaseId={phaseId}
+                    />
+                  ) : pos !== null ? (
                     <PosBadge pos={pos} />
                   ) : rowStatus ? (
                     <span
@@ -809,6 +934,8 @@ interface Props {
 }
 
 export function AthleticsStandingsBlock({ phase }: Props) {
+  const { data: statusData } = useClassificationStatus(phase.phaseId);
+  const isFinalized = statusData?.isFinalized ?? false;
   const isTrack = phase.type === "combined_pista";
   const isDistance = phase.type === "combined_distancia";
   const isHeight = phase.type === "combined_altura";
@@ -839,11 +966,11 @@ export function AthleticsStandingsBlock({ phase }: Props) {
         </div>
       </div>
 
-      {isTrack && <TrackView phaseId={phase.phaseId} />}
+      {isTrack && <TrackView phaseId={phase.phaseId} isFinalized={isFinalized} />}
       {isDistance && eventType && (
-        <DistanceView phaseId={phase.phaseId} eventType={eventType} />
+        <DistanceView phaseId={phase.phaseId} eventType={eventType} isFinalized={isFinalized} />
       )}
-      {isHeight && <HeightView phaseId={phase.phaseId} />}
+      {isHeight && <HeightView phaseId={phase.phaseId} isFinalized={isFinalized} />}
     </div>
   );
 }

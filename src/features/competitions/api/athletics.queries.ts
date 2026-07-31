@@ -1,9 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAthleticsFieldTable,
   getAthleticsTrackTable,
   getClassificationStatus,
   getSectionsByPhase,
+  getAthleticsClassification, 
+  overrideRank
 } from "./athletics.api";
 
 export const TRACK_TABLE_KEY = (phaseId: number) =>
@@ -46,3 +48,25 @@ export const useClassificationStatus = (phaseId: number) =>
     enabled: !!phaseId,
     staleTime: 0, // siempre fresco al montar
   });
+export const useAthleticsClassification = (phaseId: number) =>
+  useQuery({
+    queryKey: ["athletics-classification", phaseId] as const,
+    queryFn: () => getAthleticsClassification(phaseId),
+    enabled: !!phaseId,
+  });
+
+export const useOverrideRank = (phaseId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      phaseRegistrationId,
+      rankPosition,
+    }: {
+      phaseRegistrationId: number;
+      rankPosition: number;
+    }) => overrideRank(phaseRegistrationId, rankPosition),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["athletics-classification", phaseId] });
+    },
+  });
+};

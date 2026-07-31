@@ -140,3 +140,25 @@ export const getClassificationStatus = async (phaseId: number): Promise<{
 export const reopenPhase = async (phaseId: number): Promise<void> => {
   await apiClient.delete(`/competitions/phases/${phaseId}/classify`);
 };
+
+export const getAthleticsClassification = async (phaseId: number) => {
+  const res = await apiClient.get(
+    `/competitions/phases/${phaseId}/classification`,
+  );
+  return res.data as Array<{
+    classificationId: number;
+    phaseRegistrationId: number;
+    rankPosition: number | null;
+    pointsAwarded: number;
+  }>;
+};
+
+export const overrideRank = async (
+  phaseRegistrationId: number,
+  rankPosition: number,
+): Promise<void> => {
+  await apiClient.patch(
+    `/competitions/phase-registrations/${phaseRegistrationId}/rank-override`,
+    { rankPosition },
+  );
+};

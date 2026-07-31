@@ -12,10 +12,12 @@ import { getImageUrl } from "@/lib/utils/imageUrl";
 
 interface PoomsaeResultsTableProps {
   eventCategoryId: number;
+  phaseId?: number;
 }
 
 export function PoomsaeResultsTable({
   eventCategoryId,
+  phaseId,
 }: PoomsaeResultsTableProps) {
   const [selectedPhaseId, setSelectedPhaseId] = useState<number>(0);
   const [showManualEditor, setShowManualEditor] = useState(false);
@@ -25,6 +27,7 @@ export function PoomsaeResultsTable({
 
   const groupPhases = phases.filter((p) => p.type === "grupo");
   const effectivePhaseId =
+    phaseId ||
     selectedPhaseId || groupPhases[0]?.phaseId || phases[0]?.phaseId || 0;
 
   const { data: scores = [], isLoading: scoresLoading } =
